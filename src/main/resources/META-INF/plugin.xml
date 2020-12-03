@@ -17,10 +17,10 @@
         <li>Generate Ember.js files via <code>ember generate</code></li>
         <li>Basic reference resolving and completion for e.g. <code>DS.belongsTo('user')</code></li>
         <li>Live Templates</li>
-        <li>Handlebars references</li>
-        <li>Handlebars autocompletions</li>
+        <li>Handlebars references for tags/mustache paths and tag attributes</li>
+        <li>Handlebars autocompletion for tags and mustache paths</li>
         <li>Handlebars parameter hints for helpers/modifiers and components</li>
-        <li>Handlebars renaming</li>
+        <li>Handlebars renaming for mustache ids and html tags</li>
       </ul>
     ]]></description>
 
