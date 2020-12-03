@@ -4,8 +4,10 @@ Changelog
 ===============================================================================
 
 ## v2020.2.4
-
-- Fix off-by-one issue in the ember-template-lint annotator (#327)
+- Handlebars references for tags/mustache paths and tag attributes
+- Handlebars autocompletion for tags and mustache paths
+- Handlebars parameter hints for helpers/modifiers and components
+- Handlebars renaming for mustache ids and html tags
 
 ## v2020.2.3
 
