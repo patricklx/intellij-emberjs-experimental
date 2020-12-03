@@ -30,13 +30,6 @@ class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
         return EmberUtils.resolveHelper(file)?.parameters
     }
 
-    private fun findHelperFunction(psiElement: PsiElement?): JSFunction? {
-        val helper = EmberUtils.findFirstHbsParamFromParam(psiElement)
-
-        val file = EmberUtils.followReferences(helper)
-        return if (file is PsiFile) EmberUtils.resolveHelper(file) else if (file is JSFunction) file else null
-    }
-
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiElement? {
         val psiElement = context.file.findElementAt(context.offset)
         val block = EmberUtils.findFirstHbsParamFromParam(psiElement)

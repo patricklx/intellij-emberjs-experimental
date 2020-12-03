@@ -3,6 +3,9 @@
 Changelog
 ===============================================================================
 
+## v2020.3.1
+- Fix issue fix resolving modifiers
+
 ## v2020.3.0
 - Handlebars references for tags/mustache paths and tag attributes
 - Handlebars autocompletion for tags and mustache paths

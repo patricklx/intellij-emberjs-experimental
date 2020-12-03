@@ -83,7 +83,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange = IntRa
         return target.prevSibling
     }
 
-    override fun getContainingFile(): PsiFile {
+    override fun getContainingFile(): PsiFile? {
         return target.containingFile
     }
 
