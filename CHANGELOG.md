@@ -3,6 +3,10 @@
 Changelog
 ===============================================================================
 
+## v2020.3.1
+- Fix issue with lookup of scoped packages
+- Fix issue with lookup of modifier
+
 ## v2020.3.0
 - Handlebars references for tags/mustache paths and tag attributes
 - Handlebars autocompletion for tags and mustache paths

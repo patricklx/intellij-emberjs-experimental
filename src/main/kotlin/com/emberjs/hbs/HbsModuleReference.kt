@@ -57,6 +57,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
                 .map { psiManager.findFile(it) }
                 .filterNotNull()
                 .map { JsOrFileReference(it).resolve() }
+                .filterNotNull()
                 .take(1)
                 .let(::createResults)
     }

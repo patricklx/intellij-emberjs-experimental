@@ -51,6 +51,7 @@ class EmberUtils {
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {
                 exp = ES6PsiUtil.resolveDefaultExport(exportImport).firstOrNull() as JSElement? ?: exp
+                exp = exp ?: exportImport.fromClause?.references?.findLast { it.resolve() != null }?.resolve() as JSElement
             }
             var ref: Any? = exp?.children?.find { it is JSReferenceExpression } as JSReferenceExpression?
             while (ref is JSReferenceExpression && ref.resolve() != null) {
@@ -168,7 +169,6 @@ class EmberUtils {
 
             if (element?.references != null && element.references.isNotEmpty()) {
                 val res = element.references.map { resolveReference(it, path) }
-                        .filter { it != element }
                         .filterNotNull()
                         .firstOrNull()
                 if (res == element) {

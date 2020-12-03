@@ -40,10 +40,10 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         }
 
         // e.g. `my-app/controllers/foo` -> `my-app`
-        val packageName = unquotedRefText.substringBefore('/')
+        var packageName = unquotedRefText.substringBefore('/')
 
         // e.g. `my-app/controllers/foo` -> `controllers/foo`
-        val importPath = unquotedRefText.removePrefix("$packageName/")
+        var importPath = unquotedRefText.removePrefix("$packageName/")
 
         // find root package folder of current file (ignoring package.json in in-repo-addons)
         val hostPackageRoot = host.containingFile.virtualFile?.parents
@@ -55,12 +55,24 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
             listOf(hostPackageRoot) + EmberCliProjectConfigurator.inRepoAddons(hostPackageRoot)
         } else {
             // check node_modules
-            listOfNotNull(host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName))
+            if (packageName.startsWith("@")) {
+                val subPackage = importPath.split("/").first()
+                val first = host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName)
+                listOfNotNull(first?.findChild(subPackage))
+            } else {
+                listOfNotNull(host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName))
+            }
+        }
+
+        if (packageName.startsWith("@")) {
+            val parts = importPath.split("/").toMutableList()
+            val first = parts.removeAt(0)
+            importPath = parts.joinToString("/")
+            packageName += "/$first"
         }
 
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
         val roots = modules
-                .filter { it.isEmberAddonFolder }
                 .flatMap { listOfNotNull(it.findChild("addon"), it.findChild("app"), it.findChild("addon-test-support")) }
                 .map { JSExactFileReference(host, TextRange.create(offset, offset + packageName.length), listOf(it.path), null) }
 
@@ -102,8 +114,6 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
             return arrayOf()
         }
 
-        // filter out invalid references
-        // reference default export if available, otherwise file
         return (roots + refs.allReferences)
                 .toTypedArray()
     }
