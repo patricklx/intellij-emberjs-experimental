@@ -6,49 +6,57 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.meta.PsiMetaData
 import com.intellij.psi.scope.PsiScopeProcessor
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
+import com.intellij.psi.search.PsiElementProcessor
 import com.intellij.psi.search.SearchScope
+import com.intellij.psi.xml.XmlAttributeDecl
+import com.intellij.psi.xml.XmlAttributeValue
+import com.intellij.psi.xml.XmlElement
+import com.intellij.psi.xml.XmlTag
 import javax.swing.Icon
 
-class EmberAttrDec(private val name: String, private val description: String, ref: PsiReference?, private val references: Array<PsiReference>?) : PsiElement {
+class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiReference?, private val references: Array<PsiReference>?) : XmlAttributeDecl {
     private val userDataMap = HashMap<Any, Any>()
-    private val reference: PsiReference
+    private val reference: PsiReference?
+    private var name: String
     override fun <T> getUserData(key: Key<T>): T? {
         return this.userDataMap[key] as T?
     }
 
     init {
-        this.reference = ref ?: references!!.first()
+        this.reference = ref ?: references!!.firstOrNull()
+        this.name = descriptor.name
     }
 
     override fun <T> putUserData(key: Key<T>, value: T?) {
         this.userDataMap[key] = value as Any
     }
 
-    override fun getIcon(flags: Int): Icon {
-        return this.reference.element.getIcon(flags)
+    override fun getIcon(flags: Int): Icon? {
+        return null
     }
 
     override fun getProject(): Project {
-        return this.reference.element.project
+        return this.context.project
     }
 
     override fun getLanguage(): Language {
-        return this.reference.element.language
+        return this.context.language
     }
 
     override fun getManager(): PsiManager {
-        return this.reference.element.manager
+        return this.context.manager
     }
 
     override fun getChildren(): Array<PsiElement> {
         return emptyArray<PsiElement>()
     }
 
-    override fun getParent(): PsiElement? {
-        return this.reference.element.parent
+    override fun getParent(): XmlTag {
+        return this.context
     }
 
     override fun getFirstChild(): PsiElement? {
@@ -68,11 +76,11 @@ class EmberAttrDec(private val name: String, private val description: String, re
     }
 
     override fun getContainingFile(): PsiFile? {
-        return this.reference.element.containingFile;
+        return this.context.containingFile;
     }
 
     override fun getTextRange(): TextRange? {
-        return null
+        return descriptor.context.attributes.find { it.descriptor == descriptor }?.textRange
     }
 
     override fun getStartOffsetInParent(): Int {
@@ -96,35 +104,35 @@ class EmberAttrDec(private val name: String, private val description: String, re
     }
 
     override fun getText(): String {
-        return this.description
+        return this.name
     }
 
     override fun textToCharArray(): CharArray {
-        return this.description.toCharArray()
+        return this.name.toCharArray()
     }
 
     override fun getNavigationElement(): PsiElement? {
-        return this.reference.element
+        return this
     }
 
     override fun getOriginalElement(): PsiElement? {
-        return null
+        return this
     }
 
     override fun textMatches(text: CharSequence): Boolean {
-        return false
+        return name == text
     }
 
     override fun textMatches(element: PsiElement): Boolean {
-        return false
+        return element.text == name
     }
 
     override fun textContains(c: Char): Boolean {
-        return false
+        return name.contains(c)
     }
 
     override fun accept(visitor: PsiElementVisitor) {
-        return
+        visitor.visitElement(this)
     }
 
     override fun acceptChildren(visitor: PsiElementVisitor) {
@@ -184,10 +192,10 @@ class EmberAttrDec(private val name: String, private val description: String, re
     }
 
     override fun isWritable(): Boolean {
-        TODO("Not yet implemented")
+        return true
     }
 
-    override fun getReference(): PsiReference {
+    override fun getReference(): PsiReference? {
         return this.reference
     }
 
@@ -207,8 +215,8 @@ class EmberAttrDec(private val name: String, private val description: String, re
         TODO("Not yet implemented")
     }
 
-    override fun getContext(): PsiElement? {
-        return this.reference.element.context
+    override fun getContext(): XmlTag {
+        return this.descriptor.context
     }
 
     override fun isPhysical(): Boolean {
@@ -228,6 +236,72 @@ class EmberAttrDec(private val name: String, private val description: String, re
     }
 
     override fun isEquivalentTo(another: PsiElement?): Boolean {
+        return false
+    }
+
+    override fun processElements(processor: PsiElementProcessor<*>?, place: PsiElement?): Boolean {
+        return true
+    }
+
+    override fun getMetaData(): PsiMetaData? {
+        return null
+    }
+
+    override fun getName(): String {
+        return name
+    }
+
+    override fun setName(name: String): PsiElement {
+        var newName = ""
+        if (this.name.startsWith("|")) {
+            newName = "|"
+        }
+        newName += name
+        if (this.name.endsWith("|")) {
+            newName += "|"
+        }
+        descriptor.context.attributes.find { it.name == this.name }?.name = newName
+        this.name = newName
+        return this
+    }
+
+    override fun getNameElement(): XmlElement {
+        return this
+    }
+
+    override fun getDefaultValue(): XmlAttributeValue? {
+        return null
+    }
+
+    override fun getDefaultValueText(): String? {
+        return null
+    }
+
+    override fun isAttributeRequired(): Boolean {
+        return descriptor.isRequired
+    }
+
+    override fun isAttributeFixed(): Boolean {
+        return descriptor.isFixed
+    }
+
+    override fun isAttributeImplied(): Boolean {
+        return false
+    }
+
+    override fun isEnumerated(): Boolean {
+       return descriptor.isEnumerated
+    }
+
+    override fun getEnumeratedValues(): Array<XmlElement> {
+        return emptyArray()
+    }
+
+    override fun isIdAttribute(): Boolean {
+        return false
+    }
+
+    override fun isIdRefAttribute(): Boolean {
         return false
     }
 

@@ -338,7 +338,7 @@ function array(options: any[]): any[] {
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/component?anchor=component
  @public
  */
-function component([compnent, ...params]: [string|Component, any[]], hash: {[x: string]: any}): Component|undefined {
+function component(args: [component: string|Component, args: any[]], hash: {[x: string]: any}): Component|undefined {
   return
 }
 

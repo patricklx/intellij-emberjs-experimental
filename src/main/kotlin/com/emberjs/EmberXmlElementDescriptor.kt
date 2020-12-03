@@ -3,6 +3,9 @@ package com.emberjs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.hbs.HbsLocalReference
+import com.emberjs.hbs.RangedReference
+import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
 import com.intellij.lang.javascript.psi.JSElement
@@ -22,6 +25,7 @@ import com.intellij.xml.XmlElementDescriptor
 import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
 import com.intellij.xml.impl.schema.AnyXmlAttributeDescriptor
+import com.intellij.xml.impl.schema.AnyXmlElementDescriptor
 
 class ArgData(
         var value: String = "",
@@ -64,7 +68,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     }
 
     override fun getElementDescriptor(childTag: XmlTag, contextTag: XmlTag): XmlElementDescriptor? {
-        return XmlDescriptorUtil.getElementDescriptor(childTag, contextTag)
+        return this
     }
 
     class YieldReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
@@ -104,10 +108,14 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     fun getReferenceData(): ComponentReferenceData {
         var f: PsiFile? = null
         // if it references a block param
-        if (this.declaration.containingFile == this.tag.containingFile) {
-            f = EmberUtils.followReferences((this.declaration as XmlAttributeImpl).descriptor?.declaration?.reference?.resolve())?.containingFile
+        val target: PsiElement
+        if (this.declaration is EmberNamedElement) {
+            target = this.declaration.target
+        } else {
+            target = this.declaration
         }
-        val file = f ?: this.declaration.containingFile
+        f = EmberUtils.followReferences(target)?.containingFile
+        val file = f ?: target.containingFile
         var name = file.name.split(".").first()
         val dir = file.parent as PsiDirectoryImpl?
         var template: PsiFile? = null
@@ -137,7 +145,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
                 for (arg in args) {
                     val argName = arg.text.split(".").first()
                     if (tplArgs.find { it.value == argName } == null) {
-                        tplArgs.add(ArgData())
+                        tplArgs.add(ArgData(argName, "", AttrPsiReference(arg)))
                     }
                 }
 
@@ -156,7 +164,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         val fullPathToTs = path.replace("app/", "addon/") + "/$name.ts"
         val fullPathToDts = path.replace("app/", "addon/") + "/$name.d.ts"
         val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts)
-        val cls = tsFile?.let {EmberUtils.findDefaultExportClass(tsFile)} ?: this.declaration
+        val cls = tsFile?.let {EmberUtils.findDefaultExportClass(tsFile)} ?: target
         if (cls is JSElement) {
             val argsElem = EmberUtils.findComponentArgsType(cls)
             val signatures = argsElem?.properties ?: emptyList()
@@ -178,9 +186,12 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     override fun getAttributesDescriptors(context: XmlTag?): Array<out XmlAttributeDescriptor> {
         val result = mutableListOf<XmlAttributeDescriptor>()
+        if (context == null) {
+            return result.toTypedArray()
+        }
         val commonHtmlAttributes = HtmlNSDescriptorImpl.getCommonAttributeDescriptors(context)
         val data = getReferenceData()
-        val attributes = data.args.map { EmberAttributeDescriptor(it.value, false, it.description, it.reference, null)  }
+        val attributes = data.args.map { EmberAttributeDescriptor(context, it.value, false, it.description, it.reference, null)  }
         result.addAll(attributes)
         if (data.hasSplattributes) {
             result.addAll(commonHtmlAttributes)
@@ -193,7 +204,8 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             return null
         }
         if (attributeName == "as") {
-            return AnyXmlAttributeDescriptor(attributeName)
+            val data = getReferenceData()
+            return EmberAttributeDescriptor(context, attributeName, true, "yield", null, data.yields.toTypedArray())
         }
         val asIndex = context.attributes.indexOfFirst { it.text == "as" }
         if (asIndex >= 0) {
@@ -206,8 +218,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             if (index == -1) {
                 return this.getAttributesDescriptors(context).find { it.name == attributeName }
             }
-            val data = getReferenceData()
-            return EmberAttributeDescriptor(attributeName, true, "yield", null, data.yields.toTypedArray())
+            return EmberAttributeDescriptor(context, attributeName, true, "yield", null, emptyArray())
         }
         return this.getAttributesDescriptors(context).find { it.name == attributeName }
     }

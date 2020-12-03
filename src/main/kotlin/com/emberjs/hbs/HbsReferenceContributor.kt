@@ -2,7 +2,10 @@ package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
+import com.emberjs.EmberAttrDec
 import com.emberjs.index.EmberNameIndex
+import com.emberjs.psi.EmberNamedAttribute
+import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
 import com.intellij.openapi.util.TextRange
@@ -12,6 +15,7 @@ import com.intellij.patterns.XmlTagPattern
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.util.ProcessingContext
 
 fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference? {
@@ -25,12 +29,42 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
 }
 
 class RangedReference(element: PsiElement, val target: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
+    private var namedXml: EmberNamedAttribute? = null
+    private var named: EmberNamedElement?
+
+    init {
+        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset)) }
+        if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
+            this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+        }
+
+    }
     override fun resolve(): PsiElement? {
-        return target
+        if (target is XmlAttribute) {
+            return namedXml
+        }
+        return named
     }
 
     override fun getRangeInElement(): TextRange {
         return range
+    }
+
+    override fun handleElementRename(newElementName: String): PsiElement {
+        if (element is XmlAttribute) {
+            val attr = element as XmlAttribute
+            var newName = ""
+            if (attr.name.startsWith("|")) {
+                newName = "|"
+            }
+            newName += newElementName
+            if (attr.name.endsWith("|")) {
+                newName += "|"
+            }
+            attr.name = newName
+            return element
+        }
+        return super.handleElementRename(newElementName)
     }
 }
 
@@ -107,7 +141,10 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
         }
         val mustache = element.parents.find { it is HbMustache }!!
         val path = mustache.children.findLast { it is HbParam }
-        val fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
+        var fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
+        if (fileRef is EmberNamedElement) {
+            fileRef = fileRef.target
+        }
         if (fileRef is PsiDirectory) {
             return named
                     .map { fileRef.findFile(it) ?: fileRef.findSubdirectory(it) }

@@ -3,6 +3,9 @@
 Changelog
 ===============================================================================
 
+## v2020.2.4
+
+- Fix off-by-one issue in the ember-template-lint annotator (#327)
 
 ## v2020.2.3
 

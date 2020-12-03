@@ -5,34 +5,40 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbPsiElementImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
-import com.emberjs.index.EmberNameIndex
-import com.emberjs.utils.*
+import com.emberjs.EmberAttrDec
+import com.emberjs.psi.EmberNamedAttribute
+import com.emberjs.psi.EmberNamedElement
+import com.emberjs.refactoring.SimpleNodeFactory
+import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.originalVirtualFile
+import com.emberjs.utils.parents
+import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.ecmascript6.psi.JSClassExpression
-import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
-import com.intellij.lang.javascript.psi.JSCallExpression
-import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
-import com.intellij.lang.javascript.psi.impl.JSReferenceExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
-import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.lang.javascript.psi.types.JSSimpleRecordTypeImpl
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.html.HtmlTagImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.scope.PsiScopeProcessor
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.LocalSearchScope
+import com.intellij.psi.search.SearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parentsWithSelf
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlAttributeDecl
+import com.intellij.psi.xml.XmlTag
+import javax.swing.Icon
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -64,10 +70,10 @@ class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<Ps
 }
 
 
-
-class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) : PsiReferenceBase<PsiElement>(leaf) {
+class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : PsiReferenceBase<PsiElement>(leaf) {
+    val named = target?.let { EmberNamedElement(it) }
     override fun resolve(): PsiElement? {
-        return target
+        return named
     }
 
     override fun getRangeInElement(): TextRange {
@@ -78,8 +84,69 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         return leaf.textRangeInParent
     }
 
+    override fun handleElementRename(newElementName: String): PsiElement {
+        val node = SimpleNodeFactory.createNode(leaf.project, newElementName)
+        return leaf.replace(node)
+    }
+}
+
+
+class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) : PsiReferenceBase<PsiElement>(leaf) {
+    private var namedXml: EmberNamedAttribute? = null
+    private var named: EmberNamedElement?
+
+    init {
+        this.named = target?.let { EmberNamedElement(it) }
+        if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
+            this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl) }
+        }
+
+    }
+    override fun resolve(): PsiElement? {
+        if (target?.originalVirtualFile?.path != leaf.originalVirtualFile?.path) {
+            return target
+        }
+        if (target is XmlAttribute) {
+            return namedXml
+        }
+        return named
+    }
+
+    override fun getRangeInElement(): TextRange {
+        return TextRange(0, leaf.textLength)
+    }
+
+    override fun calculateDefaultRangeInElement(): TextRange {
+        return leaf.textRangeInParent
+    }
+
+    override fun handleElementRename(newElementName: String): PsiElement? {
+        if (leaf is HbPsiElement) {
+            val node = SimpleNodeFactory.createNode(leaf.project, newElementName)
+            return leaf.replace(node)
+        }
+        return leaf
+    }
+
     companion object {
+
         fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false): PsiElement? {
+
+            if (any is EmberNamedElement) {
+                return resolveToJs(any.target, path, resolveIncomplete)
+            }
+
+            if (any is PsiElement) {
+                val resolvedHelper = EmberUtils.handleEmberHelpers(any)
+                if (resolvedHelper != null) {
+                    return resolveToJs(resolvedHelper, path)
+                }
+
+                val refYield = EmberUtils.findTagYield(any)
+                if (refYield != null && refYield.descriptor?.declaration != null) {
+                    return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete)
+                }
+            }
 
             if (any is PsiElement && any.references.find { it is HbsLocalReference } != null) {
                 val ref = any.references.find { it is HbsLocalReference }
@@ -160,76 +227,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             return null
         }
 
-        fun handleEmberHelpers(element: PsiElement): HbsLocalReference? {
-            if (element.parent is HbOpenBlockMustache) {
-                val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
-                if (mustacheName == "let" || mustacheName == "each") {
-                    val param = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.PARAM, null)
-                    if (param == null) {
-                        return null
-                    }
-                    if (mustacheName == "let") {
-                        return HbsLocalReference(element, param)
-                    }
-                    if (mustacheName == "each") {
-                        val refResolved = param.references.firstOrNull()?.resolve()
-                                ?:
-                                PsiTreeUtil.collectElements(param, { it.elementType == HbTokenTypes.ID })
-                                        .filter { it !is LeafPsiElement }
-                                        .lastOrNull()?.references?.firstOrNull()?.resolve()
-                        if (refResolved is HbPsiElement) {
-                            return HbsLocalReference(element, param.parent)
-                        }
-                        val jsRef = resolveToJs(refResolved, emptyList(), false)
-                        if (jsRef is JSTypeOwner && jsRef.jsType is JSArrayType) {
-                            return HbsLocalReference(element, (jsRef.jsType as JSArrayType).type?.sourceElement)
-                        }
-                    }
-                }
-            }
-            return null
-        }
-
-        fun createReference(element: PsiElement): PsiReference? {
-            val name = element.text.replace("IntellijIdeaRulezzz", "")
-            var sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
-            if (name == "this" && sibling == null) {
-                val fname = element.containingFile.name.split(".").first()
-                var fileName = fname
-                if (fileName == "template") {
-                    fileName = "component"
-                }
-                val dir = element.containingFile.originalFile.containingDirectory
-                val file = dir?.findFile("$fileName.js")
-                        ?: dir?.findFile("$fileName.ts")
-                        ?: dir?.findFile("controller.js")
-                        ?: dir?.findFile("controller.ts")
-                if (file != null) {
-                    return HbsLocalReference(element, resolveToJs(file, listOf()))
-                }
-            }
-
-            val insideImport = element.parents.find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
-
-            if (insideImport && element.text != "from" && element.text != "import") {
-                return null
-            }
-
-            val importRef = EmberUtils.referenceImports(element, name)
-            if (importRef != null) {
-                return HbsLocalReference(element, importRef)
-            }
-
-            val ref = handleEmberHelpers(element)
-            if (ref != null) {
-                return ref
-            }
-
-            // for this.x.y
-            if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
-                return HbsLocalReference(element, resolveToJs(sibling.references.find { it is HbsLocalReference }!!.resolve(), listOf(element.text)))
-            }
-
+        fun referenceBlocks(element: PsiElement, name: String): PsiReference? {
             // any |block param|
             // as mustache
             val hbblockRefs = PsiTreeUtil.collectElements(element.containingFile, { it is HbOpenBlockMustacheImpl })
@@ -258,12 +256,47 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val index = tag.attributes.indexOfFirst { it.text == "as" }
                     val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
                     val r = blockParams.find { it.text.matches(Regex("^\\|*$name\\|*$")) }
-                    val desc = tag.descriptor?.getAttributeDescriptor(r)
-                    return HbsLocalReference(element, desc?.declaration?.references?.getOrNull(0)?.resolve())
+                    return r?.let { HbsLocalReference(element, it) }
                 }
                 return HbsLocalReference(element, blockVal ?: blockRef)
             }
             return null
+        }
+
+        fun createReference(element: PsiElement): PsiReference? {
+            val name = element.text.replace("IntellijIdeaRulezzz", "")
+            val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
+            if (name == "this" && sibling == null) {
+                val fname = element.containingFile.name.split(".").first()
+                var fileName = fname
+                if (fileName == "template") {
+                    fileName = "component"
+                }
+                val dir = element.containingFile.originalFile.containingDirectory
+                val file = dir?.findFile("$fileName.js")
+                        ?: dir?.findFile("$fileName.ts")
+                        ?: dir?.findFile("controller.js")
+                        ?: dir?.findFile("controller.ts")
+                if (file != null) {
+                    return HbsLocalReference(element, resolveToJs(file, listOf()))
+                }
+            }
+
+            val importRef = EmberUtils.referenceImports(element, name)
+            if (importRef != null) {
+                return HbsLocalRenameReference(element, importRef)
+            }
+
+            // for this.x.y
+            if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
+                return HbsLocalReference(element, resolveToJs(sibling.references.find { it is HbsLocalReference }!!.resolve(), listOf(element.text)))
+            }
+
+            if (element.parent is HbOpenBlockMustache) {
+                return HbsLocalRenameReference(element, element)
+            }
+
+            return referenceBlocks(element, name)
         }
     }
 }

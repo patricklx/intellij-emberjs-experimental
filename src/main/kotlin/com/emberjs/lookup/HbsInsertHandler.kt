@@ -19,6 +19,9 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             return
         }
         val path = item.getUserData(PathKey)
+        if (path == null) {
+            return
+        }
         val fullName = item.lookupString.replace("::", "/")
         val name = fullName.split("/").last()
         val pattern = "\\{\\{\\s*import\\s+([\\w*\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"
@@ -36,7 +39,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             groups.removeAt(0)
             groups[0] = "'$g,$name'"
         } else {
-            val l = arrayOf(name, path!!)
+            val l = arrayOf(name, path)
             imports.add(l.toMutableList())
         }
         var text = context.document.text

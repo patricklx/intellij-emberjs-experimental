@@ -2,10 +2,12 @@ package com.emberjs.utils
 
 import com.google.gson.stream.JsonReader
 import com.intellij.javascript.nodejs.PackageJsonData
-import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.text.CharSequenceReader
 import java.io.IOException
+import com.dmarcotte.handlebars.parsing.HbParseDefinition
+import com.intellij.psi.PsiElement
+import org.mozilla.javascript.ast.AstNode
 
 val VirtualFile.parents: Iterable<VirtualFile>
     get() = object : Iterable<VirtualFile> {
@@ -88,3 +90,9 @@ fun findMainPackageJsonFile(file: VirtualFile) = file.parents.asSequence()
         .firstOrNull { it != null }
 
 fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.parse(it, null) }
+
+
+
+fun HbParseDefinition.createElement(node: AstNode): PsiElement? {
+    return null
+}

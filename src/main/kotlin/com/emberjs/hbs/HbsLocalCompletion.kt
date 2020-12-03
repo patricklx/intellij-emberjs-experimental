@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.lookup.HbsInsertHandler
+import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
@@ -57,6 +58,11 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
+        if (anything is EmberNamedElement) {
+            resolve(anything.target, result)
+            return
+        }
+
         if (anything.references.find { it is HbsLocalReference } != null) {
             resolve(anything.references.find { it is HbsLocalReference }!!.resolve(), result)
         }
@@ -74,6 +80,20 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             if (ids.size == 1) {
                 resolve(ids.first(), result)
             }
+        }
+
+        val dereferenceYield = EmberUtils.findTagYield(anything)
+        if (dereferenceYield != null) {
+            resolve(dereferenceYield, result)
+        }
+
+        if (anything is XmlAttribute) {
+            resolve(anything.descriptor?.declaration, result)
+        }
+
+        val dereferencedHelper = EmberUtils.handleEmberHelpers(anything)
+        if (dereferencedHelper != null) {
+            resolve(dereferencedHelper, result)
         }
 
         if (refElement is JSClassExpression) {
@@ -167,7 +187,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (element is LeafPsiElement) {
             element = element.parent
         }
-        val txt = element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text!!.replace("IntellijIdeaRulezzz", "")
+        val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {

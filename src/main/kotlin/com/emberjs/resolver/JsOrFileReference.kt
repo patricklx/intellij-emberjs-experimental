@@ -10,7 +10,7 @@ class JsOrFileReference(element: PsiElement) : PsiReferenceBase<PsiElement>(elem
 
     init {
         if (this.element is PsiFile) {
-            var cls: Any? = EmberUtils.findDefaultExportClass(this.element as PsiFile)
+            var cls: Any? = EmberUtils.resolveDefaultExport(this.element as PsiFile)
             if (cls == null) {
                 val ref = PsiTreeUtil.findChildOfType(cls, JSReferenceExpressionImpl::class.java)
                 cls = ref?.resolve()

@@ -20,6 +20,7 @@
         <li>Handlebars references</li>
         <li>Handlebars autocompletions</li>
         <li>Handlebars parameter hints for helpers/modifiers and components</li>
+        <li>Handlebars renaming</li>
       </ul>
     ]]></description>
 
@@ -66,6 +67,7 @@
         <fileBasedIndex implementation="com.emberjs.translations.EmberI18nIndex"/>
         <fileBasedIndex implementation="com.emberjs.translations.EmberIntlIndex"/>
 
+        <lang.refactoringSupport language="Handlebars" implementationClass="com.emberjs.refactoring.HbsRefactoringSupportProvider"/>
         <psi.referenceContributor language="JavaScript" implementation="com.emberjs.psi.EmberReferenceContributor"/>
 
         <iconProvider implementation="com.emberjs.icons.EmberIconProvider" order="first"/>

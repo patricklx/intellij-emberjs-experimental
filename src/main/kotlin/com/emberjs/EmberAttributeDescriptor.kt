@@ -7,14 +7,16 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlElement
+import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlAttributeDescriptor
 
-class EmberAttributeDescriptor(value: String, isYield: Boolean = false, description: String?, reference: PsiReference?, references: Array<PsiReference>?) : XmlAttributeDescriptor {
+class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Boolean = false, description: String?, reference: PsiReference?, references: Array<PsiReference>?) : XmlAttributeDescriptor {
     private val attrName: String
     private val description: String
     private val declaration: PsiElement?
     private val isRequired: Boolean
     private val values: List<String>
+    val reference: PsiReference?
     val isYield: Boolean
     init {
         this.isYield = isYield
@@ -24,16 +26,12 @@ class EmberAttributeDescriptor(value: String, isYield: Boolean = false, descript
             this.attrName = value
         }
         this.description = description ?: ""
-        if (reference != null || (references != null && references.isNotEmpty())) {
-            this.declaration = EmberAttrDec(
-                    this.attrName,
-                    this.description,
-                    reference,
-                    references
-            )
-        } else {
-            this.declaration = null
-        }
+        this.reference = reference ?: references?.firstOrNull()
+        this.declaration = EmberAttrDec(
+                this,
+                reference,
+                references
+        )
 
         val ref = reference
         if (ref != null) {
@@ -54,7 +52,7 @@ class EmberAttributeDescriptor(value: String, isYield: Boolean = false, descript
     }
 
     override fun getDeclaration(): PsiElement? {
-        return declaration
+        return reference?.resolve() ?: this.declaration
     }
 
     override fun getName(context: PsiElement?): String {

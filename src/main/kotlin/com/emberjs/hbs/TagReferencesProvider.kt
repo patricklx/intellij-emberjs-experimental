@@ -4,8 +4,12 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
+import com.emberjs.EmberAttrDec
+import com.emberjs.EmberAttributeDescriptor
 import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.index.EmberNameIndex
+import com.emberjs.psi.EmberNamedAttribute
+import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.JsOrFileReference
 import com.emberjs.utils.EmberUtils
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -20,16 +24,17 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.util.parentsWithSelf
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
 import com.intellij.util.ProcessingContext
+
 
 /**
  * this is just to remove leading and trailing `|` from attribute references
  */
-fun toAttributeReference(attribute: XmlAttribute): RangedReference? {
-    attribute.ownReferences
-    val name = attribute.name
-    if (name.startsWith("|") || name.endsWith("|")) {
+fun toAttributeReference(target: XmlAttribute): PsiReference? {
+    val name = target.name
+    if (name.startsWith("|") || name.endsWith("|") && target.descriptor?.declaration != null) {
         var range = TextRange(0, name.length)
         if (name.startsWith("|")) {
             range = TextRange(1, range.endOffset)
@@ -37,19 +42,38 @@ fun toAttributeReference(attribute: XmlAttribute): RangedReference? {
         if (name.endsWith("|")) {
             range = TextRange(range.startOffset, range.endOffset - 1)
         }
-        return RangedReference(attribute, attribute.descriptor!!.declaration!!, range)
+        return RangedReference(target, target, range)
     }
     return null
 }
 
 
-class TagReference(element: PsiElement, val target: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
+class TagReference(val element: XmlTag, val target: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
+    private var namedXml: EmberNamedAttribute? = null
+    private var named: EmberNamedElement?
+
+    init {
+        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset)) }
+        if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
+            this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+        }
+    }
     override fun resolve(): PsiElement? {
-        return target
+        if (target is XmlAttribute) {
+            return namedXml
+        }
+        return named
     }
 
     override fun getRangeInElement(): TextRange {
         return range
+    }
+
+    override fun handleElementRename(newElementName: String): PsiElement {
+        val parts = element.name.split('.').toMutableList()
+        parts[0] = newElementName
+        element.name = parts.joinToString(".")
+        return element
     }
 }
 
@@ -104,14 +128,15 @@ class TagReferencesProvider : PsiReferenceProvider() {
         var ref = param ?: refPsi
         parts.subList(1, parts.size).forEach { part ->
             ref = EmberUtils.followReferences(ref)
-            if (ref is HbParam && ref!!.children[1].text == "hash") {
+            if (ref is HbParam && ref!!.children.getOrNull(1)?.text == "hash") {
                 ref = ref!!.children.filter { c -> c is HbHash }.find { c -> (c as HbHash).hashName == part }
                 if (ref is HbHash) {
-                    ref = (ref as HbHash).hashNameElement
+                    ref = ref!!.children.last()
+                    ref = EmberUtils.followReferences(ref)
                 }
             }
         }
-        return EmberUtils.followReferences(ref)
+        return ref
     }
 
     fun fromImports(tag: XmlTag): PsiElement? {
@@ -137,22 +162,21 @@ class TagReferencesProvider : PsiReferenceProvider() {
         val scope = ProjectScope.getAllScope(project)
         val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
-        val componentTemplate = // Filter out components that are not related to this project
-                EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.tagName == tag.name }
-                        // Filter out components that are not related to this project
-                        .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
-                        .mapNotNull { psiManager.findFile(it) }
-                        .firstOrNull()
+        val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.tagName == tag.name }
+                .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+                .mapNotNull { psiManager.findFile(it) }
+        // find name.hbs first, then template.hbs
+        val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
 
         if (componentTemplate != null) return componentTemplate
 
-        val component = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.tagName == tag.name }
+        val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.tagName == tag.name }
                 .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
                 .mapNotNull { psiManager.findFile(it) }
-                .map { JsOrFileReference(it).resolve() }
-                .firstOrNull()
+        // find name.js first, then component.js
+        val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
 
-        if (component != null) return component
+        if (component != null) return JsOrFileReference(component).resolve()
 
         return null
     }

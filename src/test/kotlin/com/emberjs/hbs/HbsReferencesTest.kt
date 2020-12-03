@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.impl.HbHashImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.JSClassExpression
 import com.intellij.lang.javascript.psi.JSField
@@ -185,9 +186,9 @@ class HbsReferencesTest : BasePlatformTestCase() {
         val resolvedXInHelper = element.findLast { it.parent.text == "self.x" }!!.parent.children.map { it.references }
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
 
-        assert(resolvedBlock is HbsLocalReference)
-        val param = PsiTreeUtil.findSiblingBackward(element.find { it.parent.text == "self" }!!.parent, HbTokenTypes.PARAM, null)
-        assert(resolvedBlock.resolve() == param)
+        assert(resolvedBlock is HbsLocalRenameReference)
+        val blockId = element.find { it.text == "self" }
+        assert(resolvedBlock.resolve() == blockId)
         assert(resolvedA.first() is PsiElement && resolvedA[1] is JSField)
         assert(resolvedXB[0] is PsiElement && resolvedXB[1] is JSField /*&& resolvedXB[2] is TypeScriptPropertySignature*/)
         assert(resolvedYB.first() is PsiElement && resolvedA[1] is JSField /*&& need to resolve doc*/)
@@ -221,9 +222,9 @@ class HbsReferencesTest : BasePlatformTestCase() {
         val resolvedA = element.find { it.parent.text == "self.b" }!!.parent.children.map { it.references }
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
 
-        assert(resolvedBlock is HbsLocalReference)
-        val param = PsiTreeUtil.findSiblingBackward(element.find { it.parent.text == "self" }!!.parent, HbTokenTypes.PARAM, null)
-        assert(resolvedBlock.resolve() == param)
+        assert(resolvedBlock is HbsLocalRenameReference)
+        val blockId = element.find { it.text == "self" }
+        assert((resolvedBlock.resolve() as EmberNamedElement).target == blockId)
         assert(resolvedA.first() is PsiElement && resolvedA[1] is TypeScriptPropertySignature)
     }
 
@@ -277,7 +278,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         myFixture.configureByFile("app/routes/index/template.hbs")
         val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })
         val resolvedA = element.find { it.parent.text == "item.name" }!!.parent.children.map { it.references }
-                .filter { it.isNotEmpty() }.map { it.first().resolve() }
-        assert(resolvedA.first() is HbParam && resolvedA[1] is HbHash)
+                .map { it.firstOrNull()?.resolve() }
+        assert(resolvedA.first() is EmberNamedElement && resolvedA.last() is HbHash)
     }
 }

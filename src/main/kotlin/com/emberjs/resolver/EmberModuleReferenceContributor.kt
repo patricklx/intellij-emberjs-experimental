@@ -1,10 +1,7 @@
 package com.emberjs.resolver
 
 import com.emberjs.cli.EmberCliProjectConfigurator
-import com.emberjs.utils.emberRoot
-import com.emberjs.utils.isEmberAddonFolder
-import com.emberjs.utils.isInRepoAddon
-import com.emberjs.utils.parents
+import com.emberjs.utils.*
 import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.DialectDetector
@@ -58,7 +55,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
             listOf(hostPackageRoot) + EmberCliProjectConfigurator.inRepoAddons(hostPackageRoot)
         } else {
             // check node_modules
-            listOfNotNull(host.emberRoot?.findChild("node_modules")?.findChild(packageName))
+            listOfNotNull(host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName))
         }
 
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
@@ -67,9 +64,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
                 .flatMap { listOfNotNull(it.findChild("addon"), it.findChild("app"), it.findChild("addon-test-support")) }
                 .map { JSExactFileReference(host, TextRange.create(offset, offset + packageName.length), listOf(it.path), null) }
 
-        if (roots.isEmpty()) {
-            return emptyArray()
-        }
+
         val refs : FileReferenceSet
         val startInElement = offset + packageName.length + 1
 
@@ -110,7 +105,6 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         // filter out invalid references
         // reference default export if available, otherwise file
         return (roots + refs.allReferences)
-                .filter { it.resolve() != null }
                 .toTypedArray()
     }
 

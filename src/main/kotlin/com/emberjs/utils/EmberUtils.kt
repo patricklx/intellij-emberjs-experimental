@@ -1,24 +1,30 @@
 package com.emberjs.utils
 
+import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.dmarcotte.handlebars.psi.HbMustache
+import com.dmarcotte.handlebars.psi.*
+import com.emberjs.EmberAttrDec
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
+import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.JSClassExpression
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiReference
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
-
+import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlAttributeDecl
 
 
 class EmberUtils {
@@ -52,15 +58,15 @@ class EmberUtils {
             }
             ref = ref as JSElement? ?: exp
             val func = ref?.children?.find { it is JSCallExpression }
-            if (func != null) {
+            if (func is JSCallExpression) {
                 return func
             }
             val cls = ref?.children?.find { it is JSClassExpression }
-            if (cls != null) {
+            if (cls is JSClassExpression) {
                 return cls
             }
             val obj = ref?.children?.find { it is JSObjectLiteralExpression }
-            if (obj != null) {
+            if (obj is JSObjectLiteralExpression) {
                 return obj
             }
             return ref
@@ -141,11 +147,28 @@ class EmberUtils {
 
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
-            if (element?.reference != null) {
-                return followReferences(resolveReference(element.reference, path), path)
+            if (element is HbParam) {
+                return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
+
             }
+
+            if (element is EmberNamedElement) {
+                return followReferences(element.target, path)
+            }
+
+            val resHelper = handleEmberHelpers(element)
+            if (resHelper != null) {
+                return followReferences(resHelper, path)
+            }
+
+            val resYield = findTagYield(element)
+            if (resYield != null) {
+                return followReferences(resYield, path)
+            }
+
             if (element?.references != null && element.references.isNotEmpty()) {
                 val res = element.references.map { resolveReference(it, path) }
+                        .filter { it != element }
                         .filterNotNull()
                         .firstOrNull()
                 if (res == element) {
@@ -176,6 +199,11 @@ class EmberUtils {
 
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {
+            val insideImport = element.parents.find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
+
+            if (insideImport && element.text != "from" && element.text != "import") {
+                return null
+            }
             val imports = PsiTreeUtil.collectElements(element.containingFile, { it is HbMustache && it.children[1].text == "import" })
             val ref = imports.find {
                 val names = it.children[2].text.split(",")
@@ -194,6 +222,49 @@ class EmberUtils {
             val index = Regex("\\b$name\\b").find(ref.children[2].text)!!.range.first
             val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
             return HbsLocalReference.resolveToJs(file?.resolve(), listOf()) ?: ref
+        }
+
+        fun handleEmberHelpers(element: PsiElement?): PsiElement? {
+            if (element is PsiElement && element.parent is HbOpenBlockMustache) {
+                val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
+                val helpers = arrayOf("let", "each", "with")
+                if (helpers.contains(mustacheName)) {
+                    val param = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.PARAM, null)
+                    if (param == null) {
+                        return null
+                    }
+                    if (mustacheName == "let" || mustacheName == "with") {
+                        return param
+                    }
+                    if (mustacheName == "each") {
+                        val refResolved = param.references.firstOrNull()?.resolve()
+                                ?:
+                                PsiTreeUtil.collectElements(param, { it.elementType == HbTokenTypes.ID })
+                                        .filter { it !is LeafPsiElement }
+                                        .lastOrNull()?.references?.firstOrNull()?.resolve()
+                        if (refResolved is HbPsiElement) {
+                            return param.parent
+                        }
+                        val jsRef = HbsLocalReference.resolveToJs(refResolved, emptyList(), false)
+                        if (jsRef is JSTypeOwner && jsRef.jsType is JSArrayType) {
+                            return (jsRef.jsType as JSArrayType).type?.sourceElement
+                        }
+                    }
+                }
+            }
+            return null
+        }
+
+        fun findTagYield(element: PsiElement?): XmlAttribute? {
+            if (element is EmberAttrDec && element.name != "as") {
+                val tag = element.parent
+                return tag.attributes.find { it.name == "as" }
+            }
+            if (element is XmlAttribute && element.name != "as") {
+                val tag = element.parent
+                return tag.attributes.find { it.name == "as" }
+            }
+            return null
         }
     }
 }

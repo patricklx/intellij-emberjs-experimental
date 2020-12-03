@@ -58,5 +58,5 @@ jobs:
       - run: ./gradlew buildPlugin && ls ./build/distributions
       - uses: actions/upload-artifact@v2
         with:
-          name: plugin
+          name: EmberExperimental.zip
           path: ./build/distributions/EmberExperimental.js-*.zip
