@@ -3,7 +3,7 @@
 Changelog
 ===============================================================================
 
-## v2020.2.4
+## v2020.3.0
 - Handlebars references for tags/mustache paths and tag attributes
 - Handlebars autocompletion for tags and mustache paths
 - Handlebars parameter hints for helpers/modifiers and components
