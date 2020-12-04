@@ -9,20 +9,25 @@ import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
-import com.intellij.codeInsight.completion.*
-import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
+import com.intellij.codeInsight.completion.CompletionParameters
+import com.intellij.codeInsight.completion.CompletionProvider
+import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.JSClassExpression
-import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.JSField
+import com.intellij.lang.javascript.psi.JSFunction
+import com.intellij.lang.javascript.psi.JSType
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
-import com.intellij.psi.*
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.util.ProcessingContext
+import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
 
 
 class LookupElementBuilder {
@@ -37,7 +42,7 @@ class LookupElementBuilder {
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
-    fun resolveJsType(jsType: JSType?, result: CompletionResultSet, suffix:String="") {
+    fun resolveJsType(jsType: JSType?, result: CompletionResultSet, suffix: String = "") {
         if (jsType is JSRecordTypeImpl) {
             val names = (jsType).propertyNames
             result.addAllElements(names.map { LookupElementBuilder.create(it + suffix) })
@@ -76,7 +81,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 val names = refElement.children.filter { it.elementType == HbTokenTypes.HASH }.map { it.children[0].text }
                 result.addAllElements(names.map { LookupElementBuilder.create(it) })
             }
-            val ids = PsiTreeUtil.collectElements(refElement, {it.elementType == HbTokenTypes.ID && it !is LeafPsiElement } )
+            val ids = PsiTreeUtil.collectElements(refElement, { it.elementType == HbTokenTypes.ID && it !is LeafPsiElement })
             if (ids.size == 1) {
                 resolve(ids.first(), result)
             }
@@ -96,14 +101,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(dereferencedHelper, result)
         }
 
-        if (refElement is JSClassExpression) {
+        if (refElement is JSClass) {
             result.addAllElements(refElement.fields.map { LookupElementBuilder.create(it.name!!) })
             result.addAllElements(refElement.functions.map { LookupElementBuilder.create(it.name!!) })
         }
 
         if (refElement is JSField) {
             resolveJsType(refElement.jsType, result)
-            if (refElement is JSVariableImpl<*,*> && refElement.doGetExplicitlyDeclaredType() != null) {
+            if (refElement is JSVariableImpl<*, *> && refElement.doGetExplicitlyDeclaredType() != null) {
                 val jstype = refElement.doGetExplicitlyDeclaredType()
                 resolveJsType(jstype, result)
             }
@@ -167,7 +172,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     }
 
     fun addImportCompletions(element: PsiElement, result: CompletionResultSet) {
-        val imports = PsiTreeUtil.collectElements(element.containingFile, { it is HbMustache && it.children[1].text == "import"}).map { it }
+        val imports = PsiTreeUtil.collectElements(element.containingFile, { it is HbMustache && it.children[1].text == "import" }).map { it }
         imports.forEach() {
             val importNames = it.children[2].text
                     .replace("\"", "")

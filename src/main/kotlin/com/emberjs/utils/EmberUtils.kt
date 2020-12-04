@@ -1,6 +1,5 @@
 package com.emberjs.utils
 
-import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.emberjs.EmberAttrDec
@@ -8,11 +7,11 @@ import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
 import com.emberjs.psi.EmberNamedElement
+import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
-import com.intellij.lang.ecmascript6.psi.JSClassExpression
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.*
-import com.intellij.lang.javascript.psi.ecma6.*
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.psi.PsiElement
@@ -24,7 +23,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
-import com.intellij.psi.xml.XmlAttributeDecl
 
 
 class EmberUtils {
@@ -33,8 +31,8 @@ class EmberUtils {
         fun resolveModifier(file: PsiFile): Array<JSFunction?> {
             val func = resolveDefaultExport(file)
             val installer: JSFunction? = PsiTreeUtil.collectElements(func) { it is JSFunction && it.name == "installModifier" }.firstOrNull() as JSFunction?
-            val updater: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "updateModifier"}).firstOrNull() as JSFunction?
-            val destroyer: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "destroyModifier"}).firstOrNull() as JSFunction?
+            val updater: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "updateModifier" }).firstOrNull() as JSFunction?
+            val destroyer: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "destroyModifier" }).firstOrNull() as JSFunction?
             return arrayOf(installer, updater, destroyer)
         }
 
@@ -57,13 +55,18 @@ class EmberUtils {
             while (ref is JSReferenceExpression && ref.resolve() != null) {
                 ref = ref.resolve()
             }
+
+            if (ref is JSClass || ref is JSCallExpression || ref is JSObjectLiteralExpression) {
+                return ref as PsiElement
+            }
+
             ref = ref as JSElement? ?: exp
             val func = ref?.children?.find { it is JSCallExpression }
             if (func is JSCallExpression) {
                 return func
             }
-            val cls = ref?.children?.find { it is JSClassExpression }
-            if (cls is JSClassExpression) {
+            val cls = ref?.children?.find { it is JSClass }
+            if (cls is JSClass) {
                 return cls
             }
             val obj = ref?.children?.find { it is JSObjectLiteralExpression }
@@ -89,7 +92,7 @@ class EmberUtils {
 
         fun resolveComponent(file: PsiFile): PsiElement? {
             val cls = resolveDefaultExport(file)
-            if (cls is JSClassExpression) {
+            if (cls is JSClass) {
                 return cls
             }
             return null
@@ -204,7 +207,8 @@ class EmberUtils {
             if (insideImport && element.text != "from" && element.text != "import") {
                 return null
             }
-            val imports = PsiTreeUtil.collectElements(element.containingFile, { it is HbMustache && it.children[1].text == "import" })
+            val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+            val imports = PsiTreeUtil.collectElements(hbsView, { it is HbMustache && it.children[1].text == "import" })
             val ref = imports.find {
                 val names = it.children[2].text.split(",")
                 val named = names.map {
@@ -221,7 +225,7 @@ class EmberUtils {
             }
             val index = Regex("\\b$name\\b").find(ref.children[2].text)!!.range.first
             val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
-            return HbsLocalReference.resolveToJs(file?.resolve(), listOf()) ?: ref
+            return file?.resolve() ?: ref
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {

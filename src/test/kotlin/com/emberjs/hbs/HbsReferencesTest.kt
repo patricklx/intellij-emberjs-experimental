@@ -4,13 +4,12 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
-import com.dmarcotte.handlebars.psi.impl.HbHashImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.JSClassExpression
 import com.intellij.lang.javascript.psi.JSField
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.util.PsiTreeUtil
@@ -100,10 +99,10 @@ class HbsReferencesTest : BasePlatformTestCase() {
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
         val resolvedXInHelper = element.findLast { it.parent.text == "this.x" }!!.parent.children.map { it.references }
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
-        assert(resolvedA.first() is JSClassExpression && resolvedA[1] is JSField)
-        assert(resolvedXB[0] is JSClassExpression && resolvedXB[1] is JSField && resolvedXB[2] is TypeScriptPropertySignature)
-        assert(resolvedYB.first() is JSClassExpression && resolvedA[1] is JSField /*&& need to resolve doc*/)
-        assert(resolvedXInHelper.first() is JSClassExpression && resolvedA[1] is JSField)
+        assert(resolvedA.first() is JSClass && resolvedA[1] is JSField)
+        assert(resolvedXB[0] is JSClass && resolvedXB[1] is JSField && resolvedXB[2] is TypeScriptPropertySignature)
+        assert(resolvedYB.first() is JSClass && resolvedA[1] is JSField /*&& need to resolve doc*/)
+        assert(resolvedXInHelper.first() is JSClass && resolvedA[1] is JSField)
         assert(notResolvedX.isEmpty())
     }
 
@@ -141,10 +140,10 @@ class HbsReferencesTest : BasePlatformTestCase() {
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
         val resolvedXInHelper = element.findLast { it.parent.text == "this.x" }!!.parent.children.map { it.references }
                 .filter { it.isNotEmpty() }.map { it.first().resolve() }
-        assert(resolvedA.first() is JSClassExpression && resolvedA[1] is JSField)
-        assert(resolvedXB[0] is JSClassExpression && resolvedXB[1] is JSField /*&& resolvedXB[2] is TypeScriptPropertySignature*/)
-        assert(resolvedYB.first() is JSClassExpression && resolvedA[1] is JSField /*&& need to resolve doc*/)
-        assert(resolvedXInHelper.first() is JSClassExpression && resolvedA[1] is JSField)
+        assert(resolvedA.first() is JSClass && resolvedA[1] is JSField)
+        assert(resolvedXB[0] is JSClass && resolvedXB[1] is JSField /*&& resolvedXB[2] is TypeScriptPropertySignature*/)
+        assert(resolvedYB.first() is JSClass && resolvedA[1] is JSField /*&& need to resolve doc*/)
+        assert(resolvedXInHelper.first() is JSClass && resolvedA[1] is JSField)
         assert(notResolvedX.isEmpty())
     }
 

@@ -3,7 +3,6 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
-import com.dmarcotte.handlebars.psi.impl.HbPsiElementImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.psi.EmberNamedAttribute
@@ -12,33 +11,23 @@ import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parents
-import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.JSClassExpression
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.lang.javascript.psi.types.JSSimpleRecordTypeImpl
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.html.HtmlTagImpl
-import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.scope.PsiScopeProcessor
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.search.LocalSearchScope
-import com.intellij.psi.search.SearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
-import com.intellij.psi.xml.XmlTag
-import javax.swing.Icon
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -188,7 +177,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return any as PsiElement?
             }
 
-            if (any is JSClassExpression) {
+            if (any is JSClass) {
                 val n = path.first()
                 val f = any.fields.find { it.name == n } ?: any.functions.find { it.name == n }
                 if (f == null && resolveIncomplete) {

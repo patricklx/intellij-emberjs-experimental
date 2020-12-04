@@ -22,7 +22,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.*
 import javax.swing.Icon
 
-open class EmberNamedElement(val target: PsiElement, val range: IntRange = IntRange(0, target.textLength - 1)) : PsiNameIdentifierOwner {
+open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null) : PsiNameIdentifierOwner {
     private val userDataMap = HashMap<Any, Any>()
     override fun <T : Any?> getUserData(key: Key<T>): T? {
         return this.userDataMap[key] as T?
@@ -237,6 +237,9 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange = IntRa
 
     override fun getUseScope(): SearchScope {
         val elements = mutableListOf<PsiElement>()
+        if (target.containingFile == null) {
+            return LocalSearchScope(elements.toTypedArray())
+        }
         val hbsView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
         val htmlView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         if (target.language == Language.findLanguageByID("Handlebars")) {
@@ -263,7 +266,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange = IntRa
     }
 
     override fun getName(): String {
-        if (target is XmlTag) {
+        if (target is XmlTag && range != null) {
             return target.name.substring(range)
         }
         if (target is EmberAttrDec) {
@@ -278,7 +281,10 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange = IntRa
             val r = IntRange(start, end)
             return target.text.substring(r)
         }
-        return target.text.substring(range)
+        if (range != null) {
+            return target.text.substring(range)
+        }
+        return target.text
     }
 
     override fun setName(name: String): PsiElement {

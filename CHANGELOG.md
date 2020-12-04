@@ -3,6 +3,9 @@
 Changelog
 ===============================================================================
 
+## v2020.3.2
+- fix: resolve export references correctly
+
 ## v2020.3.1
 - Fix issue with lookup of scoped packages
 - Fix issue with lookup of modifier

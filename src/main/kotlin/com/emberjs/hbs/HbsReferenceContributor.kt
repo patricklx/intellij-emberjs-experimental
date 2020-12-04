@@ -33,7 +33,7 @@ class RangedReference(element: PsiElement, val target: PsiElement?, val range: T
     private var named: EmberNamedElement?
 
     init {
-        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset)) }
+        this.named = target?.let { EmberNamedElement(it) }
         if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
             this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
@@ -138,7 +138,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
             } else {
                 it
             }
-        }
+        }.map { it.toLowerCase() }
         val mustache = element.parents.find { it is HbMustache }!!
         val path = mustache.children.findLast { it is HbParam }
         var fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
@@ -147,9 +147,18 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
         }
         if (fileRef is PsiDirectory) {
             return named
-                    .map { fileRef.findFile(it) ?: fileRef.findSubdirectory(it) }
-                    .filterNotNull()
-                    .map { RangedReference(element, it, TextRange(element.text.indexOf(it.name), it.name.length)) }
+                    .map { fileRef.findFile(it) ?: fileRef.findSubdirectory(it) ?: fileRef }
+                    .mapIndexed { index, it ->
+                        if (it is PsiDirectory) {
+                            it.findFile(named[index])
+                                    ?: it.files.find { it.name.split(".").first() == "component" }
+                                    ?: it.files.find { it.name.split(".").first() == "template" }
+                        } else {
+                            it
+                        }
+                    }
+                    .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) ?: it }  }
+                    .mapIndexed { index, it -> RangedReference(element, it, TextRange(element.text.indexOf(names[index]), names[index].length)) }
                     .toTypedArray()
         }
         if (fileRef == null) {

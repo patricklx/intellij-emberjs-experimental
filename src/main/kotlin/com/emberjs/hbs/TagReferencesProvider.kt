@@ -53,7 +53,7 @@ class TagReference(val element: XmlTag, val target: PsiElement?, val range: Text
     private var named: EmberNamedElement?
 
     init {
-        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset)) }
+        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
         if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
             this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }

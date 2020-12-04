@@ -86,6 +86,7 @@ data class EmberName(val type: String, val path: String, val importPath: String 
 
         fun from(root: VirtualFile, file: VirtualFile): EmberName? {
             val appFolder = root.findChild("app")
+            val uiFolder = appFolder?.findChild("ui")
             val addonFolder = root.findChild("addon")
             val testsFolder = root.findChild("tests")
             val unitTestsFolder = testsFolder?.findChild("unit")
@@ -94,7 +95,7 @@ data class EmberName(val type: String, val path: String, val importPath: String 
             val dummyAppFolder = testsFolder?.findFileByRelativePath("dummy/app")
 
             return fromPod(appFolder, file) ?: fromPod(addonFolder, file) ?: fromPodTest(unitTestsFolder, file)
-            ?: fromPodTest(integrationTestsFolder, file) ?: fromClassic(appFolder, file)
+            ?: fromPodTest(integrationTestsFolder, file) ?: fromClassic(appFolder, file) ?: fromClassic(uiFolder, file)
             ?: fromClassic(addonFolder, file) ?: fromClassic(dummyAppFolder, file)
             ?: fromClassicTest(unitTestsFolder, file) ?: fromClassicTest(integrationTestsFolder, file)
             ?: fromAcceptanceTest(acceptanceTestsFolder, file)
@@ -122,6 +123,9 @@ data class EmberName(val type: String, val path: String, val importPath: String 
 
             path = path.replace("/app/", "/")
             path = path.replace("/addon/", "/")
+            if (path.startsWith("app/")) {
+                path = path.replace(Regex("^app/"), "~/")
+            }
             var name = file.nameWithoutExtension.removePrefix("/")
 
             // detect flat and nested component layout (where hbs file lies in the components/ folder)
