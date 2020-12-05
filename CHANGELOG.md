@@ -3,6 +3,9 @@
 Changelog
 ===============================================================================
 
+## v2020.3.3
+- fix: resolve components with custom name (not component.ts) correctly
+
 ## v2020.3.2
 - fix: resolve export references correctly
 
