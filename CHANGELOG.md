@@ -3,6 +3,9 @@
 Changelog
 ===============================================================================
 
+## v2020.3.4
+- update intellij to 2020.3
+
 ## v2020.3.3
 - fix: resolve components with custom name (not component.ts) correctly
 
