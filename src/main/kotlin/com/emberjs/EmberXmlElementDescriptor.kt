@@ -163,8 +163,14 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         val hasSplattributes = template?.text?.contains("...attributes") ?: false
         val fullPathToTs = path.replace("app/", "addon/").replace("/templates/", "/") + "/$name.ts"
         val fullPathToDts = path.replace("app/", "addon/").replace("/templates/", "/") + "/$name.d.ts"
-        val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts)
-        val cls = tsFile?.let {EmberUtils.findDefaultExportClass(tsFile)} ?: target
+        var containingFile = target.containingFile
+        if (containingFile.name.endsWith(".js")) {
+            containingFile = dir?.findFile(containingFile.name.replace(".js", ".d.ts"))
+        }
+        val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?: containingFile
+        val cls = tsFile?.let {EmberUtils.findDefaultExportClass(tsFile)}
+                ?: containingFile?.let {EmberUtils.findDefaultExportClass(containingFile)}
+                ?: target
         if (cls is JSElement) {
             val argsElem = EmberUtils.findComponentArgsType(cls)
             val signatures = argsElem?.properties ?: emptyList()

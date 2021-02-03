@@ -2,6 +2,8 @@
 
 Changelog
 ===============================================================================
+## v2020.3.5
+- fix: resolve reference to project ts/d.ts files correctly
 
 ## v2020.3.4
 - update intellij to 2020.3

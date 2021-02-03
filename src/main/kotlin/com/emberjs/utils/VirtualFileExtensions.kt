@@ -55,7 +55,7 @@ val VirtualFile.isEmberAddonFolder: Boolean
             }
             cache[this.path] = false
             return false
-        } catch (var3: IOException) {
+        } catch (var3: Exception) {
             return false
         }
     }
