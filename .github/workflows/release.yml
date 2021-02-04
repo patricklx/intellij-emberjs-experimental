@@ -17,8 +17,9 @@ jobs:
 
       - uses: actions/setup-java@v1
         with:
-          java-version: '1.8'
+          java-version: '11'
 
+      - run: ./gradlew check
       - run: ./gradlew buildPlugin
       - run: ./gradlew publishPlugin
         env:

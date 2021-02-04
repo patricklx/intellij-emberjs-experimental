@@ -1,11 +1,11 @@
 buildscript {
     ext {
-        javaVersion = '1.8'
-        kotlinVersion = '1.4.10'
+        javaVersion = '11'
+        kotlinVersion = '1.4.21'
 
         // see https://www.jetbrains.com/intellij-repository/releases/
         // and https://www.jetbrains.com/intellij-repository/snapshots/
-        intellijVersion = '203.7148.57'
+        intellijVersion = '2020.3'
 
         // see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
         handlebarsPluginVersion = '203.5981.152'
@@ -22,7 +22,7 @@ buildscript {
 }
 
 plugins {
-    id "org.jetbrains.intellij" version "0.5.0"
+    id "org.jetbrains.intellij" version "0.6.5"
     id "com.zoltu.git-versioning" version "2.0.28"
 }
 
@@ -63,7 +63,7 @@ intellij {
     }
     compileKotlin {
         kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_1_8.toString()
+            jvmTarget = JavaVersion.VERSION_11.toString()
         }
     }
 }
