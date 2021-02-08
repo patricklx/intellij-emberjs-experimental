@@ -3,18 +3,14 @@ package com.emberjs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.RangedReference
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
 import com.intellij.lang.javascript.psi.JSElement
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptPropertySignatureImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
-import com.intellij.psi.impl.source.xml.XmlAttributeImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -24,8 +20,6 @@ import com.intellij.xml.XmlAttributeDescriptor
 import com.intellij.xml.XmlElementDescriptor
 import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
-import com.intellij.xml.impl.schema.AnyXmlAttributeDescriptor
-import com.intellij.xml.impl.schema.AnyXmlElementDescriptor
 
 class ArgData(
         var value: String = "",
@@ -42,6 +36,15 @@ class ComponentReferenceData(
 
 class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement) : XmlElementDescriptor {
     val project = tag.project
+    val version = "v2020.3.6"
+
+    override fun equals(other: Any?): Boolean {
+        return (other as EmberXmlElementDescriptor).tag == this.tag && other.version == this.version
+    }
+
+    override fun hashCode(): Int {
+        return (this.tag.name + this.version).hashCode()
+    }
 
     companion object {
 
@@ -192,7 +195,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     override fun getAttributesDescriptors(context: XmlTag?): Array<out XmlAttributeDescriptor> {
         val result = mutableListOf<XmlAttributeDescriptor>()
-        if (context == null) {
+        if (context != this.tag) {
             return result.toTypedArray()
         }
         val commonHtmlAttributes = HtmlNSDescriptorImpl.getCommonAttributeDescriptors(context)
@@ -206,7 +209,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     }
 
     override fun getAttributeDescriptor(attributeName: String?, context: XmlTag?): XmlAttributeDescriptor? {
-        if (attributeName == null || context == null) {
+        if (attributeName == null || context != this.tag) {
             return null
         }
         if (attributeName == "as") {

@@ -188,7 +188,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     override fun isValid(): Boolean {
-        return true;
+        return this.reference?.resolve() != null && this.reference.resolve()!!.isValid;
     }
 
     override fun isWritable(): Boolean {

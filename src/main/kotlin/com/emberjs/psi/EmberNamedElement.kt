@@ -243,16 +243,20 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
         val hbsView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
         val htmlView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         if (target.language == Language.findLanguageByID("Handlebars")) {
-            val hbs = target.parents.find { it is HbBlockWrapper }!!
-            val htmlElements = PsiTreeUtil.collectElements(htmlView) { hbs.textRange.contains(it.textRange) && hbs.references.any { it.isReferenceTo(target) } }
-            elements.add(hbs)
-            elements.addAll(htmlElements)
+            val hbs = target.parents.find { it is HbBlockWrapper }
+            if (hbs != null) {
+                val htmlElements = PsiTreeUtil.collectElements(htmlView) { hbs.textRange.contains(it.textRange) && hbs.references.any { it.isReferenceTo(target) } }
+                elements.add(hbs)
+                elements.addAll(htmlElements)
+            }
         }
         if (target.language == Language.findLanguageByID("HTML") && target.parents.find { it is XmlTag } != null) {
-            val html = target.parents.find { it is XmlTag }!!
-            val hbsElements = PsiTreeUtil.collectElements(hbsView) { html.textRange.contains(it.textRange) && !html.references.any { it.isReferenceTo(target) } }
-            elements.add(html)
-            elements.addAll(hbsElements)
+            val html = target.parents.find { it is XmlTag }
+            if (html != null) {
+                val hbsElements = PsiTreeUtil.collectElements(hbsView) { html.textRange.contains(it.textRange) && !html.references.any { it.isReferenceTo(target) } }
+                elements.add(html)
+                elements.addAll(hbsElements)
+            }
         }
         return LocalSearchScope(elements.toTypedArray())
     }

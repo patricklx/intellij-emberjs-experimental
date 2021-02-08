@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.6
+- fix: clean cache for attr descriptors between versions
+
 ## v2020.3.5
 - fix: resolve reference to project ts/d.ts files correctly
 
