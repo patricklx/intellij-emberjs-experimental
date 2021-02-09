@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.8
+- fix: node_modules lookup
+
 ## v2020.3.7
 - fix: references and completions from yields
 - fix: rename tag & param works again

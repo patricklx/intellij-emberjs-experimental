@@ -20,8 +20,11 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiFileSystemItem
+import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -145,8 +148,13 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                     i++
                 }
             }
+            val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
             if (!text.startsWith(".") && !text.startsWith("~")) {
-                rootFolder = rootFolder?.findChild("node_modules")
+                var parent = element.originalVirtualFile!!.parentEmberModule
+                while (parent?.parentEmberModule != null) {
+                    parent = parent.parentEmberModule
+                }
+                rootFolder = parent?.findChild("node_modules")
             }
             var path = text.split("/")
             path = path.dropLast(1)

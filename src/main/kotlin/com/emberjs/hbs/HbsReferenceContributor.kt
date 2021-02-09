@@ -8,6 +8,7 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PlatformPatterns
@@ -78,7 +79,11 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
         }
         if (!path.startsWith("~") && !path.startsWith(".")) {
-            resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
+            var parent = element.originalVirtualFile!!.parentEmberModule
+            while (parent?.parentEmberModule != null) {
+                parent = parent.parentEmberModule
+            }
+            resolvedFile = psiManager.findDirectory(parent!!)
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
         }
         val files = parts.map { s ->

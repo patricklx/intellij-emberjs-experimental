@@ -87,7 +87,7 @@ class Component {}
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/each?anchor=each
  @public
  */
-function each([items]: [any[]]) {}
+function each(params: [items: any[]]) {}
 
 /**
  The `let` helper receives one or more positional arguments and yields
@@ -133,7 +133,7 @@ function each([items]: [any[]]) {}
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/let?anchor=let
  @public
  */
-function _let([value]: [any]) {}
+function _let(params: [value: any]) {}
 
 /**
  The `fn` helper allows you to ensure a function that you are passing off
@@ -428,7 +428,7 @@ function _debugger(params: string[]) {}
  @public
  @since 2.1.0
  */
-function eachIn([object]: [Object]) {}
+function eachIn(params: [object: Object]) {}
 
 /**
  Dynamically look up a property on an object. The second argument to `{{get}}`
@@ -491,7 +491,7 @@ function eachIn([object]: [Object]) {}
  @for Ember.Templates.helpers
  @since 2.1.0
  */
-function get([object, path]: [Object, string]): any {}
+function get(params: [object: Object, path: string]): any {}
 
 /**
  The `if` helper allows you to conditionally render one of two branches,

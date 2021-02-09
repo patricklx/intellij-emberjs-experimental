@@ -154,8 +154,10 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is HbParam) {
+                if (element.children.isNotEmpty() && element.children[0].references.isNotEmpty()) {
+                    return element.children.getOrNull(0)?.let { followReferences(it) }
+                }
                 return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
-
             }
 
             if (element is EmberNamedElement) {

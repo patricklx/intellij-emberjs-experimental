@@ -45,7 +45,7 @@ class HbsParameterNameHints : InlayParameterHintsProvider {
             }
 
             var func = EmberUtils.followReferences(firstParam)
-            if (func == firstParam) {
+            if (func == firstParam && firstParam.children.isNotEmpty()) {
                 func = EmberUtils.followReferences(firstParam.children[0])
                 if (func == firstParam.children[0]) {
                     val id = PsiTreeUtil.collectElements(firstParam) { it !is LeafPsiElement && it.elementType == HbTokenTypes.ID }.lastOrNull()
