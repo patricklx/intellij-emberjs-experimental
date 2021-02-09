@@ -6,6 +6,7 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptStringLiteralTypeIm
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlElement
 import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlAttributeDescriptor
@@ -17,6 +18,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
     private val isRequired: Boolean
     private val values: List<String>
     val reference: PsiReference?
+    val xmlattr: XmlAttribute?
     val isYield: Boolean
     init {
         this.isYield = isYield
@@ -27,6 +29,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
         }
         this.description = description ?: ""
         this.reference = reference ?: references?.firstOrNull()
+        this.xmlattr = context.getAttribute(value)
         this.declaration = EmberAttrDec(
                 this,
                 reference,

@@ -4,9 +4,11 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.lang.Language
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parentsWithSelf
+import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.rd.util.assert
@@ -204,11 +206,12 @@ class HbsCompletionTest : BasePlatformTestCase() {
         val hbsWithYield = """
             {{#let (hash name='Sarah' title=office) as |item|}}
                 {{yield item}}
-            {{/each}} 
+            {{/let}} 
         """.trimIndent()
         val hbs = """
             <MyComponent as |item|>
                 {{item.}}
+                <it
             </MyComponent>
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
@@ -222,5 +225,44 @@ class HbsCompletionTest : BasePlatformTestCase() {
         myFixture.complete(CompletionType.BASIC)
         val completions = myFixture.lookupElementStrings!!
         assert(completions.containsAll(listOf("name", "title")))
+
+        val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+        val elementTag = PsiTreeUtil.collectElements(htmlView, { it is XmlTag && it.name.startsWith("it") })
+
+        myFixture.editor.caretModel.moveToOffset(elementTag.first().endOffset)
+        myFixture.complete(CompletionType.BASIC)
+        val tagCompletions = myFixture.lookupElementStrings!!
+        assert(tagCompletions.containsAll(listOf("item", "item.name", "item.title")))
+    }
+
+    fun testBlockToYieldHashCompletion() {
+        val hbsWithYield = """
+            {{yield x (hash name='Sarah' title=office)}}
+        """.trimIndent()
+        val hbs = """
+            <MyComponent as |x item|>
+                {{item.}}
+                <item
+            </MyComponent>
+        """.trimIndent()
+        myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
+        myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
+        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject(".ember-cli", "")
+        myFixture.configureByFile("app/routes/index/template.hbs")
+        val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })
+        val resolvedA = element.findLast { it.parent.text == "item" }!!.parent.parent.parent.nextSibling
+        myFixture.editor.caretModel.moveToOffset(resolvedA.endOffset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.containsAll(listOf("name", "title")))
+
+        val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+        val elementTag = PsiTreeUtil.collectElements(htmlView, { it is XmlTag && it.name.startsWith("item") })
+
+        myFixture.editor.caretModel.moveToOffset(elementTag.first().endOffset)
+        myFixture.complete(CompletionType.BASIC)
+        val tagCompletions = myFixture.lookupElementStrings!!
+        assert(tagCompletions.containsAll(listOf("item.name", "item.title")))
     }
 }

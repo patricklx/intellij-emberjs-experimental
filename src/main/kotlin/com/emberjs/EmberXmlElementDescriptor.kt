@@ -36,7 +36,7 @@ class ComponentReferenceData(
 
 class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement) : XmlElementDescriptor {
     val project = tag.project
-    val version = "v2020.3.6"
+    val version = "v2020.3.7"
 
     override fun equals(other: Any?): Boolean {
         return (other as EmberXmlElementDescriptor).tag == this.tag && other.version == this.version
@@ -81,7 +81,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         }
 
         override fun resolve(): PsiElement? {
-            return yieldBlock.children.find { it.elementType == HbTokenTypes.PARAM }
+            return yieldBlock
         }
     }
 

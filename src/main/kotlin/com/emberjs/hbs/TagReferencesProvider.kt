@@ -3,6 +3,8 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
+import com.dmarcotte.handlebars.psi.HbPath
+import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.EmberAttributeDescriptor
@@ -34,7 +36,7 @@ import com.intellij.util.ProcessingContext
  */
 fun toAttributeReference(target: XmlAttribute): PsiReference? {
     val name = target.name
-    if (name.startsWith("|") || name.endsWith("|") && target.descriptor?.declaration != null) {
+    if ((name.startsWith("|") || name.endsWith("|")) && target.descriptor?.declaration != null) {
         var range = TextRange(0, name.length)
         if (name.startsWith("|")) {
             range = TextRange(1, range.endOffset)
@@ -100,18 +102,19 @@ class TagReferencesProvider : PsiReferenceProvider() {
             return fromNamedYields(tag, name.removePrefix(":"))
         }
         // find html blocks with attribute |name|
+        var blockParamIdx = 0
         var refPsi: PsiElement? = null
         val angleBracketBlock: XmlTag? = tag.parentsWithSelf
                 .find {
-                    it is XmlTag && it.attributes.find {
-                        it.text.startsWith("|") && it.text.replace("|", "").split(" ").contains(name)
-                    } != null
+                    it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*$name.*\\|"))
                 } as XmlTag?
 
         if (angleBracketBlock != null) {
-            refPsi = angleBracketBlock.attributes.find {
-                it.text.startsWith("|") && it.text.replace("|", "").split(" ").contains(name)
-            }
+            val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
+            val endIdx = angleBracketBlock.attributes.size
+            val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
+            refPsi = params.find { Regex("\\|*.*$name.*\\|*").matches(it.text) }
+            blockParamIdx = params.indexOf(refPsi)
         }
 
         // find mustache block |params| which has tag as a child
@@ -124,10 +127,14 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 }
 
         val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name}
+        blockParamIdx = hbBlockRef?.children?.firstOrNull()?.children?.indexOf(param) ?: blockParamIdx
         val parts = fullName.split(".")
         var ref = param ?: refPsi
         parts.subList(1, parts.size).forEach { part ->
             ref = EmberUtils.followReferences(ref)
+            if (ref is HbSimpleMustache) {
+                ref = (ref as HbSimpleMustache).children.filter { it is HbParam }.getOrNull(blockParamIdx)
+            }
             if (ref is HbParam && ref!!.children.getOrNull(1)?.text == "hash") {
                 ref = ref!!.children.filter { c -> c is HbHash }.find { c -> (c as HbHash).hashName == part }
                 if (ref is HbHash) {

@@ -100,7 +100,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     override fun getTextOffset(): Int {
-        return 0
+        return descriptor.context.attributes.find { it.descriptor == descriptor }!!.textOffset
     }
 
     override fun getText(): String {
@@ -188,7 +188,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     override fun isValid(): Boolean {
-        return this.reference?.resolve() != null && this.reference.resolve()!!.isValid;
+        return true;
     }
 
     override fun isWritable(): Boolean {
@@ -260,7 +260,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
         if (this.name.endsWith("|")) {
             newName += "|"
         }
-        descriptor.context.attributes.find { it.name == this.name }?.name = newName
+        descriptor.xmlattr?.name = newName
         this.name = newName
         return this
     }

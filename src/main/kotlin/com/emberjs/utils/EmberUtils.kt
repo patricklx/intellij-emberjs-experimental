@@ -2,6 +2,7 @@ package com.emberjs.utils
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
+import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
@@ -23,6 +24,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlTag
 
 
 class EmberUtils {
@@ -268,6 +270,31 @@ class EmberUtils {
                 val tag = element.parent
                 return tag.attributes.find { it.name == "as" }
             }
+            return null
+        }
+
+        fun findTagYield2(element: PsiElement?): PsiElement? {
+            var tag: XmlTag? = null
+            var name: String? = null
+            if (element is EmberAttrDec && element.name != "as") {
+                tag = element.parent
+                name = element.name
+            }
+            if (element is XmlAttribute && element.name != "as") {
+                tag = element.parent
+                name = element.name
+            }
+            if (tag != null) {
+                val asAttr = tag.attributes.find { it.name == "as" }!!
+                val yields = tag.attributes.map { it.text }.joinToString(" ").split("|")[1]
+                val idx = yields.split(" ").indexOf(name)
+                val ref = asAttr.references.find { it is HbsLocalReference }
+                if (ref is HbPathImpl) {
+                    val params = ref.children.filter { it is HbParam }
+                    return params.getOrNull(idx)
+                }
+            }
+
             return null
         }
     }

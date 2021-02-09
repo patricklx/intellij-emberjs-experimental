@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## v2020.3.7
+- fix: references and completions from yields
+- fix: rename tag & param works again
+- improve: references and completions from yields by param
+
 ## v2020.3.6
 - fix: clean cache for attr descriptors between versions
 

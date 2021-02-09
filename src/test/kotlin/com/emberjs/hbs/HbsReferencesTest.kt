@@ -5,15 +5,18 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSField
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.model.psi.impl.referencesAt
 import com.intellij.psi.PsiElement
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
+import com.intellij.refactoring.suggested.startOffset
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.rd.util.assert
 
@@ -35,7 +38,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         val resolvedIndex = element.find { it.text == "index" }?.children?.get(0)?.references?.find { it is HbsLocalReference }?.resolve()
         val resolvedItemInFn = element.find { it.text == "item" }?.children?.get(0)?.references?.find { it is HbsLocalReference }?.resolve()
         val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
-        val declaration = (PsiTreeUtil.collectElements(htmlView, { it is HtmlTag && it.name == "item" }).first() as HtmlTag).descriptor?.declaration
+        val declaration = (PsiTreeUtil.collectElements(htmlView, { it is HtmlTag && it.name == "item" }).first() as HtmlTag).references.lastOrNull()?.resolve()
         assert(declaration.elementType == HbTokenTypes.ID && declaration?.text == "item")
         assert(resolvedItem != null)
         assert(resolvedItemA != null)
@@ -262,11 +265,11 @@ class HbsReferencesTest : BasePlatformTestCase() {
     fun testBlockToYieldHashRef() {
         val hbsWithYield = """
             {{#let (hash name='Sarah' title=office) as |item|}}
-                {{yield item}}
+                {{yield x item}}
             {{/each}} 
         """.trimIndent()
         val hbs = """
-            <MyComponent as |item|>
+            <MyComponent as |x item|>
                 {{item.name}}
             </MyComponent>
         """.trimIndent()
@@ -279,5 +282,35 @@ class HbsReferencesTest : BasePlatformTestCase() {
         val resolvedA = element.find { it.parent.text == "item.name" }!!.parent.children.map { it.references }
                 .map { it.firstOrNull()?.resolve() }
         assert(resolvedA.first() is EmberNamedElement && resolvedA.last() is HbHash)
+    }
+
+    fun testHtmlBlockToYieldHashRef() {
+        val hbsWithYield = """
+            {{#let (hash name='Sarah' title=office) as |item|}}
+                {{yield item}}
+            {{/each}} 
+        """.trimIndent()
+        val hbs = """
+            <MyComponent as |header|>
+                <header></header>
+                <header.name />
+            </MyComponent>
+        """.trimIndent()
+        myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
+        myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
+        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject(".ember-cli", "")
+        myFixture.configureByFile("app/routes/index/template.hbs")
+        val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+        val element = PsiTreeUtil.collectElements(htmlView, { it.text == "header" }).first()
+        val resolvedA = element.parent.references.lastOrNull()?.resolve()
+        assert(resolvedA is EmberNamedAttribute)
+
+        val elementWithDotName = PsiTreeUtil.collectElements(htmlView, { it.text == "header.name" }).first()
+        val resolvedItem = elementWithDotName.parent.references[1].resolve()
+        assert(resolvedItem is EmberNamedAttribute)
+
+        val resolvedItemNamed = elementWithDotName.parent.references[2].resolve()
+        assert((resolvedItemNamed as EmberNamedElement).target is HbParam)
     }
 }

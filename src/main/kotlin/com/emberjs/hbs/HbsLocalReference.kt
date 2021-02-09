@@ -28,6 +28,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
+import com.intellij.psi.xml.XmlTag
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -89,8 +90,28 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
             this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl) }
         }
-
     }
+
+    fun resolveYield(): PsiElement? {
+        val name = leaf.text
+        val res = this.resolve()
+        if (res is XmlAttributeDecl) {
+            val tag = res.context as XmlTag
+            val index = tag.attributes.indexOfFirst { it.text == "as" }
+            val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
+            val r = blockParams.find { it.text.matches(Regex("^\\|*$name\\|*$")) }
+            val idx = blockParams.indexOf(r)
+            var ref = tag.attributes[index] as PsiElement?
+            ref = EmberUtils.followReferences(ref)
+            if (ref is HbSimpleMustache) {
+                ref = ref.children.filter { it is HbParam }.getOrNull(idx)
+                return ref
+            }
+            return return null
+        }
+        return null
+    }
+
     override fun resolve(): PsiElement? {
         if (target?.originalVirtualFile?.path != leaf.originalVirtualFile?.path) {
             return target
@@ -140,6 +161,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             if (any is PsiElement && any.references.find { it is HbsLocalReference } != null) {
                 val ref = any.references.find { it is HbsLocalReference }
                 return resolveToJs(ref?.resolve(), path, resolveIncomplete)
+            }
+
+            if (any is HbSimpleMustache && any.text.startsWith("{{yield ")) {
+                path.first()
             }
 
             if (any is HbParam) {
@@ -278,7 +303,12 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
             // for this.x.y
             if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
-                return HbsLocalReference(element, resolveToJs(sibling.references.find { it is HbsLocalReference }!!.resolve(), listOf(element.text)))
+                val ref = sibling.references.find { it is HbsLocalReference } as HbsLocalReference
+                val yieldRef = ref.resolveYield()
+                if (yieldRef != null) {
+                    return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
+                }
+                return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
             }
 
             if (element.parent is HbOpenBlockMustache) {

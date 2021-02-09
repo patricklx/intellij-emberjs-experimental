@@ -279,7 +279,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
             if (target.name.startsWith("|")) {
                 start = 1
             }
-            if (target.name.startsWith("|")) {
+            if (target.name.endsWith("|")) {
                 end -= 1
             }
             val r = IntRange(start, end)

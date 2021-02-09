@@ -69,10 +69,12 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (anything.references.find { it is HbsLocalReference } != null) {
+            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
             resolve(anything.references.find { it is HbsLocalReference }!!.resolve(), result)
         }
 
         if (anything.reference is HbsLocalReference) {
+            resolve((anything.reference as HbsLocalReference?)?.resolveYield(), result)
             resolve(anything.reference?.resolve(), result)
         }
 
@@ -85,11 +87,6 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             if (ids.size == 1) {
                 resolve(ids.first(), result)
             }
-        }
-
-        val dereferenceYield = EmberUtils.findTagYield(anything)
-        if (dereferenceYield != null) {
-            resolve(dereferenceYield, result)
         }
 
         if (anything is XmlAttribute) {
