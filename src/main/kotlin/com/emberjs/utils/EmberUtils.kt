@@ -214,15 +214,15 @@ class EmberUtils {
             val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val imports = PsiTreeUtil.collectElements(hbsView, { it is HbMustache && it.children[1].text == "import" })
             val ref = imports.find {
-                val names = it.children[2].text.split(",")
+                val names = it.children[2].text.replace("'", "").replace("\"", "").split(",")
                 val named = names.map {
                     if (it.contains(" as ")) {
                         it.split(" as ").last()
                     } else {
                         it
                     }
-                }
-                named.contains(name)
+                }.map { it.toLowerCase().replace(" ", "") }
+                named.contains(name.toLowerCase())
             }
             if (ref == null) {
                 return null

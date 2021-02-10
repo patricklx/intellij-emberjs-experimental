@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.9
+- fix: correctly process multi import statements
+
 ## v2020.3.8
 - fix: node_modules lookup
 

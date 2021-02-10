@@ -186,8 +186,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 val name = importNames.split(" as ").last()
                 result.addElement(LookupElementBuilder.create(name))
             }
-            val names = it.children[2].text.split(",")
-            result.addAllElements(names.map { LookupElementBuilder.create(it.replace(" ", "")) })
+            val names = importNames.split(",").map { it.replace(" ", "") }
+            result.addAllElements(names.map { LookupElementBuilder.create(it) })
         }
     }
 

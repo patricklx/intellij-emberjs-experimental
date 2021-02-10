@@ -136,14 +136,14 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
 class ImportNameReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
-        val names = element.text.split(",")
+        val names = element.text.replace("'", "").replace("\"", "").split(",")
         val named = names.map {
             if (it.contains(" as ")) {
                 it.split(" as ").first()
             } else {
                 it
             }
-        }.map { it.toLowerCase() }
+        }.map { it.toLowerCase().replace(" ", "") }
         val mustache = element.parents.find { it is HbMustache }!!
         val path = mustache.children.findLast { it is HbParam }
         var fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
@@ -155,15 +155,22 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                     .map { fileRef.findFile(it) ?: fileRef.findSubdirectory(it) ?: fileRef }
                     .mapIndexed { index, it ->
                         if (it is PsiDirectory) {
-                            it.findFile(named[index])
-                                    ?: it.files.find { it.name.split(".").first() == "component" }
-                                    ?: it.files.find { it.name.split(".").first() == "template" }
+                            val subdir = it.findSubdirectory(named[index])
+                            if (subdir != null) {
+                                subdir.files.find { it.name.split(".").first() == "component" }
+                                ?: subdir.files.find { it.name.split(".").first() == "template" }
+                            } else{
+                                it.files.find { it.name.split(".").first() == named[index] }
+                                        ?: it.files.find { it.name.split(".").first() == "component" }
+                                        ?: it.files.find { it.name.split(".").first() == "template" }
+                            }
+
                         } else {
                             it
                         }
                     }
                     .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) ?: it }  }
-                    .mapIndexed { index, it -> RangedReference(element, it, TextRange(element.text.indexOf(names[index]), names[index].length)) }
+                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
         if (fileRef == null) {
