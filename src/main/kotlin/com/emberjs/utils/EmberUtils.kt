@@ -153,13 +153,6 @@ class EmberUtils {
 
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
-            if (element is HbParam) {
-                if (element.children.isNotEmpty() && element.children[0].references.isNotEmpty()) {
-                    return element.children.getOrNull(0)?.let { followReferences(it) }
-                }
-                return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
-            }
-
             if (element is EmberNamedElement) {
                 return followReferences(element.target, path)
             }
@@ -167,6 +160,13 @@ class EmberUtils {
             val resHelper = handleEmberHelpers(element)
             if (resHelper != null) {
                 return followReferences(resHelper, path)
+            }
+
+            if (element is HbParam) {
+                if (element.children.isNotEmpty() && element.children[0].references.isNotEmpty()) {
+                    return element.children.getOrNull(0)?.let { followReferences(it) }
+                }
+                return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
             }
 
             val resYield = findTagYield(element)
@@ -233,15 +233,18 @@ class EmberUtils {
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
+            if (element is PsiElement && element is HbParam && element.text.startsWith("(component")) {
+                return element.children.filter { it is HbParam }.get(1)
+            }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
-                val helpers = arrayOf("let", "each", "with")
+                val helpers = arrayOf("let", "each", "with", "component")
                 if (helpers.contains(mustacheName)) {
                     val param = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.PARAM, null)
                     if (param == null) {
                         return null
                     }
-                    if (mustacheName == "let" || mustacheName == "with") {
+                    if (mustacheName == "let" || mustacheName == "with" || mustacheName == "component") {
                         return param
                     }
                     if (mustacheName == "each") {

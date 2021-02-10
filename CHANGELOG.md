@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.10
+- feature: follow components invoked with {{component x}}
+
 ## v2020.3.9
 - fix: correctly process multi import statements
 
