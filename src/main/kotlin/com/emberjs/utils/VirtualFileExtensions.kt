@@ -7,6 +7,7 @@ import com.intellij.util.text.CharSequenceReader
 import java.io.IOException
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.intellij.psi.PsiElement
+import org.jetbrains.annotations.Nullable
 import org.mozilla.javascript.ast.AstNode
 
 val VirtualFile.parents: Iterable<VirtualFile>
@@ -91,7 +92,10 @@ fun findMainPackageJsonFile(file: VirtualFile) = file.parents.asSequence()
 
 fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.parse(it, null) }
 
-
+fun findMainProjectName(file: VirtualFile):String? {
+    val json: PackageJsonData? = findMainPackageJson(file)
+    return json?.name
+}
 
 fun HbParseDefinition.createElement(node: AstNode): PsiElement? {
     return null

@@ -135,9 +135,11 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (element.elementType == HbTokenTypes.STRING && element.parents.find { it is HbMustache && it.children[1].text == "import"} != null) {
             var text = element.text.replace("IntellijIdeaRulezzz ", "")
             text = text.substring(1, text.length)
+            val name = findMainProjectName(element.originalVirtualFile!!)
             if (text == "") {
                 result.addElement(LookupElementBuilder.create("~/"))
                 result.addElement(LookupElementBuilder.create("."))
+                result.addElement(LookupElementBuilder.create(name + "/"))
             }
             var rootFolder = element.originalVirtualFile?.parentEmberModule
             if (text.startsWith(".")) {
@@ -148,7 +150,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                     i++
                 }
             }
-            val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
+
+            if (text.split("/").first() == name) {
+                text = text.replace(Regex("^$name/"), "~/")
+            }
             if (!text.startsWith(".") && !text.startsWith("~")) {
                 var parent = element.originalVirtualFile!!.parentEmberModule
                 while (parent?.parentEmberModule != null) {

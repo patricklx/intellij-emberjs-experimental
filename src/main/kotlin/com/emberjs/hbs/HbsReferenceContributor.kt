@@ -72,9 +72,16 @@ class RangedReference(element: PsiElement, val target: PsiElement?, val range: T
 class ImportPathReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<RangedReference> {
         val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
-        val path = element.text.substring(1, element.text.lastIndex)
+        var path = element.text.substring(1, element.text.lastIndex)
         var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent
         var parts = path.split("/")
+
+        val name = findMainProjectName(element.originalVirtualFile!!)
+
+        if (parts[0] == name) {
+            path = path.replace(Regex("^$name/"), "~/")
+        }
+
         if (path.startsWith("~")) {
             resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
         }
