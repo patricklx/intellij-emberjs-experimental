@@ -166,9 +166,9 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
             if (rootFolder != null) {
                 val validExtensions = arrayOf("css", "js", "ts")
-                val names = rootFolder!!.children.filter { validExtensions.contains(it.name.split(".").last()) }
+                val names = rootFolder!!.children.filter { it.isDirectory || validExtensions.contains(it.name.split(".").last()) }
                         .map {
-                            val name = it.name + if(it.isDirectory) "/" else ""
+                            val name = it.name
                             LookupElementBuilder.create(name.split(".").first())
                         }
                 result.addAllElements(names)
