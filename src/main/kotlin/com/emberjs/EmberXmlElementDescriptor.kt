@@ -141,7 +141,9 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
                     .joinToString("/")
 
             val fullPathToHbs = path.replace("app/", "addon/") + "/$name.hbs"
-            template = template ?: getFileByPath(parentModule, fullPathToHbs)
+            template = template
+                    ?: getFileByPath(parentModule, fullPathToHbs)
+                    ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
 
             if (template?.node?.psi != null) {
                 val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)

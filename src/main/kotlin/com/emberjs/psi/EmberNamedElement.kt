@@ -285,9 +285,6 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
             val r = IntRange(start, end)
             return target.text.substring(r)
         }
-        if (range != null) {
-            return target.text.substring(range)
-        }
         return target.text
     }
 

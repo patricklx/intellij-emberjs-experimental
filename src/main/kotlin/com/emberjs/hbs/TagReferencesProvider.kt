@@ -134,6 +134,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             ref = EmberUtils.followReferences(ref)
             if (ref is HbSimpleMustache) {
                 ref = (ref as HbSimpleMustache).children.filter { it is HbParam }.getOrNull(blockParamIdx)
+                ref = EmberUtils.followReferences(ref) ?: ref
             }
             if (ref is HbParam && ref!!.children.getOrNull(1)?.text == "hash") {
                 ref = ref!!.children.filter { c -> c is HbHash }.find { c -> (c as HbHash).hashName == part }
