@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## v2020.3.11
+- feature: resolve `or` helper
+- fix: import path completion
+- resolve in addon imports
+
 ## v2020.3.10
 - feature: follow components invoked with {{component x}}
 
