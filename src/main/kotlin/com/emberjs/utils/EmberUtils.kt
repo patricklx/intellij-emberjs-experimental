@@ -7,6 +7,7 @@ import com.emberjs.EmberAttrDec
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
+import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
@@ -233,8 +234,16 @@ class EmberUtils {
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
-            if (element is PsiElement && element is HbParam && element.text.startsWith("(component")) {
-                return element.children.filter { it is HbParam }.get(1)
+            if (element is PsiElement && element is HbParam && element.text.contains(Regex("^\\(component\\b"))) {
+                val param = element.children.filterIsInstance<HbParam>().get(1)
+                if (param.children.firstOrNull()?.children?.firstOrNull() is HbStringLiteral) {
+                    return TagReferencesProvider.forTagName(param.project, param.text.dropLast(1).drop(1).camelize())
+                }
+                return param
+            }
+            if (element is PsiElement && element is HbParam && element.text.contains(Regex("^\\(or\\b"))) {
+                return element.children.find { it is HbParam && it.text != "or" && it.children[0].children[0].references.isNotEmpty() } ?:
+                element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^\\(component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text

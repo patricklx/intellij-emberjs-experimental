@@ -25,12 +25,14 @@ fun String.classify(): String {
 }
 
 private val STRING_DECAMELIZE_REGEXP = Regex("([a-z\\d])([A-Z])")
+private val STRING_CAMELIZE_REGEXP = Regex("-([a-z])")
 
 fun String.decamelize(): String = replace(STRING_DECAMELIZE_REGEXP, "$1_$2").toLowerCase(Locale.ROOT)
 
 private val STRING_DASHERIZE_REGEXP = Regex("[ _]")
 
 fun String.dasherize(): String = decamelize().replace(STRING_DASHERIZE_REGEXP, "-")
+fun String.camelize(): String = this.take(1).toUpperCase() + this.takeLast(this.length-1).replace(STRING_CAMELIZE_REGEXP) { it.value.takeLast(1).toUpperCase() }
 
 fun String.prepend(prefix: String) = "$prefix${this}"
 fun String.append(suffix: String) = "${this}$suffix"

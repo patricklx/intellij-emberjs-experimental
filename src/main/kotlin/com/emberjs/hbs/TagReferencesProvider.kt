@@ -18,6 +18,7 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.ProjectScope
@@ -29,6 +30,7 @@ import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
 import com.intellij.util.ProcessingContext
+import org.jetbrains.annotations.Nullable
 
 
 /**
@@ -158,35 +160,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             return local
         }
 
-        val internalComponentsFile = PsiFileFactory.getInstance(tag.project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
-        val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
-
-        if (internalComponents.properties.map { it.name }.contains(tag.name)) {
-            val prop = internalComponents.properties.find { it.name == tag.name }
-            return (prop?.jsType?.sourceElement as JSReferenceExpression).resolve()
-        }
-
-        val project = tag.project
-        val scope = ProjectScope.getAllScope(project)
-        val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
-
-        val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.tagName == tag.name }
-                .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
-                .mapNotNull { psiManager.findFile(it) }
-        // find name.hbs first, then template.hbs
-        val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
-
-        if (componentTemplate != null) return componentTemplate
-
-        val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.tagName == tag.name }
-                .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
-                .mapNotNull { psiManager.findFile(it) }
-        // find name.js first, then component.js
-        val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
-
-        if (component != null) return JsOrFileReference(component).resolve()
-
-        return null
+        return Companion.forTagName(tag.project, tag.name)
     }
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<TagReference> {
         val tag = element as XmlTag
@@ -212,5 +186,37 @@ class TagReferencesProvider : PsiReferenceProvider() {
             TagReference(tag, elem, range)
         }
         return references.filterNotNull().toTypedArray()
+    }
+
+    companion object {
+        fun forTagName(project: Project, name: String): PsiElement? {
+            val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
+            val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
+
+            if (internalComponents.properties.map { it.name }.contains(name)) {
+                val prop = internalComponents.properties.find { it.name == name }
+                return (prop?.jsType?.sourceElement as JSReferenceExpression).resolve()
+            }
+
+            val scope = ProjectScope.getAllScope(project)
+            val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
+
+            val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.tagName == name }
+                    .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+                    .mapNotNull { psiManager.findFile(it) }
+            // find name.hbs first, then template.hbs
+            val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
+
+            if (componentTemplate != null) return componentTemplate
+
+            val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.tagName == name }
+                    .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+                    .mapNotNull { psiManager.findFile(it) }
+            // find name.js first, then component.js
+            val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
+
+            if (component != null) return JsOrFileReference(component).resolve()
+            return null
+        }
     }
 }
