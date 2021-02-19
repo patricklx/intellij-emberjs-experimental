@@ -222,8 +222,8 @@ class EmberUtils {
                     } else {
                         it
                     }
-                }.map { it.toLowerCase().replace(" ", "") }
-                named.contains(name.toLowerCase())
+                }.map { it.replace(" ", "") }
+                named.contains(name)
             }
             if (ref == null) {
                 return null
