@@ -3,18 +3,15 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
-import com.dmarcotte.handlebars.psi.HbPath
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.emberjs.EmberAttrDec
-import com.emberjs.EmberAttributeDescriptor
 import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.JsOrFileReference
 import com.emberjs.utils.EmberUtils
-import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
@@ -30,7 +27,6 @@ import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
 import com.intellij.util.ProcessingContext
-import org.jetbrains.annotations.Nullable
 
 
 /**
@@ -52,21 +48,14 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
 }
 
 
-class TagReference(val element: XmlTag, val target: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
-    private var namedXml: EmberNamedAttribute? = null
-    private var named: EmberNamedElement?
+class TagReference(val element: XmlTag, val fullName: String, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
 
-    init {
-        this.named = target?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
-        if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
-            this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
-        }
-    }
     override fun resolve(): PsiElement? {
-        if (target is XmlAttribute) {
-            return namedXml
+        val t = TagReferencesProvider.forTag(element, fullName)
+        if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
+            return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
-        return named
+        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
     }
 
     override fun getRangeInElement(): TextRange {
@@ -83,95 +72,12 @@ class TagReference(val element: XmlTag, val target: PsiElement?, val range: Text
 
 class TagReferencesProvider : PsiReferenceProvider() {
 
-    fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
-        val angleComponents = tag.parents.find {
-            it is XmlTag && it.descriptor is EmberXmlElementDescriptor
-        } as XmlTag
-        val data = (angleComponents.descriptor as EmberXmlElementDescriptor).getReferenceData()
-        val tplYields = data.yields
-
-        return tplYields
-                .map { it.yieldBlock }
-                .filterNotNull()
-                .find {
-                    it.children.find { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name} != null
-                }
-    }
-
-    fun fromLocalBlock(tag: XmlTag, fullName: String): PsiElement? {
-        val name = fullName.split(".").first()
-        if (name.startsWith(":")) {
-            return fromNamedYields(tag, name.removePrefix(":"))
-        }
-        // find html blocks with attribute |name|
-        var blockParamIdx = 0
-        var refPsi: PsiElement? = null
-        val angleBracketBlock: XmlTag? = tag.parentsWithSelf
-                .find {
-                    it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*$name.*\\|"))
-                } as XmlTag?
-
-        if (angleBracketBlock != null) {
-            val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
-            val endIdx = angleBracketBlock.attributes.size
-            val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
-            refPsi = params.find { Regex("\\|*.*$name.*\\|*").matches(it.text) }
-            blockParamIdx = params.indexOf(refPsi)
-        }
-
-        // find mustache block |params| which has tag as a child
-        val hbsView = tag.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
-        val hbBlockRef = PsiTreeUtil.collectElements(hbsView, { it is HbOpenBlockMustacheImpl })
-                .filter { it.text.contains(Regex("\\|.*$name.*\\|")) }
-                .map { it.parent }
-                .find { block ->
-                    block.textRange.contains(tag.textRange)
-                }
-
-        val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name}
-        blockParamIdx = hbBlockRef?.children?.firstOrNull()?.children?.indexOf(param) ?: blockParamIdx
-        val parts = fullName.split(".")
-        var ref = param ?: refPsi
-        parts.subList(1, parts.size).forEach { part ->
-            ref = EmberUtils.followReferences(ref)
-            if (ref is HbSimpleMustache) {
-                ref = (ref as HbSimpleMustache).children.filter { it is HbParam }.getOrNull(blockParamIdx)
-                ref = EmberUtils.followReferences(ref) ?: ref
-            }
-            if (ref is HbParam && ref!!.children.getOrNull(1)?.text == "hash") {
-                ref = ref!!.children.filter { c -> c is HbHash }.find { c -> (c as HbHash).hashName == part }
-                if (ref is HbHash) {
-                    ref = ref!!.children.last()
-                    ref = EmberUtils.followReferences(ref)
-                }
-            }
-        }
-        return ref
-    }
-
-    fun fromImports(tag: XmlTag): PsiElement? {
-        return EmberUtils.referenceImports(tag, tag.name.split(".").first())
-    }
-
-    fun forTag(tag: XmlTag?, fullName: String): PsiElement? {
-        if (tag == null) return null
-        val local = fromLocalBlock(tag, fullName) ?: fromImports(tag)
-        if (local != null) {
-            return local
-        }
-
-        return Companion.forTagName(tag.project, tag.name)
-    }
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<TagReference> {
         val tag = element as XmlTag
         val parts = tag.name.split(".")
         val references = parts.mapIndexed { index, s ->
             val p = parts.subList(0, index).joinToString(".")
             val fullName = parts.subList(0, index + 1).joinToString(".")
-            val elem = forTag(tag, fullName)
-            if (elem == null) {
-                return@mapIndexed null
-            }
 
             val offset: Int
             if (p.length == 0) {
@@ -183,12 +89,93 @@ class TagReferencesProvider : PsiReferenceProvider() {
             }
 
             val range = TextRange(offset, offset + s.length)
-            TagReference(tag, elem, range)
+            TagReference(tag, fullName, range)
         }
         return references.filterNotNull().toTypedArray()
     }
 
     companion object {
+
+        fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
+            val angleComponents = tag.parents.find {
+                it is XmlTag && it.descriptor is EmberXmlElementDescriptor
+            } as XmlTag
+            val data = (angleComponents.descriptor as EmberXmlElementDescriptor).getReferenceData()
+            val tplYields = data.yields
+
+            return tplYields
+                    .map { it.yieldBlock }
+                    .filterNotNull()
+                    .find {
+                        it.children.find { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name} != null
+                    }
+        }
+
+        fun fromLocalBlock(tag: XmlTag, fullName: String): PsiElement? {
+            val name = fullName.split(".").first()
+            if (name.startsWith(":")) {
+                return fromNamedYields(tag, name.removePrefix(":"))
+            }
+            // find html blocks with attribute |name|
+            var blockParamIdx = 0
+            var refPsi: PsiElement? = null
+            val angleBracketBlock: XmlTag? = tag.parentsWithSelf
+                    .find {
+                        it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*$name.*\\|"))
+                    } as XmlTag?
+
+            if (angleBracketBlock != null) {
+                val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
+                val endIdx = angleBracketBlock.attributes.size
+                val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
+                refPsi = params.find { Regex("\\|*.*$name.*\\|*").matches(it.text) }
+                blockParamIdx = params.indexOf(refPsi)
+            }
+
+            // find mustache block |params| which has tag as a child
+            val hbsView = tag.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+            val hbBlockRef = PsiTreeUtil.collectElements(hbsView, { it is HbOpenBlockMustacheImpl })
+                    .filter { it.text.contains(Regex("\\|.*$name.*\\|")) }
+                    .map { it.parent }
+                    .find { block ->
+                        block.textRange.contains(tag.textRange)
+                    }
+
+            val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name}
+            blockParamIdx = hbBlockRef?.children?.firstOrNull()?.children?.indexOf(param) ?: blockParamIdx
+            val parts = fullName.split(".")
+            var ref = param ?: refPsi
+            parts.subList(1, parts.size).forEach { part ->
+                ref = EmberUtils.followReferences(ref)
+                if (ref is HbSimpleMustache) {
+                    ref = (ref as HbSimpleMustache).children.filter { it is HbParam }.getOrNull(blockParamIdx)
+                    ref = EmberUtils.followReferences(ref) ?: ref
+                }
+                if (ref is HbParam && ref!!.children.getOrNull(1)?.text == "hash") {
+                    ref = ref!!.children.filter { c -> c is HbHash }.find { c -> (c as HbHash).hashName == part }
+                    if (ref is HbHash) {
+                        ref = ref!!.children.last()
+                        ref = EmberUtils.followReferences(ref)
+                    }
+                }
+            }
+            return ref
+        }
+
+        fun fromImports(tag: XmlTag): PsiElement? {
+            return EmberUtils.referenceImports(tag, tag.name.split(".").first())
+        }
+
+        fun forTag(tag: XmlTag?, fullName: String): PsiElement? {
+            if (tag == null) return null
+            val local = fromLocalBlock(tag, fullName) ?: fromImports(tag)
+            if (local != null) {
+                return local
+            }
+
+            return Companion.forTagName(tag.project, tag.name)
+        }
+
         fun forTagName(project: Project, name: String): PsiElement? {
             val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
             val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression

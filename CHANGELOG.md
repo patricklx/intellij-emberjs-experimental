@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.12
+- fix: improve tag attribute values resolve
+
 ## v2020.3.11
 - feature: resolve `or` helper
 - fix: import path completion
