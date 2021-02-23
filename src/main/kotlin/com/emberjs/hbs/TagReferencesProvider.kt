@@ -55,7 +55,7 @@ class TagReference(val element: XmlTag, val fullName: String, val range: TextRan
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
             return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
-        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
+        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) } ?: element.references.find { it !is TagReference }?.resolve()
     }
 
     override fun getRangeInElement(): TextRange {

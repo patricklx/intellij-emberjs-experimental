@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.13
+- fix: resolve common tags normally
+
 ## v2020.3.12
 - fix: improve tag attribute values resolve
 - fix: improve imports lookup
