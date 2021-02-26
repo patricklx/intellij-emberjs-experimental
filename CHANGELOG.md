@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.15
+- fix: add tag variants from imports
+
 ## v2020.3.14
 - fix: template-imports is now hbs imports
 

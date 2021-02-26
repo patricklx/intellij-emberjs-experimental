@@ -185,9 +185,31 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
     }
 
+    fun fromImports(element: XmlTag, elements: MutableList<LookupElement>) {
+        val insideImport = element.parents.find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
+
+        if (insideImport && element.text != "from" && element.text != "import") {
+            return
+        }
+        val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+        val imports = PsiTreeUtil.collectElements(hbsView, { it is HbMustache && it.children[1].text == "import" })
+        imports.forEach {
+            val names = it.children[2].text.replace("'", "").replace("\"", "").split(",")
+            val named = names.map {
+                if (it.contains(" as ")) {
+                    it.split(" as ").last()
+                } else {
+                    it
+                }
+            }.map { it.replace(" ", "") }
+            elements.addAll(named.map { LookupElementBuilder.create(it) })
+        }
+    }
+
     override fun addTagNameVariants(elements: MutableList<LookupElement>?, tag: XmlTag, prefix: String?) {
         if (elements == null) return
         fromLocalParams(tag, elements)
+        fromImports(tag, elements)
         if (tag.name.startsWith(":")) {
             return
         }
