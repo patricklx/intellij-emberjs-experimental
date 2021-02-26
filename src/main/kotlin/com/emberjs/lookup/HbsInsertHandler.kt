@@ -15,7 +15,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (PsiTreeUtil.collectElements(item.psiElement) { it.references.find { it is HbsLocalReference } != null }.size > 0) {
             return
         }
-        if (context.project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-template-imports") == null) {
+        if (context.project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") == null) {
             return
         }
         val path = item.getUserData(PathKey)

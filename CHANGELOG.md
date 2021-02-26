@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.14
+- fix: template-imports is now hbs imports
+
 ## v2020.3.13
 - fix: resolve common tags normally
 
