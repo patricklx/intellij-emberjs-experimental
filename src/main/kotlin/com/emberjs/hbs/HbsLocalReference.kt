@@ -11,7 +11,9 @@ import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parents
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
@@ -139,6 +141,20 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
     }
 
     companion object {
+
+        fun resolveToLocalJs(element: PsiElement): HbsLocalReference? {
+            if (element.originalVirtualFile !is VirtualFileWindow) {
+                return null
+            }
+            val psiManager = PsiManager.getInstance(element.project)
+            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.text, listOf(f as PsiElement))
+
+            if (collection.isEmpty()) {
+                return null
+            }
+            return HbsLocalReference(element, collection.first())
+        }
 
         fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false): PsiElement? {
 
@@ -315,7 +331,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, element)
             }
 
-            return referenceBlocks(element, name)
+            return referenceBlocks(element, name) ?:
+                resolveToLocalJs(element)
         }
     }
 }

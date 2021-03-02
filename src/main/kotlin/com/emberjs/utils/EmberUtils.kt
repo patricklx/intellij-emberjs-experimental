@@ -9,8 +9,10 @@ import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
 import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.psi.EmberNamedElement
+import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
+import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
@@ -153,6 +155,11 @@ class EmberUtils {
         }
 
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
+
+            if (element is ES6ImportedBinding) {
+                val ref = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference
+                return followReferences(ref.fileReferenceSet.lastReference?.multiResolve(false)?.filterNotNull()?.firstOrNull()?.element)
+            }
 
             if (element is EmberNamedElement) {
                 return followReferences(element.target, path)

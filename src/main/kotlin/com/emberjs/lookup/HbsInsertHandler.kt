@@ -1,12 +1,15 @@
 package com.emberjs.lookup
 
+import com.emberjs.FullPathKey
 import com.emberjs.PathKey
 import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
+import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 
 class HbsInsertHandler : InsertHandler<LookupElement> {
@@ -15,13 +18,34 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (PsiTreeUtil.collectElements(item.psiElement) { it.references.find { it is HbsLocalReference } != null }.size > 0) {
             return
         }
-        if (context.project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") == null) {
-            return
-        }
         val path = item.getUserData(PathKey)
+        val fullPath = item.getUserData(FullPathKey)
         if (path == null) {
             return
         }
+        if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gjs")) {
+            return
+        }
+        if (context.file.virtualFile is VirtualFileWindow) {
+            val psiManager = PsiManager.getInstance(context.project)
+            val f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
+
+            val names = f.children.filter { it is ES6ImportDeclaration }
+                    .map { it as ES6ImportDeclaration }
+                    .toTypedArray()
+                    .map { it.importedBindings.map { it.name } + it.importSpecifiers.map { it.alias ?: it.name }}
+                    .flatten()
+                    .filterNotNull()
+            if (names.contains(item.lookupString)) return
+            val importStr = "import ${item.lookupString} from '$fullPath';\n"
+            f.viewProvider.document!!.setText(importStr + f.viewProvider.document!!.text)
+            return
+        }
+
+        if (context.project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") == null) {
+            return
+        }
+
         val fullName = item.lookupString.replace("::", "/")
         val name = fullName.split("/").last()
         val pattern = "\\{\\{\\s*import\\s+([\\w*\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"

@@ -12,18 +12,16 @@ import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
-import com.intellij.lang.javascript.psi.JSField
-import com.intellij.lang.javascript.psi.JSFunction
-import com.intellij.lang.javascript.psi.JSType
+import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -196,6 +194,24 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
+    fun addLocalJSCompletion(element: PsiElement, result: CompletionResultSet) {
+        if (element.originalVirtualFile !is VirtualFileWindow) {
+            return
+        }
+        val psiManager = PsiManager.getInstance(element.project)
+        val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+        f?.children?.forEach {
+
+            if (it is JSVarStatement) {
+                result.addAllElements(it.declarations.map { LookupElementBuilder.create(it.name!!) })
+            }
+
+            if (it is ES6ImportDeclaration) {
+                result.addAllElements(it.importSpecifiers.map { LookupElementBuilder.create(it.alias?.name ?: it.name!! )})
+            }
+        }
+    }
+
     override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
         val regex = Regex("\\|.*\\|")
         var element = parameters.position
@@ -251,5 +267,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 resolve(psiExp, result)
             }
         }
+
+        addLocalJSCompletion(element, result)
     }
 }

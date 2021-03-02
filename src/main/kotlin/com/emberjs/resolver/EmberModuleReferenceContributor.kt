@@ -2,24 +2,20 @@ package com.emberjs.resolver
 
 import com.emberjs.cli.EmberCliProjectConfigurator
 import com.emberjs.utils.*
-import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
-import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.DialectDetector
 import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
-import com.intellij.lang.javascript.psi.JSFile
-import com.intellij.lang.javascript.psi.impl.JSPsiImplUtils
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
-import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
 import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.Nullable
 import java.util.regex.Pattern
 
-
+open class EmberJSModuleReference(text: String?, offset: Int, textRange: @NotNull TextRange, fileReferenceSet: @NotNull FileReferenceSet, newFileTemplateName: @Nullable String?, isSoft: Boolean) : JSModuleReference(text, offset, textRange, fileReferenceSet, newFileTemplateName, isSoft)
 /**
  * Resolves absolute imports from the ember application root, e.g.
  * ```
@@ -74,7 +70,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
         val roots = modules
                 .flatMap { listOfNotNull(it.findChild("addon"), it.findChild("app"), it.findChild("addon-test-support")) }
-                .map { JSExactFileReference(host, TextRange.create(offset, offset + packageName.length), listOf(it.path), null) }
+                .map { JSExactFileReference(host, TextRange.create(offset, offset + packageName.length), listOf(it.path), arrayOf(null, "ts", "js")) }
 
 
         val refs : FileReferenceSet
@@ -87,7 +83,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         try {
             refs = object : FileReferenceSet(importPath, host, startInElement, provider, false, true, DialectDetector.JAVASCRIPT_FILE_TYPES_ARRAY) {
                 override fun createFileReference(range: TextRange, index: Int, text: String?): FileReference {
-                    return object : JSModuleReference(text, index, range, this, null, true) {
+                    return object : EmberJSModuleReference(text, index, range, this, null, true) {
                         override fun innerResolveInContext(referenceText: String, psiFileSystemItem: PsiFileSystemItem, resolveResults: MutableCollection<ResolveResult>, caseSensitive: Boolean) {
                             super.innerResolveInContext(referenceText, psiFileSystemItem, resolveResults, caseSensitive)
 

@@ -1,6 +1,4 @@
 package com.emberjs
-
-import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.psi.EmberNamedElement
@@ -13,7 +11,6 @@ import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlAttributeDescriptor

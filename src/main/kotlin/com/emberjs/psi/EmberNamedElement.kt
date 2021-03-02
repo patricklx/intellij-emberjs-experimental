@@ -3,11 +3,13 @@ package com.emberjs.psi
 import com.dmarcotte.handlebars.psi.HbBlockWrapper
 import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.EmberAttrDec
-import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.parents
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
@@ -20,6 +22,7 @@ import com.intellij.psi.search.PsiElementProcessor
 import com.intellij.psi.search.SearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.*
+import com.intellij.refactoring.suggested.startOffset
 import javax.swing.Icon
 
 open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null) : PsiNameIdentifierOwner {
@@ -240,6 +243,20 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
         if (target.containingFile == null) {
             return LocalSearchScope(elements.toTypedArray())
         }
+
+        if (target.containingFile.name.endsWith(".gjs")) {
+            val manager = InjectedLanguageManager.getInstance(target.project)
+            val templates = PsiTreeUtil.collectElements(target.containingFile) { it is JSStringTemplateExpression }
+            templates.forEach {
+                val injected = manager.findInjectedElementAt(target.containingFile, it.startOffset + 1)?.containingFile ?: return@forEach
+                val virtualFile = injected.virtualFile
+                if (virtualFile is VirtualFileWindow) {
+                    elements.add(injected)
+                }
+            }
+        }
+
+
         val hbsView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
         val htmlView = target.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         if (target.language == Language.findLanguageByID("Handlebars")) {
@@ -289,15 +306,12 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
     }
 
     override fun setName(name: String): PsiElement {
-        if (target is XmlTag) {
-            target.name = name
-        }
-        if (target is EmberAttrDec) {
-            target.name = name
-        }
         if (target is HbPsiElement) {
             val node = SimpleNodeFactory.createNode(target.project, name)
             return target.replace(node)
+        }
+        if (target is PsiNamedElement) {
+            target.setName(name)
         }
         return target
     }

@@ -12,7 +12,10 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.JsOrFileReference
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.originalVirtualFile
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.openapi.project.Project
@@ -91,10 +94,20 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val range = TextRange(offset, offset + s.length)
             TagReference(tag, fullName, range)
         }
-        return references.filterNotNull().toTypedArray()
+        return references.toTypedArray()
     }
 
     companion object {
+
+        fun resolveToLocalJs(element: XmlTag): PsiElement? {
+            if (element.originalVirtualFile !is VirtualFileWindow) {
+                return null
+            }
+            val psiManager = PsiManager.getInstance(element.project)
+            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.name, listOf(f as PsiElement))
+            return collection.firstOrNull()
+        }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
             val angleComponents = tag.parents.find {
@@ -173,7 +186,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return local
             }
 
-            return Companion.forTagName(tag.project, tag.name)
+            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name)
         }
 
         fun forTagName(project: Project, name: String): PsiElement? {

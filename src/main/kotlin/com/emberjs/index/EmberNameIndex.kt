@@ -13,7 +13,7 @@ import com.intellij.util.indexing.*
 class EmberNameIndex() : ScalarIndexExtension<EmberName>() {
 
     override fun getName() = NAME
-    override fun getVersion() = 4
+    override fun getVersion() = 5
     override fun getKeyDescriptor() = EmberNameKeyDescriptor()
     override fun dependsOnFileContent() = false
 
@@ -25,7 +25,7 @@ class EmberNameIndex() : ScalarIndexExtension<EmberName>() {
 
     companion object {
         val NAME: ID<EmberName, Void> = ID.create("ember.names")
-        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars")
+        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "d.ts")
 
         private val index by lazy { FileBasedIndex.getInstance() }
 

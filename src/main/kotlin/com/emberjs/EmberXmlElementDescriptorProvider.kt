@@ -10,6 +10,10 @@ class EmberXmlElementDescriptorProvider : XmlElementDescriptorProvider {
     override fun getDescriptor(tag: XmlTag?): XmlElementDescriptor? {
         if (tag == null) return null
 
+        if (tag.containingFile.name.endsWith(".gjs")) {
+            return forTag(tag)
+        }
+
         val containingFile = tag.containingFile as? HtmlFileImpl ?: return null
         val language = containingFile.contentElementType?.language ?: return null
         if (language.id !== "Handlebars") return null

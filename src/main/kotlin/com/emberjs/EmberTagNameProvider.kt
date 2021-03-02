@@ -182,7 +182,6 @@ class EmberTagNameProvider : XmlTagNameProvider {
                 result.addAll(names.map { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it), 2.0) })
             }
         }
-
     }
 
     fun fromImports(element: XmlTag, elements: MutableList<LookupElement>) {
@@ -218,10 +217,11 @@ class EmberTagNameProvider : XmlTagNameProvider {
         elements.add(LookupElementBuilder.create("Input"))
         elements.add(LookupElementBuilder.create("LinkTo"))
 
-
-        val containingFile = tag.containingFile as? HtmlFileImpl ?: return
-        val language = containingFile.contentElementType?.language ?: return
-        if (language.id !== "Handlebars") return
+        if (!tag.containingFile.name.endsWith(".gjs")) {
+            val containingFile = tag.containingFile as? HtmlFileImpl ?: return
+            val language = containingFile.contentElementType?.language ?: return
+            if (language.id !== "Handlebars") return
+        }
 
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
@@ -235,7 +235,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             .filter { EmberNameIndex.hasContainingFiles(it, scope) }
 
             // Convert search results for LookupElements
-            .map { Pair(it.storageKey, toLookupElement(it)) }
+            .map { Pair(it.tagName, toLookupElement(it)) }
             .toMap(componentMap)
 
         // Collect all component templates from the index
@@ -245,10 +245,10 @@ class EmberTagNameProvider : XmlTagNameProvider {
             .filter { EmberNameIndex.hasContainingFiles(it, scope) }
 
             // Filter out components that are already in the map
-            .filter { !componentMap.containsKey(it.storageKey) }
+            .filter { !componentMap.containsKey(it.tagName) }
 
             // Convert search results for LookupElements
-            .map { Pair(it.storageKey, toLookupElement(it)) }
+            .map { Pair(it.tagName, toLookupElement(it)) }
             .toMap(componentMap)
 
 
@@ -258,17 +258,19 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
 class PathKeyClass : Key<String>("PATH")
 val PathKey = PathKeyClass()
+val FullPathKey = PathKeyClass()
 
 
 
 fun toLookupElement(name: EmberName, priority: Double = 90.0): LookupElement {
     val lookupElement = LookupElementBuilder
             .create(name.tagName)
-            .withTailText(" from ${name.importPath}")
+            .withTailText(" from ${name.importPath.split("/").first()}")
             .withTypeText("component")
             .withIcon(EmberIconProvider.getIcon("component"))
             .withCaseSensitivity(true)
             .withInsertHandler(HbsInsertHandler())
     lookupElement.putUserData(PathKey, name.importPath)
+    lookupElement.putUserData(FullPathKey, name.fullImportPath)
     return PrioritizedLookupElement.withPriority(lookupElement, priority)
 }

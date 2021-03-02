@@ -6,19 +6,36 @@ import com.emberjs.utils.parents
 import com.intellij.openapi.vfs.VfsUtilCore.isAncestor
 import com.intellij.openapi.vfs.VirtualFile
 
-data class EmberName(val type: String, val path: String, val importPath: String = "") {
+data class EmberName(val type: String, val path: String, val fullImportPath: String = "") {
 
-    override fun hashCode(): Int = fullName.hashCode()
+    override fun hashCode(): Int = fullImportPath.hashCode()
 
     override fun equals(other: Any?): Boolean {
         return this.hashCode() == other.hashCode()
     }
 
     val name by lazy {
-        path
+        val isComponentTemplate = type == "template" && path.startsWith("components/")
+        if (type == "component" || isComponentTemplate) {
+            path
+                .replace(Regex("/template$"), "")
+                .replace(Regex("/component$"), "")
+        } else {
+            path
+        }
+
     }
 
-    val storageKey by lazy { "$type:$name:$importPath" }
+    val importPath by lazy {
+        if (type == "component" || isComponentTemplate) {
+            val parts = fullImportPath.split("/").toMutableList()
+            parts.removeLast()
+            return@lazy parts.joinToString("/")
+        }
+        fullImportPath
+    }
+
+    val storageKey by lazy { "$type:$name:$fullImportPath" }
 
     val fullName by lazy { "$type:$name" }
 
@@ -134,10 +151,10 @@ data class EmberName(val type: String, val path: String, val importPath: String 
             }
             // if component.js/ts or component.d.ts exists
             if (file.nameWithoutExtension == "component" || file.name == "component.d.ts") {
-                name = ""
+                name = "component"
             }
             if (file.nameWithoutExtension == "template") {
-                name = ""
+                name = "template"
             }
             return "$path/$name".removeSuffix("/")
         }

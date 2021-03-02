@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## v2020.3.16
+- feature: support .gjs files
+- fix: attributes autocomplete only for literal types
+
 ## v2020.3.15
 - fix: add tag variants from imports
 
