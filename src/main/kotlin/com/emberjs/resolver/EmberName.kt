@@ -8,7 +8,7 @@ import com.intellij.openapi.vfs.VirtualFile
 
 data class EmberName(val type: String, val path: String, val fullImportPath: String = "") {
 
-    override fun hashCode(): Int = fullImportPath.hashCode()
+    override fun hashCode(): Int = fullName.hashCode()
 
     override fun equals(other: Any?): Boolean {
         return this.hashCode() == other.hashCode()
