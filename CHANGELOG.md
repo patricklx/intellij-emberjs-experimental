@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.18
+- feature: show from which package comes helper/component/modifier
+
 ## v2020.3.17
 - fix: attributes also allow non-literal if not all are literal
 

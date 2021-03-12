@@ -12,6 +12,7 @@ object EmberLookupElementBuilder {
         val element = LookupElementBuilder
                 .create(if (dots) it.name.replace("/", ".") else it.name)
                 .withTypeText(it.type)
+                .withTailText(" from ${it.importPath.split("/").first()}")
                 .withIcon(EmberIconProvider.getIcon(it.type) ?: EmberIcons.EMPTY_16)
                 .withCaseSensitivity(true)
                 .withInsertHandler(HbsInsertHandler())
