@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.17
+- fix: attributes also allow non-literal if not all are literal
+
 ## v2020.3.16
 - feature: support .gjs files
 - fix: attributes autocomplete only for literal types

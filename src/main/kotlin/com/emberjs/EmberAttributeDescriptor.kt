@@ -19,6 +19,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
     private val declaration: PsiElement?
     private val isRequired: Boolean
     private val values: List<String>
+    private var hasNonLiteralTypes: Boolean
     val reference: PsiReference?
     val xmlattr: XmlAttribute?
     val isYield: Boolean
@@ -39,13 +40,15 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
         )
 
         val ref = reference
+        this.hasNonLiteralTypes = true
         if (ref != null) {
             val type = PsiTreeUtil.collectElementsOfType(ref.element, TypeScriptPropertySignatureImpl::class.java).firstOrNull()
             val types = (type?.jsType?.asRecordType()?.sourceElement as? TypeScriptUnionOrIntersectionTypeImpl?)?.types
-            val typesStr = types?.map { it.castSafelyTo<TypeScriptStringLiteralTypeImpl>()?.let { it.innerText } }?.filterNotNull() ?: arrayListOf<String>()
+            val typesStr = types?.map { it.castSafelyTo<TypeScriptStringLiteralTypeImpl>()?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
             val isOptional = (type?.isOptional ?: true) || typesStr.isEmpty() || (typesStr.contains("undefined") || typesStr.contains("null") || typesStr.contains("*"))
             this.isRequired = !isOptional
             this.values = typesStr
+            this.hasNonLiteralTypes = typesStr.size != types?.size
         } else {
             this.isRequired = false
             this.values = arrayListOf()
@@ -97,6 +100,9 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
     }
 
     override fun validateValue(context: XmlElement?, value: String?): String? {
+        if (this.hasNonLiteralTypes) {
+            return null
+        }
         if (this.values.isNotEmpty()) {
             if (this.values.contains(value)) {
                 return null;
