@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.19
+- fix: allow dynamic values for literal tag attributes
+
 ## v2020.3.18
 - feature: show from which package comes helper/component/modifier
 
