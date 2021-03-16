@@ -189,7 +189,10 @@ class TagReferencesProvider : PsiReferenceProvider() {
             return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name)
         }
 
-        fun forTagName(project: Project, name: String): PsiElement? {
+        fun forTagName(project: Project, tagName: String): PsiElement? {
+            val name = tagName
+                    .replace(Regex("-(.)")) { it.groupValues.last().toUpperCase() }
+                    .replace(Regex("/(.)")) { "::" + it.groupValues.last().toUpperCase() }
             val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
             val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 
@@ -201,7 +204,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val scope = ProjectScope.getAllScope(project)
             val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
-            val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.tagName == name }
+            val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.angleBracketsName == name }
                     .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.hbs first, then template.hbs
@@ -209,7 +212,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
             if (componentTemplate != null) return componentTemplate
 
-            val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.tagName == name }
+            val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.angleBracketsName == name }
                     .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.js first, then component.js

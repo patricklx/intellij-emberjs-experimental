@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.20
+- feature: provide auto complete and references for namespaced tags
+
 ## v2020.3.19
 - fix: allow dynamic values for literal tag attributes
 

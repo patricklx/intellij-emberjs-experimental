@@ -14,6 +14,7 @@ import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -225,6 +226,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
+        val useImports = (project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") != null)
+
 
         val componentMap = hashMapOf<String, LookupElement>()
 
@@ -235,7 +238,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             .filter { EmberNameIndex.hasContainingFiles(it, scope) }
 
             // Convert search results for LookupElements
-            .map { Pair(it.tagName, toLookupElement(it)) }
+            .map { Pair(it.angleBracketsName, toLookupElement(it, useImports)) }
             .toMap(componentMap)
 
         // Collect all component templates from the index
@@ -245,10 +248,11 @@ class EmberTagNameProvider : XmlTagNameProvider {
             .filter { EmberNameIndex.hasContainingFiles(it, scope) }
 
             // Filter out components that are already in the map
-            .filter { !componentMap.containsKey(it.tagName) }
+            .filter { !componentMap.containsKey(it.angleBracketsName) }
 
             // Convert search results for LookupElements
-            .map { Pair(it.tagName, toLookupElement(it)) }
+            .map { Pair(it.angleBracketsName, toLookupElement(it, useImports)) }
+
             .toMap(componentMap)
 
 
@@ -262,9 +266,13 @@ val FullPathKey = PathKeyClass()
 
 
 
-fun toLookupElement(name: EmberName, priority: Double = 90.0): LookupElement {
+fun toLookupElement(name: EmberName, useImports: Boolean, priority: Double = 90.0): LookupElement {
+    var tagName = name.angleBracketsName
+    if (useImports) {
+        tagName = name.tagName
+    }
     val lookupElement = LookupElementBuilder
-            .create(name.tagName)
+            .create(tagName)
             .withTailText(" from ${name.importPath.split("/").first()}")
             .withTypeText("component")
             .withIcon(EmberIconProvider.getIcon("component"))
