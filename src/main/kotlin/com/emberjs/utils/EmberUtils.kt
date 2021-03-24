@@ -103,8 +103,12 @@ class EmberUtils {
             return null
         }
 
-        fun resolveToEmber(file: PsiFile): PsiElement? {
-            return resolveComponent(file) ?: resolveHelper(file) ?: resolveDefaultModifier(file) ?: file
+        fun resolveToEmber(file: PsiFile): PsiElement {
+            return resolveComponent(file)
+                    ?: resolveHelper(file)
+                    ?: resolveDefaultModifier(file)
+                    ?: resolveDefaultExport(file)
+                    ?: file
         }
 
         fun findHelperParams(file: PsiFile): Array<JSParameterListElement>? {

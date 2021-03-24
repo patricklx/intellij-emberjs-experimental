@@ -56,8 +56,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
                 // Convert search results for LookupElements
                 .map { psiManager.findFile(it) }
                 .filterNotNull()
-                .map { JsOrFileReference(it).resolve() }
-                .filterNotNull()
+                .map { EmberUtils.resolveToEmber(it) }
                 .take(1)
                 .let(::createResults)
     }

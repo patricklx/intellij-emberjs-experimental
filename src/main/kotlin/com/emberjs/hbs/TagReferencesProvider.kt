@@ -210,7 +210,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             // find name.hbs first, then template.hbs
             val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
 
-            if (componentTemplate != null) return componentTemplate
+            if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
 
             val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.angleBracketsName == name }
                     .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
@@ -218,7 +218,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             // find name.js first, then component.js
             val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
 
-            if (component != null) return JsOrFileReference(component).resolve()
+            if (component != null) return EmberUtils.resolveToEmber(component)
             return null
         }
     }

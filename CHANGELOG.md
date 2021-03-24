@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.21
+- feature: resolve imports to templates
+
 ## v2020.3.20
 - feature: provide auto complete and references for namespaced tags
 

@@ -57,7 +57,7 @@ class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<Ps
             return emptyArray()
         }
         val ref = EmberUtils.resolveToEmber(fileRef as PsiFile)
-        return arrayOf(PsiElementResolveResult(ref ?: fileRef))
+        return arrayOf(PsiElementResolveResult(ref))
     }
 }
 
@@ -109,7 +109,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 ref = ref.children.filter { it is HbParam }.getOrNull(idx)
                 return ref
             }
-            return return null
+            return null
         }
         return null
     }

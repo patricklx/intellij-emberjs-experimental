@@ -176,7 +176,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                             it
                         }
                     }
-                    .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) ?: it }  }
+                    .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) }  }
                     .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
