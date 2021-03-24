@@ -16,7 +16,7 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.javascript.psi.*
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
@@ -44,17 +44,16 @@ class LookupElementBuilder {
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
     fun resolveJsType(jsType: JSType?, result: CompletionResultSet, suffix: String = "") {
-        if (jsType is JSRecordTypeImpl) {
-            val names = (jsType).propertyNames
+        val jsRecordType = jsType?.asRecordType()
+        if (jsRecordType is JSRecordTypeImpl) {
+            val names = jsRecordType.propertyNames
             result.addAllElements(names.map { LookupElementBuilder.create(it + suffix) })
-            return
         }
         if (jsType?.sourceElement is JSDocCommentImpl) {
             val doc = jsType.sourceElement as JSDocCommentImpl
             if (doc.tags[0].value?.reference?.resolve() != null) {
                 resolve(doc.tags[0].value?.reference?.resolve()!!, result)
             }
-            return
         }
     }
 
@@ -99,13 +98,15 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(dereferencedHelper, result)
         }
 
-        if (refElement is JSClass) {
-            result.addAllElements(refElement.fields.map { LookupElementBuilder.create(it.name!!) })
-            result.addAllElements(refElement.functions.map { LookupElementBuilder.create(it.name!!) })
+        if (refElement is JSTypeOwner) {
+            resolveJsType(refElement.jsType, result)
+        }
+
+        if (refElement is JSTypedEntity) {
+            resolveJsType(refElement.jsType, result)
         }
 
         if (refElement is JSField) {
-            resolveJsType(refElement.jsType, result)
             if (refElement is JSVariableImpl<*, *> && refElement.doGetExplicitlyDeclaredType() != null) {
                 val jstype = refElement.doGetExplicitlyDeclaredType()
                 resolveJsType(jstype, result)

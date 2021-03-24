@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.22
+- fix: better resolve js types
+
 ## v2020.3.21
 - feature: resolve imports to templates
 

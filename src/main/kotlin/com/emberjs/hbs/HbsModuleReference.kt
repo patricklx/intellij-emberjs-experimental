@@ -2,7 +2,6 @@ package com.emberjs.hbs
 
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.lookup.EmberLookupElementBuilder
-import com.emberjs.resolver.JsOrFileReference
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.intellij.lang.Language

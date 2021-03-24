@@ -14,6 +14,7 @@ import com.emberjs.utils.parents
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.javascript.psi.JSFunction
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
@@ -21,7 +22,6 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
-import com.intellij.lang.javascript.psi.types.JSSimpleRecordTypeImpl
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.html.HtmlTag
@@ -31,6 +31,7 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
+import org.mozilla.javascript.annotations.JSGetter
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -234,6 +235,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             if (any is JSTypeOwner) {
                 jsType = any.jsType
             }
+            if (any is JSFunction && any.isGetProperty) {
+                jsType = any.returnType
+            }
             if (jsType != null) {
                 if (jsType.sourceElement is JSDocCommentImpl) {
                     val doc = jsType.sourceElement as JSDocCommentImpl
@@ -243,7 +247,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                         return resolveToJs(res, path, resolveIncomplete)
                     }
                 }
-                if (jsType is JSSimpleRecordTypeImpl) {
+                jsType = jsType.asRecordType()
+                if (jsType is JSRecordTypeImpl) {
                     val elem = jsType.findPropertySignature(path.first())?.memberSource?.singleElement
                     return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
                 }
@@ -303,10 +308,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     fileName = "component"
                 }
                 val dir = element.containingFile.originalFile.containingDirectory
-                val file = dir?.findFile("$fileName.js")
-                        ?: dir?.findFile("$fileName.ts")
-                        ?: dir?.findFile("controller.js")
+                val file = dir?.findFile("$fileName.ts")
+                        ?: dir?.findFile("$fileName.js")
                         ?: dir?.findFile("controller.ts")
+                        ?: dir?.findFile("controller.js")
                 if (file != null) {
                     return HbsLocalReference(element, resolveToJs(file, listOf()))
                 }
