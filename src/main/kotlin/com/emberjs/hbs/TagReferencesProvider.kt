@@ -10,7 +10,6 @@ import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
-import com.emberjs.resolver.JsOrFileReference
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
