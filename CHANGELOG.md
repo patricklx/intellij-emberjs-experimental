@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.23
+- fix: fix tag properties lookup for some cases
+
 ## v2020.3.22
 - fix: better resolve js types
 

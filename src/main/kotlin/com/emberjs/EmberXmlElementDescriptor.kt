@@ -114,8 +114,8 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         } else {
             target = this.declaration
         }
-        f = EmberUtils.followReferences(target)?.containingFile
-        val file = f ?: target.containingFile
+        f = EmberUtils.followReferences(target)?.containingFile?.originalFile
+        val file = f ?: target.containingFile.originalFile
         var name = file.name.split(".").first()
         val dir = file.parent as PsiDirectoryImpl?
         var template: PsiFile? = null
