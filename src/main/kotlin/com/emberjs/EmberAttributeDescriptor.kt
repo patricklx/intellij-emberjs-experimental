@@ -1,5 +1,6 @@
 package com.emberjs
 
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptLiteralType
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptUnionOrIntersectionType
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptPropertySignatureImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptStringLiteralTypeImpl
@@ -44,7 +45,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
         if (ref != null) {
             val type = PsiTreeUtil.collectElementsOfType(ref.element, TypeScriptPropertySignatureImpl::class.java).firstOrNull()
             val types = (type?.jsType?.asRecordType()?.sourceElement as? TypeScriptUnionOrIntersectionTypeImpl?)?.types
-            val typesStr = types?.map { it.castSafelyTo<TypeScriptStringLiteralTypeImpl>()?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
+            val typesStr = types?.map { it.castSafelyTo<TypeScriptLiteralType>()?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
             val isOptional = (type?.isOptional ?: true) || typesStr.isEmpty() || (typesStr.contains("undefined") || typesStr.contains("null") || typesStr.contains("*"))
             this.isRequired = !isOptional
             this.values = typesStr

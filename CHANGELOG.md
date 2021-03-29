@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.24
+- fix: correctly show literal types, (e.g. number)
+
 ## v2020.3.23
 - fix: fix tag properties lookup for some cases
 
