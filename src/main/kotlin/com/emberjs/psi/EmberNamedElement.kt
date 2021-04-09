@@ -214,11 +214,11 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
         return target.references
     }
 
-    override fun <T : Any?> getCopyableUserData(key: Key<T>?): T? {
+    override fun <T : Any?> getCopyableUserData(key: Key<T>): T? {
         return target.getCopyableUserData(key)
     }
 
-    override fun <T : Any?> putCopyableUserData(key: Key<T>?, value: T?) {
+    override fun <T : Any?> putCopyableUserData(key: Key<T>, value: T?) {
         return target.putCopyableUserData(key, value)
     }
 

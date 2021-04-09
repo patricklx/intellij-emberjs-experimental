@@ -1,6 +1,5 @@
 package com.emberjs
 
-import com.emberjs.hbs.HbsModuleReference
 import com.intellij.lang.documentation.DocumentationProvider
 import com.intellij.lang.documentation.ExternalDocumentationProvider
 import com.intellij.openapi.application.PathManager
@@ -8,15 +7,8 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.platform.templates.github.DownloadUtil
 import com.intellij.psi.PsiElement
-import org.apache.xerces.dom.AttrImpl
-import org.apache.xerces.dom.DeferredElementNSImpl
-import org.apache.xerces.parsers.DOMParser
-import org.cyberneko.html.HTMLConfiguration
 import org.jsoup.Jsoup
-import org.w3c.dom.Node
-import org.xml.sax.InputSource
 import java.io.File
-import java.io.StringReader
 
 
 class EmberHbsDocumentationProvider : DocumentationProvider, ExternalDocumentationProvider {

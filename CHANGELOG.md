@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.25
+- upgrade intellij idea 
+
 ## v2020.3.24
 - fix: correctly show literal types, (e.g. number)
 

@@ -16,6 +16,8 @@ import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlAttributeValue
 import com.intellij.psi.xml.XmlElement
 import com.intellij.psi.xml.XmlTag
+import org.jetbrains.annotations.NotNull
+import org.jetbrains.annotations.Nullable
 import javax.swing.Icon
 
 class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiReference?, private val references: Array<PsiReference>?) : XmlAttributeDecl {
@@ -203,11 +205,11 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
         return this.references ?: emptyArray()
     }
 
-    override fun <T : Any?> getCopyableUserData(key: Key<T>?): T? {
+    override fun <T : Any?> getCopyableUserData(key: Key<T>): T? {
         TODO("Not yet implemented")
     }
 
-    override fun <T : Any?> putCopyableUserData(key: Key<T>?, value: T?) {
+    override fun <T : Any?> putCopyableUserData(key: Key<T>, value: T?) {
         TODO("Not yet implemented")
     }
 
