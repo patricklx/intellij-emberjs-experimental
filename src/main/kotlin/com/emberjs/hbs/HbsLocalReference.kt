@@ -14,6 +14,7 @@ import com.emberjs.utils.parents
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSFunction
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
@@ -300,6 +301,28 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
         fun createReference(element: PsiElement): PsiReference? {
             val name = element.text.replace("IntellijIdeaRulezzz", "")
+            if (element.parent is HbData) {
+                val fname = element.containingFile.name.split(".").first()
+                var fileName = fname
+                if (fileName == "template") {
+                    fileName = "component"
+                }
+                val dir = element.containingFile.originalFile.containingDirectory
+                val file = dir?.findFile("$fileName.ts")
+                        ?: dir?.findFile("$fileName.d.ts")
+                        ?: dir?.findFile("$fileName.js")
+                        ?: dir?.findFile("controller.ts")
+                        ?: dir?.findFile("controller.js")
+                if (file != null) {
+                    val cls = EmberUtils.findDefaultExportClass(file)
+                    val args = EmberUtils.findComponentArgsType(cls as JSElement)
+                    val prop = args?.properties?.find { it.memberName == name }
+                    if (prop != null) {
+                        return HbsLocalReference(element, prop.memberSource.singleElement)
+                    }
+                    return null
+                }
+            }
             val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
             if (name == "this" && sibling == null) {
                 val fname = element.containingFile.name.split(".").first()
@@ -309,6 +332,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
                 val dir = element.containingFile.originalFile.containingDirectory
                 val file = dir?.findFile("$fileName.ts")
+                        ?: dir?.findFile("$fileName.d.ts")
                         ?: dir?.findFile("$fileName.js")
                         ?: dir?.findFile("controller.ts")
                         ?: dir?.findFile("controller.js")

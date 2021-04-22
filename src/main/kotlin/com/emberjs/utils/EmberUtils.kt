@@ -16,6 +16,7 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.psi.PsiElement
@@ -134,7 +135,12 @@ class EmberUtils {
 
 
         fun findComponentArgsType(cls: JSElement): JSRecordType? {
-            val typeList = PsiTreeUtil.findChildOfType(cls, TypeScriptTypeArgumentList::class.java)
+            val typeList: TypeScriptTypeArgumentList?
+            if (cls is TypeScriptClassImpl) {
+                typeList = cls.extendsList?.children?.first()?.children?.getOrNull(1) as TypeScriptTypeArgumentList?
+            } else {
+                typeList = PsiTreeUtil.findChildOfType(cls, TypeScriptTypeArgumentList::class.java)
+            }
             val type = typeList?.typeArguments?.first()?.calculateType()
             val recordType = type?.asRecordType()
             return recordType

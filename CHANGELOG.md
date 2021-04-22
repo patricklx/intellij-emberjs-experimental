@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.26
+- feature: add support for args autocompletion in templates (`@xxx`) and reference to own args
+
 ## v2020.3.25
 - upgrade intellij idea 
 

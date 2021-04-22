@@ -1,6 +1,7 @@
 package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
+import com.dmarcotte.handlebars.psi.HbData
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
@@ -213,6 +214,31 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
+    fun addArgsCompletion(element: PsiElement, result: CompletionResultSet) {
+        val fname = element.containingFile.name.split(".").first()
+        var fileName = fname
+        if (fileName == "template") {
+            fileName = "component"
+        }
+        val dir = element.containingFile.originalFile.containingDirectory
+        val file = dir?.findFile("$fileName.ts")
+                ?: dir?.findFile("$fileName.d.ts")
+                ?: dir?.findFile("$fileName.js")
+                ?: dir?.findFile("controller.ts")
+                ?: dir?.findFile("controller.js")
+        if (file != null) {
+            val cls = EmberUtils.findDefaultExportClass(file)
+            val args = EmberUtils.findComponentArgsType(cls as JSElement)
+            if (args?.properties != null) {
+                if (element.parent is HbData) {
+                    result.addAllElements(args.properties.map { LookupElementBuilder.create(it.memberName) })
+                } else {
+                    result.addAllElements(args.properties.map { LookupElementBuilder.create("@${it.memberName}") })
+                }
+            }
+        }
+    }
+
     override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
         val regex = Regex("\\|.*\\|")
         var element = parameters.position
@@ -220,6 +246,11 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             element = element.parent
         }
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
+
+        if (element.parent is HbData) {
+            addArgsCompletion(element, result)
+            return
+        }
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {
@@ -231,6 +262,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
+        addArgsCompletion(element, result)
         addImportPathCompletions(element, result)
         addImportCompletions(element, result)
 
