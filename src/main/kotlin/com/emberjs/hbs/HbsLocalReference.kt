@@ -190,6 +190,11 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     if (any.children[1].text == "hash") {
                         val name = path.first()
                         val res = any.children.find { it.elementType == HbTokenTypes.HASH && it.children[0].text == name }
+                        if (res != null && res.children[2].children.firstOrNull() is HbMustacheName) {
+                            val mustacheImpl = res.children[2].children.first()
+                            val lastId = mustacheImpl.children[0].children.findLast { it.elementType == HbTokenTypes.ID }
+                            return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete) ?: res
+                        }
                         val ref = PsiTreeUtil.collectElements(res, { it.references.find { it is HbsLocalReference } != null }).firstOrNull()
                         if (ref != null) {
                             val hbsRef = ref.references.find { it is HbsLocalReference }!!

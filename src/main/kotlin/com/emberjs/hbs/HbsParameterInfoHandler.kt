@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.utils.*
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.lang.parameterInfo.*

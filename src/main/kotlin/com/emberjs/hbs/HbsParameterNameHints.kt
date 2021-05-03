@@ -13,6 +13,7 @@ import com.intellij.lang.javascript.psi.JSRecordType
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTupleType
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.lang.javascript.psi.types.JSTypeImpl
 import com.intellij.psi.PsiElement
@@ -28,7 +29,7 @@ class HbsParameterNameHints : InlayParameterHintsProvider {
 
     override fun getParameterHints(psiElement: PsiElement): MutableList<InlayInfo> {
         if (psiElement is HbParam) {
-            val firstParam = EmberUtils.findFirstHbsParamFromParam(psiElement)
+            var firstParam = EmberUtils.findFirstHbsParamFromParam(psiElement)
             if (firstParam == null) {
                 return emptyList<InlayInfo>().toMutableList()
             }

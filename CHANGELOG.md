@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## v2020.3.27
+- fix: correctly resolve paths in hash
+- feature: add parameter autocompletion for `{{component x param=1 ...}}`
+
 ## v2020.3.26
 - feature: add support for args autocompletion in templates (`@xxx`) and reference to own args
 

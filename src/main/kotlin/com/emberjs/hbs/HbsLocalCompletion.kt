@@ -18,6 +18,7 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
@@ -120,6 +121,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         var func: JSFunction? = null
         if (file is JSFunction) {
             func = file
+        }
+        if (file is JSClass) {
+            val ref = EmberUtils.getComponentReferenceData(file.containingFile)
+            result.addAllElements(ref.args.map { LookupElementBuilder.create(it.value + "=") })
         }
         if (file is PsiFile) {
             func = EmberUtils.resolveHelper(file)
@@ -255,6 +260,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {
             addHelperCompletions(helperElement, result)
+            val r = EmberUtils.handleEmberHelpers(helperElement.parent)
+            if (r != null) {
+                addHelperCompletions(r.children[0].children[0], result)
+            }
         }
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {

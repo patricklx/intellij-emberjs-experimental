@@ -2,8 +2,9 @@ package com.emberjs.utils
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
+import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.emberjs.EmberAttrDec
+import com.emberjs.*
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
@@ -18,17 +19,29 @@ import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiFileSystemItem
-import com.intellij.psi.PsiReference
+import com.intellij.psi.*
+import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
+
+class ArgData(
+        var value: String = "",
+        var description: String? = null,
+        var reference: AttrPsiReference? = null) {}
+
+class ComponentReferenceData(
+        public val hasSplattributes: Boolean = false,
+        public val yields: MutableList<EmberXmlElementDescriptor.YieldReference> = mutableListOf(),
+        public val args: MutableList<ArgData> = mutableListOf()
+) {
+
+}
 
 
 class EmberUtils {
@@ -251,16 +264,17 @@ class EmberUtils {
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
-            if (element is PsiElement && element is HbParam && element.text.contains(Regex("^\\(component\\b"))) {
-                val param = element.children.filterIsInstance<HbParam>().get(1)
+            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)component\\b"))) {
+                val idx = element.children.indexOfFirst { it.text == "component" }
+                val param = element.children.get(idx + 1)
                 if (param.children.firstOrNull()?.children?.firstOrNull() is HbStringLiteral) {
                     return TagReferencesProvider.forTagName(param.project, param.text.dropLast(1).drop(1).camelize())
                 }
                 return param
             }
-            if (element is PsiElement && element is HbParam && element.text.contains(Regex("^\\(or\\b"))) {
+            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
                 return element.children.find { it is HbParam && it.text != "or" && it.children[0].children[0].references.isNotEmpty() } ?:
-                element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^\\(component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+                element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
@@ -327,6 +341,103 @@ class EmberUtils {
             }
 
             return null
+        }
+
+        fun getFileByPath(directory: PsiDirectory?, path: String): PsiFile? {
+            if (directory == null) return null
+            var dir: PsiDirectory = directory
+            val parts = path.split("/").toMutableList()
+            while (parts.isNotEmpty()) {
+                val p = parts.removeAt(0)
+                val d: Any? = dir.findSubdirectory(p) ?: dir.findFile(p)
+                if (d is PsiFile) {
+                    return d
+                }
+                if (d is PsiDirectory) {
+                    dir = d
+                    continue
+                }
+                return null
+            }
+            return null
+        }
+
+        fun getComponentReferenceData(file: PsiFile): ComponentReferenceData {
+            var name = file.name.split(".").first()
+            val dir = file.parent as PsiDirectoryImpl?
+            var template: PsiFile? = null
+            var path = ""
+            var parentModule: PsiDirectory? = null
+            val tplArgs = emptyArray<ArgData>().toMutableList()
+            var tplYields = mutableListOf<EmberXmlElementDescriptor.YieldReference>()
+
+            if (dir != null) {
+                // co-located
+                if (name == "component") {
+                    name = "template"
+                }
+                template = dir.findFile("$name.hbs")
+                parentModule = file.parents.find { it is PsiDirectory && it.virtualFile == file.originalVirtualFile?.parentEmberModule} as PsiDirectory?
+                path = file.parents(true)
+                        .takeWhile { it != parentModule }
+                        .toList()
+                        .reversed()
+                        .map { (it as PsiFileSystemItem).name }
+                        .joinToString("/")
+
+                val fullPathToHbs = path.replace("app/", "addon/") + "/$name.hbs"
+                template = template
+                        ?: getFileByPath(parentModule, fullPathToHbs)
+                                ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
+
+                if (template?.node?.psi != null) {
+                    val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)
+                    for (arg in args) {
+                        val argName = arg.text.split(".").first()
+                        if (tplArgs.find { it.value == argName } == null) {
+                            tplArgs.add(ArgData(argName, "", AttrPsiReference(arg)))
+                        }
+                    }
+
+                    val yields = PsiTreeUtil.collectElements(template.node.psi, { it is HbPathImpl && it.text == "yield" })
+                    for (y in yields) {
+                        tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
+                    }
+                }
+            }
+
+
+            if (name == "template") {
+                name = "component"
+            }
+            val hasSplattributes = template?.text?.contains("...attributes") ?: false
+            val fullPathToTs = path.replace("app/", "addon/").replace("/templates/", "/") + "/$name.ts"
+            val fullPathToDts = path.replace("app/", "addon/").replace("/templates/", "/") + "/$name.d.ts"
+            var containingFile = file.containingFile
+            if (containingFile.name.endsWith(".js")) {
+                containingFile = dir?.findFile(containingFile.name.replace(".js", ".d.ts"))
+            }
+            val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?: containingFile
+            val cls = tsFile?.let {findDefaultExportClass(tsFile)}
+                    ?: containingFile?.let {findDefaultExportClass(containingFile)}
+                    ?: file
+            if (cls is JSElement) {
+                val argsElem = findComponentArgsType(cls)
+                val signatures = argsElem?.properties ?: emptyList()
+                for (sign in signatures) {
+                    val comment = sign.memberSource.singleElement?.children?.find { it is JSDocComment }
+//                val s: TypeScriptSingleTypeImpl? = sign.children.find { it is TypeScriptSingleTypeImpl } as TypeScriptSingleTypeImpl?
+                    val attr = sign.toString().split(":").last()
+                    val data = tplArgs.find { it.value == attr } ?: ArgData()
+                    data.value = attr
+                    data.reference = AttrPsiReference(sign.memberSource.singleElement!!)
+                    data.description = comment?.text ?: ""
+                    if (tplArgs.find { it.value == attr } == null) {
+                        tplArgs.add(data)
+                    }
+                }
+            }
+            return ComponentReferenceData(hasSplattributes, tplYields, tplArgs)
         }
     }
 }
