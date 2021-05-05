@@ -252,11 +252,6 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
-        if (element.parent is HbData) {
-            addArgsCompletion(element, result)
-            return
-        }
-
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {
             addHelperCompletions(helperElement, result)
@@ -268,6 +263,11 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
+            return
+        }
+
+        if (element.parent is HbData) {
+            addArgsCompletion(element, result)
             return
         }
 

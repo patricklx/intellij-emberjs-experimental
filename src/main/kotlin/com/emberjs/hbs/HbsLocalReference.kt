@@ -306,6 +306,35 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
         fun createReference(element: PsiElement): PsiReference? {
             val name = element.text.replace("IntellijIdeaRulezzz", "")
+
+            val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
+            if (name == "this" && sibling == null) {
+                val fname = element.containingFile.name.split(".").first()
+                var fileName = fname
+                if (fileName == "template") {
+                    fileName = "component"
+                }
+                val dir = element.containingFile.originalFile.containingDirectory
+                val file = dir?.findFile("$fileName.ts")
+                        ?: dir?.findFile("$fileName.d.ts")
+                        ?: dir?.findFile("$fileName.js")
+                        ?: dir?.findFile("controller.ts")
+                        ?: dir?.findFile("controller.js")
+                if (file != null) {
+                    return HbsLocalReference(element, resolveToJs(file, listOf()))
+                }
+            }
+
+            // for this.x.y
+            if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
+                val ref = sibling.references.find { it is HbsLocalReference } as HbsLocalReference
+                val yieldRef = ref.resolveYield()
+                if (yieldRef != null) {
+                    return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
+                }
+                return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
+            }
+
             if (element.parent is HbData) {
                 val fname = element.containingFile.name.split(".").first()
                 var fileName = fname
@@ -328,37 +357,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     return null
                 }
             }
-            val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
-            if (name == "this" && sibling == null) {
-                val fname = element.containingFile.name.split(".").first()
-                var fileName = fname
-                if (fileName == "template") {
-                    fileName = "component"
-                }
-                val dir = element.containingFile.originalFile.containingDirectory
-                val file = dir?.findFile("$fileName.ts")
-                        ?: dir?.findFile("$fileName.d.ts")
-                        ?: dir?.findFile("$fileName.js")
-                        ?: dir?.findFile("controller.ts")
-                        ?: dir?.findFile("controller.js")
-                if (file != null) {
-                    return HbsLocalReference(element, resolveToJs(file, listOf()))
-                }
-            }
 
             val importRef = EmberUtils.referenceImports(element, name)
             if (importRef != null) {
                 return HbsLocalRenameReference(element, importRef)
-            }
-
-            // for this.x.y
-            if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
-                val ref = sibling.references.find { it is HbsLocalReference } as HbsLocalReference
-                val yieldRef = ref.resolveYield()
-                if (yieldRef != null) {
-                    return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
-                }
-                return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
             }
 
             if (element.parent is HbOpenBlockMustache) {

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.28
+- fix: correctly resolve paths from args and fix completion
+
 ## v2020.3.27
 - fix: correctly resolve paths in hash
 - feature: add parameter autocompletion for `{{component x param=1 ...}}`
