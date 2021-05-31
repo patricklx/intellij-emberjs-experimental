@@ -362,9 +362,9 @@ class EmberUtils {
             return null
         }
 
-        fun getComponentReferenceData(file: PsiFile): ComponentReferenceData {
-            var name = file.name.split(".").first()
-            val dir = file.parent as PsiDirectoryImpl?
+        fun getComponentReferenceData(file: PsiElement): ComponentReferenceData {
+            var name = file.containingFile.name.split(".").first()
+            val dir = file.containingFile.parent as PsiDirectoryImpl?
             var template: PsiFile? = null
             var path = ""
             var parentModule: PsiDirectory? = null

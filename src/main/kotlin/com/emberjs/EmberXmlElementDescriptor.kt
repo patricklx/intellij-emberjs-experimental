@@ -81,6 +81,10 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         f = EmberUtils.followReferences(target)?.containingFile?.originalFile
         val file = f ?: target.containingFile.originalFile
 
+        if (file.name == "intellij-emberjs/internal/components-stub") {
+            return EmberUtils.getComponentReferenceData(target)
+        }
+
         return EmberUtils.getComponentReferenceData(file)
     }
 

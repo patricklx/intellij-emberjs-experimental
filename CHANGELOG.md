@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2020.3.29
+- fix: correctly resolve internal ember components
+
 ## v2020.3.28
 - fix: correctly resolve paths from args and fix completion
 

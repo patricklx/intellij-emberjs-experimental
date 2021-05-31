@@ -279,7 +279,7 @@ class InputComponent extends Component<{
   /**
    *  This argument is used to control which Ember component is used under the hood
    */
-  type?: 'checkbox|button|color|date|datetime-local|email|file|hidden|image|month|number|password|radio|range|reset|search|submit|tel|text|time|url|week'
+  type?: 'checkbox'|'button'|'color'|'date'|'datetime-local'|'email'|'file'|'hidden'|'image'|'month'|'number'|'password'|'radio'|'range'|'reset'|'search'|'submit'|'tel'|'text'|'time'|'url'|'week'
   'enter'?: Function,
   'insert-newline'?: Function,
   'escape-press'?: Function,
