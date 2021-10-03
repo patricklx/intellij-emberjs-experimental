@@ -1,7 +1,7 @@
 buildscript {
     ext {
         javaVersion = '11'
-        kotlinVersion = '1.4.21'
+        kotlinVersion = '1.5.31'
 
         // see https://www.jetbrains.com/intellij-repository/releases/
         // and https://www.jetbrains.com/intellij-repository/snapshots/
@@ -15,13 +15,10 @@ buildscript {
         mavenCentral()
         maven { url "https://jitpack.io" }
     }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-    }
 }
 
 plugins {
+    os "Java"
     id "org.jetbrains.intellij" version "1.1.6"
     id "com.zoltu.git-versioning" version "2.0.28"
 }
@@ -34,11 +31,10 @@ sourceCompatibility = javaVersion
 buildSearchableOptions.enabled = false
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
     testCompile "org.assertj:assertj-core:3.18.0"
 }
 
