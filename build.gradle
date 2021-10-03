@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    testCompile "org.assertj:assertj-core:3.18.0"
+    testImplementation "org.assertj:assertj-core:3.21.0"
 }
 
 intellij {
