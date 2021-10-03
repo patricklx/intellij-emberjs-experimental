@@ -25,7 +25,6 @@ plugins {
 
 apply plugin: 'org.jetbrains.intellij'
 apply plugin: 'java'
-apply plugin: 'kotlin'
 
 sourceCompatibility = javaVersion
 buildSearchableOptions.enabled = false
