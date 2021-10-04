@@ -118,10 +118,12 @@ class EmberGotoRelatedProviderTest : BasePlatformTestCase() {
 
     private fun doTest(fixtureName: String, tests: Map<String, List<String>>) {
         // Load fixture files into the project
-        val root = myFixture.copyDirectoryToProject(fixtureName, "/")
+        FileBasedIndex.getInstance().apply {
+            requestRebuild(EmberNameIndex.NAME)
+            ensureUpToDate(EmberNameIndex.NAME, myFixture.project, null)
+        }
 
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberNameIndex.NAME)
+        val root = myFixture.copyDirectoryToProject(fixtureName, "/")
 
         val project = myFixture.project
 

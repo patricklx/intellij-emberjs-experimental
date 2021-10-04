@@ -14,16 +14,20 @@ class EmberNameIndexTest : BasePlatformTestCase() {
 
     private fun doTest(vararg modules: String) {
         // Load fixture files into the project
-        myFixture.copyDirectoryToProject(getTestName(true), "/")
-
-        // Rebuild index now that the `package.json` file is copied over
         FileBasedIndex.getInstance().apply {
-            ensureUpToDate(EmberNameIndex.NAME, myFixture.project, null)
+            invalidateCaches()
             requestRebuild(EmberNameIndex.NAME)
         }
 
+        myFixture.copyDirectoryToProject(getTestName(true), "/")
+
+// Rebuild index now that the `package.json` file is copied over
+
         assertThat(EmberNameIndex.getAllKeys(myFixture.project))
                 .containsOnly(*modules.map { EmberName.from(it) }.toTypedArray())
+
+
+
     }
 
     fun testExample() = doTest(

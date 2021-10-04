@@ -27,7 +27,7 @@ class EmberNameIndex() : ScalarIndexExtension<EmberName>() {
         val NAME: ID<EmberName, Void> = ID.create("ember.names")
         private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "d.ts")
 
-        private val index by lazy { FileBasedIndex.getInstance() }
+        private val index: FileBasedIndex get() = FileBasedIndex.getInstance()
 
         fun getAllKeys(project: Project): Collection<EmberName>
                 = index.getAllKeys(NAME, project)
