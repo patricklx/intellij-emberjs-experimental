@@ -36,7 +36,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - run: ./gradlew assemble
-      - run: ./gradlew check -i
+      - run: ./gradlew check
   upload:
     name: Upload
     runs-on: ubuntu-latest
