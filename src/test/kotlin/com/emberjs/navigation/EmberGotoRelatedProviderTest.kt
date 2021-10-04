@@ -119,8 +119,8 @@ class EmberGotoRelatedProviderTest : BasePlatformTestCase() {
     private fun doTest(fixtureName: String, tests: Map<String, List<String>>) {
         // Load fixture files into the project
         FileBasedIndex.getInstance().apply {
+            invalidateCaches()
             requestRebuild(EmberNameIndex.NAME)
-            ensureUpToDate(EmberNameIndex.NAME, myFixture.project, null)
         }
 
         val root = myFixture.copyDirectoryToProject(fixtureName, "/")
