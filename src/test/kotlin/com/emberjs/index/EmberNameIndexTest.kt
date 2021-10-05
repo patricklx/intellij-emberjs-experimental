@@ -8,26 +8,16 @@ import java.nio.file.Paths
 
 class EmberNameIndexTest : BasePlatformTestCase() {
     override fun getTestDataPath(): String? {
-        val resource = ClassLoader.getSystemResource("com/emberjs/fixtures")
+        val resource = ClassLoader.getSystemResource("com/emberjs/index/fixtures")
         return Paths.get(resource.toURI()).toAbsolutePath().toString()
     }
 
     private fun doTest(vararg modules: String) {
         // Load fixture files into the project
-        FileBasedIndex.getInstance().apply {
-            invalidateCaches()
-            requestRebuild(EmberNameIndex.NAME)
-        }
-
-        myFixture.copyDirectoryToProject("crates.io", "/")
-
-// Rebuild index now that the `package.json` file is copied over
+        myFixture.copyDirectoryToProject(getTestName(true), "/")
 
         assertThat(EmberNameIndex.getAllKeys(myFixture.project))
                 .containsOnly(*modules.map { EmberName.from(it) }.toTypedArray())
-
-
-
     }
 
     fun testExample() = doTest(
