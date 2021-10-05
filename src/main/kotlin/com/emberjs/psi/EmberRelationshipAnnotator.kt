@@ -33,7 +33,7 @@ class EmberRelationshipAnnotator : Annotator {
         val scope = ProjectScope.getAllScope(project)
         val psiManager = PsiManager.getInstance(project)
 
-        val referencedFiles = EmberNameIndex.getFilteredKeys(scope) { it == name }
+        val referencedFiles = EmberNameIndex.getFilteredProjectKeys(scope) { it == name }
                 .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
                 .map { psiManager.findFile(it) }
                 .filterNotNull()

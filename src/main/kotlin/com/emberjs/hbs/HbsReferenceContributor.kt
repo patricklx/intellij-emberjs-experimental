@@ -118,9 +118,8 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         if (resolvedFile is PsiDirectory) {
             val resolvedPath = resolvedFile!!.virtualFile.path.replace("addon/", "").replace("app/", "")
             val scope = GlobalSearchScope.allScope(element.project)
-            file = EmberNameIndex.getFilteredKeys(scope) { it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
-                    // Filter out files that are not related to this project
-                    .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+            file = EmberNameIndex.getFilteredFiles(scope) { it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
+                    // Filter out files that are not related to this pr
                     .map { psiManager.findFile(it) }
                     .firstOrNull()
         } else {

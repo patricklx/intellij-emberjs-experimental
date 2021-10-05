@@ -30,7 +30,7 @@ class EmberJSLiteralReference(element: JSLiteralExpression, val types: Iterable<
         val names = arrayOf(value, value.removeSuffix("s"))
 
         // Collect all matching modules from the index
-        return EmberNameIndex.getFilteredKeys(scope) { it.type in types && it.name in names }
+        return EmberNameIndex.getFilteredProjectKeys(scope) { it.type in types && it.name in names }
 
                 // Filter out components that are not related to this project
                 .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
@@ -41,7 +41,7 @@ class EmberJSLiteralReference(element: JSLiteralExpression, val types: Iterable<
     }
 
     override fun getVariants(): Array<out Any> {
-        return EmberNameIndex.getFilteredKeys(scope) { it.type == types.firstOrNull() }
+        return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == types.firstOrNull() }
 
                 // Filter out modules that are not related to this project
                 .filter { EmberNameIndex.hasContainingFiles(it, scope) }

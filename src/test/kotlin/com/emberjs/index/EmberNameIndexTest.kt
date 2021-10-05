@@ -8,7 +8,7 @@ import java.nio.file.Paths
 
 class EmberNameIndexTest : BasePlatformTestCase() {
     override fun getTestDataPath(): String? {
-        val resource = ClassLoader.getSystemResource("com/emberjs/index/fixtures")
+        val resource = ClassLoader.getSystemResource("com/emberjs/fixtures")
         return Paths.get(resource.toURI()).toAbsolutePath().toString()
     }
 
@@ -19,7 +19,7 @@ class EmberNameIndexTest : BasePlatformTestCase() {
             requestRebuild(EmberNameIndex.NAME)
         }
 
-        myFixture.copyDirectoryToProject(getTestName(true), "/")
+        myFixture.copyDirectoryToProject("crates.io", "/")
 
 // Rebuild index now that the `package.json` file is copied over
 

@@ -203,16 +203,14 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val scope = ProjectScope.getAllScope(project)
             val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
-            val templates = EmberNameIndex.getFilteredKeys(scope) { it.isComponentTemplate && it.angleBracketsName == name }
-                    .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+            val templates = EmberNameIndex.getFilteredFiles(scope) { it.isComponentTemplate && it.angleBracketsName == name }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.hbs first, then template.hbs
             val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
 
             if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
 
-            val components = EmberNameIndex.getFilteredKeys(scope) { it.type == "component" && it.angleBracketsName == name }
-                    .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
+            val components = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.js first, then component.js
             val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
