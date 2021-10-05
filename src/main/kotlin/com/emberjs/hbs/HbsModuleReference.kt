@@ -47,11 +47,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
             }
         }
 
-        return EmberNameIndex.getFilteredKeys(scope) { matches(it) }
-
-                // Filter out components that are not related to this project
-                .flatMap { EmberNameIndex.getContainingFiles(it, scope) }
-
+        return EmberNameIndex.getFilteredFiles(scope) { matches(it) }
                 // Convert search results for LookupElements
                 .map { psiManager.findFile(it) }
                 .filterNotNull()
@@ -61,13 +57,8 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     }
 
     override fun getVariants(): Array<out Any?> {
-
         // Collect all components from the index
-        return EmberNameIndex.getFilteredKeys(scope) { it.type == moduleType }
-
-                // Filter out components that are not related to this project
-                .filter { EmberNameIndex.hasContainingFiles(it, scope) }
-
+        return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == moduleType }
                 // Convert search results for LookupElements
                 .map { EmberLookupElementBuilder.create(it, dots = false) }
                 .toTypedArray()
