@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## v2021.10.5
+- upgrade to latest intellij idea
+
 ## v2020.3.29
 - fix: correctly resolve internal ember components
 
