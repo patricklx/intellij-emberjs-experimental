@@ -12,7 +12,7 @@ Features
 ![Navigate → Class...](doc/goto-class.png)
 Experimental:
 - Handlebars references for tags/mustache paths and tag attributes
-- Handlebars autocompletion for tags and mustache paths
+- Handlebars autocompletion for tags and mustache paths, also from yields
 - Handlebars parameter hints for helpers/modifiers and components
 - Handlebars renaming for mustache ids and html tags
 
