@@ -10,7 +10,13 @@ Features
 -------------------------------------------------------------------------------
 
 ![Navigate → Class...](doc/goto-class.png)
+Experimental:
+- Handlebars references for tags/mustache paths and tag attributes
+- Handlebars autocompletion for tags and mustache paths
+- Handlebars parameter hints for helpers/modifiers and components
+- Handlebars renaming for mustache ids and html tags
 
+Basic:
 - Ember.js project discovery when imported from existing sources
 - Automatically sets the language level to ES6
 - Marks `app`, `public` and `tests` folders as source, resource and test folders
@@ -21,13 +27,6 @@ Features
 - Generate Ember.js files via `ember generate`
 - Basic reference resolving and completion for e.g. `DS.belongsTo('user')`
 - Live templates
-
-Experimental:
-- Handlebars references for tags/mustache paths and tag attributes
-- Handlebars autocompletion for tags and mustache paths
-- Handlebars parameter hints for helpers/modifiers and components
-- Handlebars renaming for mustache ids and html tags
-
 [more...](doc/features.md)
 
 
