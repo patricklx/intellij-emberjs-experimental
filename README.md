@@ -12,7 +12,8 @@ Features
 ![Navigate → Class...](doc/goto-class.png)
 Experimental:
 - Handlebars references for tags/mustache paths and tag attributes
-- Handlebars autocompletion for tags and mustache paths, also from yields
+- Handlebars autocompletion for tags and mustache paths, also from yields and named yields
+- resolves {{or x y z}} to the first resolvable option, this makes {{component (or x y)}} work, e.g in power-select
 - Handlebars parameter hints for helpers/modifiers and components
 - Handlebars renaming for mustache ids and html tags
 
