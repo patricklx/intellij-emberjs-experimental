@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
 plugins {
     // Java support
     id("java")
@@ -8,6 +9,8 @@ plugins {
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
     id("org.jetbrains.intellij") version "1.1.6"
 }
+
+
 
 group = "com.emberjs"
 version = "2021.2.1"
@@ -55,4 +58,9 @@ tasks {
     publishPlugin {
         token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
+
+}
+
+tasks.test {
+    systemProperty("idea.force.use.core.classloader", "true")
 }
