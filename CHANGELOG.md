@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.0
+- upgrade intellij version
+
 ## 2021.2.1
 - upgrade to latest intellij idea
 
