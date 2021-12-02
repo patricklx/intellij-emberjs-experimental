@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+
 plugins {
     // Java support
     id("java")
@@ -8,6 +9,8 @@ plugins {
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
     id("org.jetbrains.intellij") version "1.1.6"
 }
+
+
 
 group = "com.emberjs"
 version = "2021.2.1"
@@ -27,7 +30,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2021.2")
+    version.set("2021.3")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
@@ -37,7 +40,7 @@ intellij {
     // Example: platformPlugins = com.intellij.java, com.jetbrains.php:203.4449.22
     //
     // com.dmarcotte.handlebars: see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
-    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:212.4746.2"))
+    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:213.5744.190"))
 
     sandboxDir.set(project.rootDir.canonicalPath + "/.sandbox")
 }
@@ -55,4 +58,9 @@ tasks {
     publishPlugin {
         token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
+
+}
+
+tasks.test {
+    systemProperty("idea.force.use.core.classloader", "true")
 }
