@@ -289,7 +289,7 @@ class InputComponent extends Component<{
   'key-down'?: Function,
   'key-up'?: Function,
 }> {
-  template = '<div ...attributes />'
+  layout = '<div ...attributes />'
 }
 
 /**
