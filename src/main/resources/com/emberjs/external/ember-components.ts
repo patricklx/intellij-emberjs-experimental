@@ -287,9 +287,9 @@ class InputComponent extends Component<{
   'focus-out'?: Function,
   'key-press'?: Function,
   'key-down'?: Function,
-  'key-up'?: Function
+  'key-up'?: Function,
 }> {
-
+  template = '<div ...attributes />'
 }
 
 /**
