@@ -5,7 +5,8 @@ type LinkToArgs = {
   disabled?: boolean
   activeClass?: string
   'current-when'?: string
-  model?: any
+  model?: any,
+  query?: any
 }
 
 /**
