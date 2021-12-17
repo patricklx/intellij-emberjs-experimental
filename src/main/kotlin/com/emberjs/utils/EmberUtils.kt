@@ -371,42 +371,6 @@ class EmberUtils {
             val tplArgs = emptyArray<ArgData>().toMutableList()
             var tplYields = mutableListOf<EmberXmlElementDescriptor.YieldReference>()
 
-            if (dir != null) {
-                // co-located
-                if (name == "component") {
-                    name = "template"
-                }
-                template = dir.findFile("$name.hbs")
-                parentModule = file.parents.find { it is PsiDirectory && it.virtualFile == file.originalVirtualFile?.parentEmberModule} as PsiDirectory?
-                path = file.parents(true)
-                        .takeWhile { it != parentModule }
-                        .toList()
-                        .reversed()
-                        .map { (it as PsiFileSystemItem).name }
-                        .joinToString("/")
-
-                val fullPathToHbs = path.replace("app/", "addon/") + "/$name.hbs"
-                template = template
-                        ?: getFileByPath(parentModule, fullPathToHbs)
-                                ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
-
-                if (template?.node?.psi != null) {
-                    val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)
-                    for (arg in args) {
-                        val argName = arg.text.split(".").first()
-                        if (tplArgs.find { it.value == argName } == null) {
-                            tplArgs.add(ArgData(argName, "", AttrPsiReference(arg)))
-                        }
-                    }
-
-                    val yields = PsiTreeUtil.collectElements(template.node.psi, { it is HbPathImpl && it.text == "yield" })
-                    for (y in yields) {
-                        tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
-                    }
-                }
-            }
-
-
             if (name == "template") {
                 name = "component"
             }
@@ -437,6 +401,49 @@ class EmberUtils {
                     }
                 }
             }
+
+            if (dir != null) {
+                // co-located
+                if (name == "component") {
+                    name = "template"
+                }
+                template = dir.findFile("$name.hbs")
+                parentModule = file.parents.find { it is PsiDirectory && it.virtualFile == file.originalVirtualFile?.parentEmberModule} as PsiDirectory?
+                path = file.parents(true)
+                        .takeWhile { it != parentModule }
+                        .toList()
+                        .reversed()
+                        .map { (it as PsiFileSystemItem).name }
+                        .joinToString("/")
+
+                val fullPathToHbs = path.replace("app/", "addon/") + "/$name.hbs"
+                var jsTemplate = null;
+                if (cls is JSClass) {
+                    jsTemplate = cls.fields.get("layout");    
+                }
+
+                template = template
+                        ?: getFileByPath(parentModule, fullPathToHbs)
+                                ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
+                                ?: jsTemplate
+
+
+                if (template?.node?.psi != null) {
+                    val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)
+                    for (arg in args) {
+                        val argName = arg.text.split(".").first()
+                        if (tplArgs.find { it.value == argName } == null) {
+                            tplArgs.add(ArgData(argName, "", AttrPsiReference(arg)))
+                        }
+                    }
+
+                    val yields = PsiTreeUtil.collectElements(template.node.psi, { it is HbPathImpl && it.text == "yield" })
+                    for (y in yields) {
+                        tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
+                    }
+                }
+            }
+
             return ComponentReferenceData(hasSplattributes, tplYields, tplArgs)
         }
     }
