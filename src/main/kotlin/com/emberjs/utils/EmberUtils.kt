@@ -36,9 +36,9 @@ class ArgData(
         var reference: AttrPsiReference? = null) {}
 
 class ComponentReferenceData(
-        public val hasSplattributes: Boolean = false,
-        public val yields: MutableList<EmberXmlElementDescriptor.YieldReference> = mutableListOf(),
-        public val args: MutableList<ArgData> = mutableListOf()
+        val hasSplattributes: Boolean = false,
+        val yields: MutableList<EmberXmlElementDescriptor.YieldReference> = mutableListOf(),
+        val args: MutableList<ArgData> = mutableListOf()
 ) {
 
 }
@@ -172,7 +172,10 @@ class EmberUtils {
                     val nameAs = reference.element.text.split(",").find { it.split(" as ").first() == path }
                     name = nameAs?.split(" as ")?.last()
                 }
-                element = reference.multiResolve(false).find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
+                val resolutions = reference.multiResolve(false)
+                element = resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.ts") }?.element
+                            ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.js") }?.element
+                            ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
             }
             return element
         }
@@ -219,10 +222,10 @@ class EmberUtils {
 
 
         fun findFirstHbsParamFromParam(psiElement: PsiElement?): PsiElement? {
-            val parent = psiElement?.parents
+            val parent = psiElement?.parents(false)
                     ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN_SEXPR }
                     ?:
-                    psiElement?.parents
+                    psiElement?.parents(false)
                             ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN }
             if (parent == null) {
                 return null
@@ -237,7 +240,7 @@ class EmberUtils {
 
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {
-            val insideImport = element.parents.find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
+            val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
 
             if (insideImport && element.text != "from" && element.text != "import") {
                 return null
@@ -369,7 +372,7 @@ class EmberUtils {
             var path = ""
             var parentModule: PsiDirectory? = null
             val tplArgs = emptyArray<ArgData>().toMutableList()
-            var tplYields = mutableListOf<EmberXmlElementDescriptor.YieldReference>()
+            val tplYields = mutableListOf<EmberXmlElementDescriptor.YieldReference>()
 
             if (dir != null) {
                 // co-located
@@ -377,7 +380,7 @@ class EmberUtils {
                     name = "template"
                 }
                 template = dir.findFile("$name.hbs")
-                parentModule = file.parents.find { it is PsiDirectory && it.virtualFile == file.originalVirtualFile?.parentEmberModule} as PsiDirectory?
+                parentModule = file.parents(false).find { it is PsiDirectory && it.virtualFile == file.originalVirtualFile?.parentEmberModule} as PsiDirectory?
                 path = file.parents(true)
                         .takeWhile { it != parentModule }
                         .toList()
