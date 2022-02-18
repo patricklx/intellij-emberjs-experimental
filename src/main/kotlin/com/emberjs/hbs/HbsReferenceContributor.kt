@@ -8,7 +8,6 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PlatformPatterns
@@ -74,7 +73,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
         var path = element.text.substring(1, element.text.lastIndex)
         var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent
-        var parts = path.split("/")
+        val parts = path.split("/")
 
         val name = findMainProjectName(element.originalVirtualFile!!)
 
@@ -93,7 +92,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             resolvedFile = psiManager.findDirectory(parent!!)
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
         }
-        val files = parts.map { s ->
+        val files = parts.mapIndexed { i, s ->
             if (s == "." || s == "~") {
                 // do nothing
             }
@@ -105,8 +104,13 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                     if (resolvedFile!!.virtualFile.isEmberAddonFolder || resolvedFile!!.virtualFile.isEmberFolder) {
                         dir = dir?.findSubdirectory("addon") ?: dir?.findSubdirectory("app")
                     }
-                    resolvedFile = dir?.findSubdirectory(s) ?: dir?.children?.find { it is PsiFile && it.name.split(".").first() == s } as PsiFileSystemItem?
-                            ?: resolvedFile
+                    val subdir = dir?.findSubdirectory(s)
+                    val file = dir?.children?.find { it is PsiFile && it.name.split(".").first() == s } as PsiFileSystemItem?
+                    resolvedFile = if (i == parts.count() - 1) {
+                        file ?: subdir ?: resolvedFile
+                    } else {
+                        subdir ?: file ?: resolvedFile
+                    }
                 } else {
                     resolvedFile = null
                 }
@@ -149,7 +153,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
             } else {
                 it
             }
-        }.map { it.toLowerCase().replace(" ", "") }
+        }.map { it.lowercase().replace(" ", "") }
         val mustache = element.parents.find { it is HbMustache }!!
         val path = mustache.children.findLast { it is HbParam }
         var fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
