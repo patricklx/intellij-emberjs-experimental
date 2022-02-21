@@ -198,6 +198,10 @@ class LinkToComponent extends Component<LinkToArgs> {
 
 }
 
+function hbs(strings: TemplateStringsArray) {
+  return '';
+}
+
 /**
  The `Input` component lets you create an HTML `<input>` element.
  ```handlebars
@@ -290,7 +294,7 @@ class InputComponent extends Component<{
   'key-down'?: Function,
   'key-up'?: Function,
 }> {
-  layout = '<div ...attributes />'
+  layout = hbs`<div ...attributes />`;
 }
 
 /**
