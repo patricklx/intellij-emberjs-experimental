@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2021.3.1
+- improve template lookup
+- handle inline templates on layout field
+
 ## 2021.3.0
 - upgrade intellij version
 
