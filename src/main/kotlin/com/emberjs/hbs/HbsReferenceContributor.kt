@@ -89,7 +89,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             while (parent?.parentEmberModule != null) {
                 parent = parent.parentEmberModule
             }
-            resolvedFile = psiManager.findDirectory(parent!!)
+            resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
         }
         val files = parts.mapIndexed { i, s ->
