@@ -467,10 +467,10 @@ class EmberUtils {
                 template = template
                         ?: getFileByPath(parentModule, fullPathToHbs)
                                 ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
-                                ?: jsTemplate as PsiFile
+                                ?: jsTemplate as PsiFile?
 
 
-                if (template.node?.psi != null) {
+                if (template?.node?.psi != null) {
                     val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)
                     for (arg in args) {
                         val argName = arg.text.split(".").first()
