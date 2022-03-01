@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.3
+- fix: another null pointer exception 
+
 ## 2021.3.2
 - fix: null access violation
 
