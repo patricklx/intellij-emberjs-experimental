@@ -26,7 +26,7 @@ import com.intellij.refactoring.suggested.startOffset
 import javax.swing.Icon
 
 open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null) : PsiNameIdentifierOwner {
-    private val userDataMap = HashMap<Any, Any>()
+    private val userDataMap = HashMap<Any, Any?>()
     override fun <T : Any?> getUserData(key: Key<T>): T? {
         return this.userDataMap[key] as T?
     }
@@ -43,7 +43,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
     }
 
     override fun <T : Any?> putUserData(key: Key<T>, value: T?) {
-        this.userDataMap[key] = value as Any
+        this.userDataMap[key] = value as Any?
     }
 
     override fun getIcon(flags: Int): Icon? {

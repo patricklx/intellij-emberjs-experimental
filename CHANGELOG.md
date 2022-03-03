@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.5
+- fix: bad cast
+
 ## 2021.3.4
 - improvement: better support data tags (@something.x)
 
