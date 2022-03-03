@@ -204,7 +204,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     }
                 }
                 if (any.children[0] is HbMustacheName) {
-                    val lastId = any.children[0].children[0].children.findLast { it.elementType == HbTokenTypes.ID }
+                    val lastId = any.children[0].children[0].children.findLast { it.elementType == HbTokenTypes.ID } // lookup id ref (something.x)
+                            ?: any.children[0].children[1].children.findLast { it.elementType == HbTokenTypes.ID } // lookup data if ref (@something.x)
                     return resolveToJs(lastId, path, resolveIncomplete)
                 }
             }
@@ -368,7 +369,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             return referenceBlocks(element, name) ?:
-                resolveToLocalJs(element)
+            resolveToLocalJs(element)
         }
     }
 }

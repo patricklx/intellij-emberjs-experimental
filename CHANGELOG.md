@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.4
+- improvement: better support data tags (@something.x)
+
 ## 2021.3.3
 - fix: another null pointer exception 
 

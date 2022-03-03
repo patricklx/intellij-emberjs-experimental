@@ -86,8 +86,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 result.addAllElements(names.map { LookupElementBuilder.create(it) })
             }
             val ids = PsiTreeUtil.collectElements(refElement, { it.elementType == HbTokenTypes.ID && it !is LeafPsiElement })
-            if (ids.size == 1) {
-                resolve(ids.first(), result)
+            if (ids.isNotEmpty()) {
+                resolve(ids.last(), result)
             }
         }
 
