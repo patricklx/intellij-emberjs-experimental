@@ -226,7 +226,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
-        val useImports = (project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") != null)
+        val useImports = false;
+//        val useImports = (project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") != null)
 
 
         val componentMap = hashMapOf<String, LookupElement>()

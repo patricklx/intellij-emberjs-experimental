@@ -111,7 +111,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
             val angleComponents = tag.parents.find {
                 it is XmlTag && it.descriptor is EmberXmlElementDescriptor
-            } as XmlTag
+            } as XmlTag? ?: return null
             val data = (angleComponents.descriptor as EmberXmlElementDescriptor).getReferenceData()
             val tplYields = data.yields
 

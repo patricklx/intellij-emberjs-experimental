@@ -30,7 +30,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
-import com.intellij.psi.util.parentsWithSelf
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 
@@ -71,8 +70,14 @@ class EmberUtils {
             var exp = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {
-                exp = ES6PsiUtil.resolveDefaultExport(exportImport).firstOrNull() as JSElement? ?: exp
-                exp = exp ?: exportImport.fromClause?.references?.findLast { it.resolve() != null }?.resolve() as JSElement
+                exp = ES6PsiUtil.resolveDefaultExport(exportImport).firstOrNull() as? JSElement? ?: exp
+                if (exportImport.fromClause?.text?.endsWith("/template\"") == true) {
+                    val dir = exportImport.fromClause?.references?.filter { it.resolve() != null }?.takeLast(2)?.first()?.resolve() as? PsiDirectory
+                    if (dir?.findFile("template.hbs") !== null) {
+                        return dir.findFile("template.hbs")
+                    }
+                }
+                exp = exp ?: exportImport.fromClause?.references?.findLast { it.resolve() != null }?.resolve() as? JSElement
             }
             var ref: Any? = exp?.children?.find { it is JSReferenceExpression } as JSReferenceExpression?
             while (ref is JSReferenceExpression && ref.resolve() != null) {
@@ -374,7 +379,7 @@ class EmberUtils {
             val dir = file.containingFile.parent as PsiDirectoryImpl?
             var template: PsiFile? = null
             var path = ""
-            var parentModule: PsiDirectory? = null
+            var parentModule: PsiDirectory? = file.containingFile.parent
             val tplArgs = emptyArray<ArgData>().toMutableList()
             val tplYields = mutableListOf<EmberXmlElementDescriptor.YieldReference>()
 
@@ -382,8 +387,8 @@ class EmberUtils {
                 name = "component"
             }
 
-            val fullPathToTs = "/$name.ts"
-            val fullPathToDts = "/$name.d.ts"
+            val fullPathToTs = "$name.ts"
+            val fullPathToDts = "$name.d.ts"
             var containingFile = file.containingFile
             if (containingFile == null) {
                 return ComponentReferenceData()

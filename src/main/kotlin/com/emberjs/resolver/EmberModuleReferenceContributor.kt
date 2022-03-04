@@ -1,7 +1,10 @@
 package com.emberjs.resolver
 
+import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.emberjs.cli.EmberCliProjectConfigurator
 import com.emberjs.utils.*
+import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.lang.javascript.DialectDetector
 import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
@@ -35,14 +38,20 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
             return emptyArray()
         }
 
+        var refText = unquotedRefText;
+        if (unquotedRefText.endsWith("IntellijIdeaRulezzz ")) {
+            val parts = unquotedRefText.split("/")
+            refText = parts.subList(0, parts.lastIndex).joinToString("/")
+        }
+
         // e.g. `my-app/controllers/foo` -> `my-app`
-        var packageName = unquotedRefText.substringBefore('/')
+        var packageName = refText.substringBefore('/')
 
         // e.g. `my-app/controllers/foo` -> `controllers/foo`
-        var importPath = unquotedRefText.removePrefix("$packageName/")
+        var importPath = refText.removePrefix("$packageName/")
 
         // find root package folder of current file (ignoring package.json in in-repo-addons)
-        val hostPackageRoot = host.containingFile.virtualFile?.parents
+        val hostPackageRoot = host.containingFile.originalVirtualFile?.parents
                 ?.find { it.findChild("package.json") != null && !it.isInRepoAddon }
                 ?: return emptyArray()
 
@@ -76,12 +85,9 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         val refs : FileReferenceSet
         val startInElement = offset + packageName.length + 1
 
-        if (importPath == "") {
-            return roots.toTypedArray()
-        }
 
         try {
-            refs = object : FileReferenceSet(importPath, host, startInElement, provider, false, true, DialectDetector.JAVASCRIPT_FILE_TYPES_ARRAY) {
+            refs = object : FileReferenceSet(importPath, host, startInElement, provider, false, true, DialectDetector.JAVASCRIPT_FILE_TYPES_ARRAY + arrayOf(HbFileType.INSTANCE, HtmlFileType.INSTANCE)) {
                 override fun createFileReference(range: TextRange, index: Int, text: String?): FileReference {
                     return object : EmberJSModuleReference(text, index, range, this, null, true) {
                         override fun innerResolveInContext(referenceText: String, psiFileSystemItem: PsiFileSystemItem, resolveResults: MutableCollection<ResolveResult>, caseSensitive: Boolean) {
@@ -91,7 +97,12 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
                             resolveResults.removeAll { it.element?.containingFile == host.containingFile }
                         }
 
+                        override fun getImplicitExtensions(): Array<String> {
+                            val ext = super.getImplicitExtensions()
+                            return ext + arrayOf(".hbs")
+                        }
                         override fun isAllowFolders() = false
+                        override fun isPreferImplicitExtension() = true
                     }
                 }
 
