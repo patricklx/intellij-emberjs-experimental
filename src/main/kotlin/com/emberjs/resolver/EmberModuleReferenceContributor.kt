@@ -38,11 +38,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
             return emptyArray()
         }
 
-        var refText = unquotedRefText;
-        if (unquotedRefText.endsWith("IntellijIdeaRulezzz ")) {
-            val parts = unquotedRefText.split("/")
-            refText = parts.subList(0, parts.lastIndex).joinToString("/")
-        }
+        val refText = unquotedRefText;
 
         // e.g. `my-app/controllers/foo` -> `my-app`
         var packageName = refText.substringBefore('/')
