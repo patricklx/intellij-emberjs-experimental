@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2021.3.6
+- improvement: resolve template.hbs in js files
+- fix: module resolution for ember files 
+
 ## 2021.3.5
 - fix: bad cast
 
