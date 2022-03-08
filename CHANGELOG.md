@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2021.3.7
+- fix: resolving some tags failed
+- feature: add default hbs language injection for hbs string tags (hbs\`tpl\`) 
+
 ## 2021.3.6
 - improvement: resolve template.hbs in js files
 - fix: module resolution for ember files 

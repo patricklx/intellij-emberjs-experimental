@@ -38,6 +38,7 @@
     <depends>JavaScript</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends optional="true" config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
+    <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
@@ -71,7 +72,6 @@
         <psi.referenceContributor language="JavaScript" implementation="com.emberjs.psi.EmberReferenceContributor"/>
 
         <iconProvider implementation="com.emberjs.icons.EmberIconProvider" order="first"/>
-
         <defaultLiveTemplatesProvider implementation="com.emberjs.template.EmberLiveTemplatesProvider"/>
 
         <!-- deprecated and only included for legacy reasons -->

@@ -72,9 +72,9 @@ class EmberUtils {
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {
                 exp = ES6PsiUtil.resolveDefaultExport(exportImport).firstOrNull() as? JSElement? ?: exp
                 if (exportImport.fromClause?.text?.endsWith("/template\"") == true) {
-                    val dir = exportImport.fromClause?.references?.filter { it.resolve() != null }?.takeLast(2)?.first()?.resolve() as? PsiDirectory
-                    if (dir?.findFile("template.hbs") !== null) {
-                        return dir.findFile("template.hbs")
+                    val hbs = exportImport.fromClause?.references?.find { it.resolve() is HbPsiFile }?.resolve() as? HbPsiFile
+                    if (hbs != null) {
+                        return hbs
                     }
                 }
                 exp = exp ?: exportImport.fromClause?.references?.findLast { it.resolve() != null }?.resolve() as? JSElement
@@ -374,7 +374,8 @@ class EmberUtils {
             return null
         }
 
-        fun getComponentReferenceData(file: PsiElement): ComponentReferenceData {
+        fun getComponentReferenceData(f: PsiElement): ComponentReferenceData {
+            val file = resolveDefaultExport(f.containingFile)?.containingFile ?: f
             var name = file.containingFile.name.split(".").first()
             val dir = file.containingFile.parent as PsiDirectoryImpl?
             var template: PsiFile? = null

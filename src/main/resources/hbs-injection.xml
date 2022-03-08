@@ -1,0 +1,8 @@
+<component name="LanguageInjectionConfiguration">
+<injection language="Handlebars" injector-id="js">
+    <display-name>hbs injection</display-name>
+    <single-file value="false" />
+    <place><![CDATA[taggedString("hbs")]]></place>
+    <templateTag>hbs</templateTag>
+</injection>
+</component>
