@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.8
+- fix: correct tag name with hbs imports
+
 ## 2021.3.7
 - fix: resolving some tags failed
 - feature: add default hbs language injection for hbs string tags (hbs\`tpl\`) 
