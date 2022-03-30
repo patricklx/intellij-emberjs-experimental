@@ -9,20 +9,25 @@ import com.intellij.psi.PsiWhiteSpace
 
 object HbsPatterns {
     val SIMPLE_MUSTACHE_NAME: Capture<HbMustacheName> = psiElement(HbMustacheName::class.java)
+            .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.MUSTACHE))
             .afterLeaf(psiElement(HbTokenTypes.OPEN))
 
     val SIMPLE_MUSTACHE_NAME_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
+            .withTextLengthLongerThan(0)
             .withSuperParent(3, SIMPLE_MUSTACHE_NAME)
 
     val BLOCK_MUSTACHE_NAME: Capture<HbMustacheName> = psiElement(HbMustacheName::class.java)
+            .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.OPEN_BLOCK_STACHE))
             .afterLeaf(psiElement(HbTokenTypes.OPEN_BLOCK))
 
     val BLOCK_MUSTACHE_NAME_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
+            .withTextLengthLongerThan(0)
             .withSuperParent(3, BLOCK_MUSTACHE_NAME)
 
     val BLOCK_MUSTACHE_PARAM: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
+            .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.OPEN_BLOCK_STACHE))
 
     val MUSTACHE_ID_MISSING: Capture<PsiElement> = psiElement(HbTokenTypes.ID).withParent(psiElement(HbPsiElement::class.java)

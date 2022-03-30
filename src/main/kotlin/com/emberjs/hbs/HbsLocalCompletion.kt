@@ -235,7 +235,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val cls = EmberUtils.findDefaultExportClass(file)
             val args = EmberUtils.findComponentArgsType(cls as JSElement)
             if (args?.properties != null) {
-                if (element.parent is HbData) {
+                if (element.parent is HbData && result.prefixMatcher.prefix != "@") {
                     result.addAllElements(args.properties.map { LookupElementBuilder.create(it.memberName) })
                 } else {
                     result.addAllElements(args.properties.map { LookupElementBuilder.create("@${it.memberName}") })

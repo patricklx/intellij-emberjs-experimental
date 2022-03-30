@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.9
+- fix: sometimes no autocompletion for data tags (@xxx)
+
 ## 2021.3.8
 - fix: correct tag name with hbs imports
 
