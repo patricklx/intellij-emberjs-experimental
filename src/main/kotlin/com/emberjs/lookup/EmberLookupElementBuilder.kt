@@ -10,9 +10,9 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 object EmberLookupElementBuilder {
     fun create(it: EmberName, dots: Boolean = true): LookupElement {
         val element = LookupElementBuilder
-                .create(if (dots) it.name.replace("/", ".") else it.name)
+                .create(it, if (dots) it.name.replace("/", ".") else it.name)
                 .withTypeText(it.type)
-                .withTailText(" from ${it.importPath.split("/").first()}")
+                .withTailText(" from ${it.importPath}")
                 .withIcon(EmberIconProvider.getIcon(it.type) ?: EmberIcons.EMPTY_16)
                 .withCaseSensitivity(true)
                 .withInsertHandler(HbsInsertHandler())

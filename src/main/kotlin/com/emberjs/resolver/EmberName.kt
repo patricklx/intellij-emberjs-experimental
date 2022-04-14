@@ -53,7 +53,8 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
     val angleBracketsName by lazy {
         assert(type == "component" || isComponentTemplate)
 
-        val baseName = if (isComponentTemplate) name.removePrefix("components/") else name
+        var baseName = if (isComponentTemplate) name.removePrefix("components/") else name
+        baseName = baseName.first().uppercase() + baseName.subSequence(1, baseName.lastIndex)
 
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
             assert(it.range.first - it.range.last == 0)
