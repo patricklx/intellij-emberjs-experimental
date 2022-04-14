@@ -28,7 +28,11 @@ import org.jetbrains.jps.model.java.JavaSourceRootType.TEST_SOURCE
 import org.jetbrains.jps.model.module.JpsModuleSourceRootType
 
 class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
-    override fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>) {
+
+    override fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>, isProjectCreatedWithWizard: Boolean) {
+        this.configureProject(project, baseDir, moduleRef);
+    }
+    fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>) {
         val module = ModuleManager.getInstance(project).modules.singleOrNull()
         System.out.println("configureProject: $module ${baseDir.isEmberFolder}")
         if (module != null && baseDir.isEmberFolder) {

@@ -5,9 +5,9 @@ plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.6.10"
+    id("org.jetbrains.kotlin.jvm") version "1.6.20"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.3.1"
+    id("org.jetbrains.intellij") version "1.5.2"
 }
 
 
@@ -20,8 +20,9 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    testImplementation("org.assertj:assertj-core:3.21.0")
-    testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.assertj:assertj-core:3.22.0")
+    implementation(kotlin("test"))
 }
 
 // Configure gradle-intellij-plugin plugin.
