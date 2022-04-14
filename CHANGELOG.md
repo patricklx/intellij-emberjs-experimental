@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.0
+- upgrade to 2022.1.0
+
 ## 2021.3.9
 - fix: sometimes no autocompletion for data tags (@xxx)
 
