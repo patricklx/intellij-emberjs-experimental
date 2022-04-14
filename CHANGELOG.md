@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.10
+- fix: ClassNotFoundException: kotlin.test.Assertions
+
 ## 2021.3.9
 - fix: sometimes no autocompletion for data tags (@xxx)
 

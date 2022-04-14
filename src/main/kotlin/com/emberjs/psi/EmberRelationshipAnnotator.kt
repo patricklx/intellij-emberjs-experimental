@@ -43,9 +43,8 @@ class EmberRelationshipAnnotator : Annotator {
         // Create an annotation with a gutter icon renderer
         holder.createInfoAnnotation(identifier, null).apply {
             val navHandler = DefaultGutterIconNavigationHandler<PsiElement>(referencedFiles, name.displayName)
-            val lmi = LineMarkerInfo(identifier, identifier.textRange, icon,
-                    null, navHandler, GutterIconRenderer.Alignment.CENTER,
-                    { "go to related" })
+            val lmi = LineMarkerInfo(identifier, identifier.textRange, icon, Pass.LINE_MARKERS,
+                    null, navHandler, GutterIconRenderer.Alignment.CENTER)
 
             gutterIconRenderer = LineMarkerInfo.LineMarkerGutterIconRenderer(lmi)
         }

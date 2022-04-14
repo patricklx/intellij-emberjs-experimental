@@ -41,11 +41,6 @@ class EmberTestFinderTest : BasePlatformTestCase() {
     override fun getTestDataPath() = FIXTURES_PATH.toString()
 
     private fun doTest(fixtureName: String, tests: Map<String, List<String>>) {
-        // Load fixture files into the project
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberNameIndex.NAME)
-
-
         val root = myFixture.copyDirectoryToProject(fixtureName, "/")
 
 
