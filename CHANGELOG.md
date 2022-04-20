@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.2
+- fix: completion did not provide all possibilities (when using with ember-hbs-imports)
+- 
 ## 2022.1.1
 - fix: completion did not provide all possibilities (when using with ember-hbs-imports)
 - fix: tag completions & references did not work in some cases
