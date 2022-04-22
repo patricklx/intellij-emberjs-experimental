@@ -51,7 +51,7 @@ class EmberGotoRelatedProvider : GotoRelatedProvider() {
 
         val scope = ProjectScope.getAllScope(project)
 
-        return EmberNameIndex.getFilteredPairs(scope) { it in modulesToSearch }
+        return EmberNameIndex.getFilteredPairs(scope) { modulesToSearch.find { m -> m.fullName == it.fullName } != null }
     }
 
     companion object {
