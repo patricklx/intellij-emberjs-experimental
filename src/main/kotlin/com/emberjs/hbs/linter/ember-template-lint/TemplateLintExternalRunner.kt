@@ -110,10 +110,10 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             sessionData.templateLintPackage
                     .addMainEntryJsFile(commandLine, sessionData.interpreter)
             
-            if (sessionData.templateLintPackage.versionStr.split(".").first().toInt() >= 4 {
+            if (sessionData.templateLintPackage.versionStr.split(".").first().toInt() >= 4) {
               commandLine.addParameter("--format=json")
             } else {
-              commandLine.addParameter("json")
+              commandLine.addParameter("--json")
             }
 
             val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
