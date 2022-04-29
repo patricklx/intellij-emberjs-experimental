@@ -2,9 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2022.1.3
+- fix: templatelint had bad parameters for v > 4 
+
 ## 2022.1.2
 - fix: completion did not provide all possibilities (when using with ember-hbs-imports)
-- 
+
 ## 2022.1.1
 - fix: completion did not provide all possibilities (when using with ember-hbs-imports)
 - fix: tag completions & references did not work in some cases
