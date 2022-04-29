@@ -73,7 +73,8 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
         @Throws(IOException::class)
         private fun writeFileContentToStdin(processHandler: KillableColoredProcessHandler, sessionData: TemplateLintSessionData, charset: Charset) {
-            val content = sessionData.fileToLintContent
+            //for projects using hbs-imports, filter out the imports, but keep empty lines
+            val content = sessionData.fileToLintContent.replace(Regex("\\{\\{\\s*import\\s+([A-Z-a-z\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"), "")
             try {
                 val stdin = ObjectUtils.assertNotNull(processHandler.processInput)
                 var throwable: Throwable? = null
