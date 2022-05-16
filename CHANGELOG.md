@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.4
+- fix: another LineMarkerInfo deprecation
+
 ## 2022.1.3
 - fix: templatelint had bad parameters for v > 4 
 
