@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2021.3.11
+- fix: another assertion
+
 ## 2021.3.10
 - fix: ClassNotFoundException: kotlin.test.Assertions
 
