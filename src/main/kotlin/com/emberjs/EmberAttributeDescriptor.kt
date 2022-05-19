@@ -105,7 +105,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
             return null
         }
         if (this.values.isNotEmpty() && value != null) {
-            if (value.startsWith("{{") || value.startsWith("\"{{")) {
+            if (value == "" || value.startsWith("{{") || value.startsWith("\"{{")) {
                 return null;
             }
             if (this.values.contains(value)) {
