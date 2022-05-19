@@ -404,6 +404,9 @@ class EmberUtils {
                     ?: findDefaultExportClass(containingFile)
                     ?: file
 
+            if (cls is PsiFile && cls.name == "intellij-emberjs/internal/components-stub") {
+                cls = f;
+            }
             var jsTemplate: Any? = null;
             if (cls is JSElement) {
                 val argsElem = findComponentArgsType(cls)
