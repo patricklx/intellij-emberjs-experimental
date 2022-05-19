@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.5
+- fix: internal component attributes did not work correctly
+
 ## 2022.1.4
 - fix: another LineMarkerInfo deprecation
 
