@@ -400,7 +400,7 @@ class EmberUtils {
             }
 
             val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?: containingFile
-            val cls = findDefaultExportClass(tsFile)
+            var cls = findDefaultExportClass(tsFile)
                     ?: findDefaultExportClass(containingFile)
                     ?: file
 
