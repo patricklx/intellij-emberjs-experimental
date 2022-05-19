@@ -73,7 +73,8 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
         @Throws(IOException::class)
         private fun writeFileContentToStdin(processHandler: KillableColoredProcessHandler, sessionData: TemplateLintSessionData, charset: Charset) {
-            val content = sessionData.fileToLintContent
+            //for projects using hbs-imports, filter out the imports, but keep empty lines
+            val content = sessionData.fileToLintContent.replace(Regex("\\{\\{\\s*import\\s+([A-Z-a-z\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"), "")
             try {
                 val stdin = ObjectUtils.assertNotNull(processHandler.processInput)
                 var throwable: Throwable? = null
@@ -110,7 +111,11 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             sessionData.templateLintPackage
                     .addMainEntryJsFile(commandLine, sessionData.interpreter)
 
-            commandLine.addParameter("--json")
+            if (sessionData.templateLintPackage.versionStr.split(".").first().toInt() >= 4) {
+              commandLine.addParameter("--format=json")
+            } else {
+              commandLine.addParameter("--json")
+            }
 
             val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
             val relativePath = FileUtil.getRelativePath(workDirectory.absolutePath, pathToLint, File.separatorChar)

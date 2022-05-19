@@ -190,8 +190,8 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
         fun forTagName(project: Project, tagName: String): PsiElement? {
             val name = tagName
-                    .replace(Regex("-(.)")) { it.groupValues.last().toUpperCase() }
-                    .replace(Regex("/(.)")) { "::" + it.groupValues.last().toUpperCase() }
+                    .replace(Regex("-(.)")) { it.groupValues.last().uppercase() }
+                    .replace(Regex("/(.)")) { "::" + it.groupValues.last().uppercase() }
             val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
             val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 

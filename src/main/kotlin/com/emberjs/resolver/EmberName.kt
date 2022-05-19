@@ -8,7 +8,7 @@ import com.intellij.openapi.vfs.VirtualFile
 
 data class EmberName(val type: String, val path: String, val fullImportPath: String = "") {
 
-    override fun hashCode(): Int = fullName.hashCode()
+    override fun hashCode(): Int = storageKey.hashCode()
 
     override fun equals(other: Any?): Boolean {
         return this.hashCode() == other.hashCode()
@@ -53,7 +53,8 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
     val angleBracketsName by lazy {
         assert(type == "component" || isComponentTemplate)
 
-        val baseName = if (isComponentTemplate) name.removePrefix("components/") else name
+        var baseName = if (isComponentTemplate) name.removePrefix("components/") else name
+        baseName = baseName.first().uppercase() + baseName.subSequence(1, baseName.lastIndex+1)
 
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
             assert(it.range.first - it.range.last == 0)
@@ -61,10 +62,10 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             if (it.value == "/") return@replace "::"
 
             if (it.range.first == 0 || !ALPHA.matches(baseName.subSequence(it.range.start - 1, it.range.start))) {
-                return@replace it.value.toUpperCase()
+                return@replace it.value.uppercase()
             }
 
-            if (it.value == "-") "" else it.value.toLowerCase()
+            if (it.value == "-") "" else it.value.lowercase()
         }
     }
 
@@ -76,10 +77,10 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             assert(it.range.first - it.range.last == 0)
 
             if (it.range.first == 0 || !ALPHA.matches(baseName.subSequence(it.range.start - 1, it.range.start))) {
-                return@replace it.value.toUpperCase()
+                return@replace it.value.uppercase()
             }
 
-            if (it.value == "-") "" else it.value.toLowerCase()
+            if (it.value == "-") "" else it.value.lowercase()
         }
     }
 
@@ -197,13 +198,13 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
 
                 if (type == EmberFileType.COMPONENT) {
                     if (file.extension == "hbs") {
-                        return EmberName(EmberFileType.TEMPLATE.name.toLowerCase(), "components/$pathFromTypeRoot", path)
+                        return EmberName(EmberFileType.TEMPLATE.name.lowercase(), "components/$pathFromTypeRoot", path)
                     }
                     if (file.extension == "css" || file.extension == "scss") {
                         return EmberName("styles", "components/${pathFromTypeRoot.removeSuffix(".module")}")
                     }
                 }
-                return EmberName(type.name.toLowerCase(), pathFromTypeRoot, path)
+                return EmberName(type.name.lowercase(), pathFromTypeRoot, path)
             }
         }
 
@@ -227,7 +228,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
 
                 val name = "$path/${file.nameWithoutExtension.removeSuffix("-test")}".removePrefix("/")
 
-                EmberName("${type.name.toLowerCase()}$testSuffix", name)
+                EmberName("${type.name.lowercase()}$testSuffix", name)
             }
         }
 
@@ -274,7 +275,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
                                 else -> it
                             }
                         }
-                        .let { EmberName(type.name.toLowerCase(), it,this.getImportPath(type, file) ?: file.path) }
+                        .let { EmberName(type.name.lowercase(), it,this.getImportPath(type, file) ?: file.path) }
             }
         }
 
@@ -305,7 +306,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
                             }
                         }
 
-                EmberName("${type.name.toLowerCase()}$testSuffix", name)
+                EmberName("${type.name.lowercase()}$testSuffix", name)
             }
         }
     }

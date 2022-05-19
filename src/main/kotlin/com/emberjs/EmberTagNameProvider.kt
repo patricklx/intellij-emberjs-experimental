@@ -125,7 +125,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
         val regex = Regex("\\|.*\\|")
         val txt = element.name.replace("IntellijIdeaRulezzz", "").split(".").first()
         // find all |blocks| from mustache
-        val blocks = PsiTreeUtil.collectElements(element.containingFile) { it is HbBlockWrapperImpl }
+        val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+        val blocks = PsiTreeUtil.collectElements(hbsView) { it is HbBlockWrapperImpl }
                 .filter { it.children[0].text.contains(regex) }
                 .filter { it.textRange.contains(element.textRange) }
 
@@ -266,8 +267,8 @@ fun toLookupElement(name: EmberName, useImports: Boolean, priority: Double = 90.
         tagName = name.tagName
     }
     val lookupElement = LookupElementBuilder
-            .create(tagName)
-            .withTailText(" from ${name.importPath.split("/").first()}")
+            .create(name, tagName)
+            .withTailText(" from ${name.importPath}")
             .withTypeText("component")
             .withIcon(EmberIconProvider.getIcon("component"))
             .withCaseSensitivity(true)

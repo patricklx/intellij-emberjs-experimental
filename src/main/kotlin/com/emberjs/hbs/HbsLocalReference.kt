@@ -272,7 +272,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         fun referenceBlocks(element: PsiElement, name: String): PsiReference? {
             // any |block param|
             // as mustache
-            val hbblockRefs = PsiTreeUtil.collectElements(element.containingFile, { it is HbOpenBlockMustacheImpl })
+            val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+            val hbblockRefs = PsiTreeUtil.collectElements(hbsView, { it is HbOpenBlockMustacheImpl })
                     .filter {
                         PsiTreeUtil.collectElements(PsiTreeUtil.getNextSiblingOfType(it, HbStatementsImpl::class.java), { it == element }).isNotEmpty()
                     }

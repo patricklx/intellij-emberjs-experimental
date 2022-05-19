@@ -26,7 +26,7 @@ class EmberTestFinder : TestFinder {
         val psiManager = PsiManager.getInstance(project)
         val scope = ProjectScope.getAllScope(project)
 
-        return EmberNameIndex.getFilteredFiles(scope) { it in search }
+        return EmberNameIndex.getFilteredFiles(scope) { search.find{ x-> x.fullName == it.fullName} != null }
                 .filterNotNull()
                 .map { psiManager.findFile(it) }
                 .filterNotNull()
@@ -43,7 +43,7 @@ class EmberTestFinder : TestFinder {
         val psiManager = PsiManager.getInstance(project)
         val scope = ProjectScope.getAllScope(project)
 
-        return EmberNameIndex.getFilteredFiles(scope) { it == search }
+        return EmberNameIndex.getFilteredFiles(scope) { it.fullName == search.fullName }
                 .filterNotNull()
                 .map { psiManager.findFile(it) }
                 .filterNotNull()
