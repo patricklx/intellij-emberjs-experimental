@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.6
+- fix: internal components did not have a reference
+
 ## 2022.1.5
 - fix: internal component attributes did not work correctly
 
