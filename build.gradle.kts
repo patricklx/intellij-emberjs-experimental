@@ -13,15 +13,16 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2021.3.11"
+version = "2020.3.30"
 
 // Configure project's dependencies
 repositories {
     mavenCentral()
 }
 dependencies {
-    testImplementation("org.assertj:assertj-core:3.21.0")
-    testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation("org.assertj:assertj-core:3.22.0")
+    implementation(kotlin("test"))
 }
 
 // Configure gradle-intellij-plugin plugin.
@@ -31,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2021.3")
+    version.set("2020.3")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
@@ -41,7 +42,7 @@ intellij {
     // Example: platformPlugins = com.intellij.java, com.jetbrains.php:203.4449.22
     //
     // com.dmarcotte.handlebars: see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
-    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:213.5744.190"))
+    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:203.5981.152"))
 
     sandboxDir.set(project.rootDir.canonicalPath + "/.sandbox")
 }
@@ -60,6 +61,9 @@ tasks {
         token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
 
+    buildSearchableOptions {
+        onlyIf {false}
+    }
 }
 
 tasks.test {

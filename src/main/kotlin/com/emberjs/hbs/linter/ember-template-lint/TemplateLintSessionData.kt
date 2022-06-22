@@ -6,7 +6,6 @@ class TemplateLintSessionData(
         val templateLintPackage: TemplateLintPackage,
         val workingDir: VirtualFile,
         val fileToLint: VirtualFile,
-        val fileToLintContent: String,
-        val fix: Boolean,
+        val fileToLintContent: String
 ) {
 }

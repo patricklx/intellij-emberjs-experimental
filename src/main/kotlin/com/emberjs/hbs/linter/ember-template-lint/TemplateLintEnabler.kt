@@ -1,5 +1,6 @@
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.lang.javascript.JSBundle
+import com.intellij.lang.javascript.linter.JSLinterConfiguration.getInstance
 import com.intellij.lang.javascript.linter.JSLinterGuesser
 import com.intellij.lang.javascript.linter.JSLinterUtil
 import com.intellij.notification.Notification
@@ -54,7 +55,7 @@ class TemplateLintEnabler : DirectoryProjectConfigurator {
         }
 
         fun templateLintEnabled(project: Project, enabled: Boolean) {
-            TemplateLintConfiguration.getInstance(project).isEnabled = enabled
+            getInstance(project, TemplateLintConfiguration::class.java).isEnabled = enabled
         }
 
         fun notifyEnabled(project: Project, dependency: String) {

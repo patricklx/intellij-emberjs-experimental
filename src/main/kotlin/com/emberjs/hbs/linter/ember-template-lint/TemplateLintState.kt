@@ -3,20 +3,25 @@ import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.util.NodePackage
 import com.intellij.javascript.nodejs.util.NodePackageRef
 import com.intellij.lang.javascript.linter.JSNpmLinterState
+import kotlin.test.assertNotNull
 
-data class TemplateLintState(
+class TemplateLintState(
         private val myInterpreterRef: NodeJsInterpreterRef,
         private val myTemplateLintPackage: NodePackage,
-        val isRunOnSave: Boolean,
+        private val myPackageRef: NodePackageRef = NodePackageRef.create(myTemplateLintPackage)
 ) : JSNpmLinterState<TemplateLintState> {
 
-    private val myPackageRef: NodePackageRef = NodePackageRef.create(myTemplateLintPackage)
+    constructor() : this(
+            NodeJsInterpreterRef.createProjectRef(),
+            NodePackage("")
+    )
 
     override fun withLinterPackage(packageRef: NodePackageRef): TemplateLintState {
         val constantPackage = packageRef.constantPackage
-                ?: throw AssertionError(this.javaClass.simpleName + " does not support non-constant package refs")
 
-        return copy(myTemplateLintPackage = constantPackage)
+        assertNotNull(constantPackage != null, this.javaClass.simpleName + " does not support non-constant package refs")
+
+        return TemplateLintState(this.myInterpreterRef, constantPackage!!)
     }
 
     override fun getInterpreterRef(): NodeJsInterpreterRef {
@@ -28,18 +33,11 @@ data class TemplateLintState(
     }
 
     override fun withInterpreterRef(interpreterRef: NodeJsInterpreterRef): TemplateLintState {
-        return copy(myInterpreterRef = interpreterRef)
+        return TemplateLintState(interpreterRef, this.myTemplateLintPackage)
     }
 
     val templateLintPackage: NodePackage
         get() {
             return this.myTemplateLintPackage
         }
-
-    companion object {
-        val DEFAULT = TemplateLintState(
-                NodeJsInterpreterRef.createProjectRef(),
-                NodePackage(""),
-                false)
-    }
 }

@@ -8,11 +8,6 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.util.CommonProcessors
-import com.intellij.util.FilteringProcessor
-import com.intellij.util.Processor
-import com.intellij.util.SlowOperations
-import com.intellij.util.containers.addIfNotNull
 import com.intellij.util.indexing.*
 import com.intellij.util.io.BooleanDataDescriptor
 
@@ -38,15 +33,16 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
         }
 
         private fun getAllPairs(project: Project): Collection<Pair<EmberName, VirtualFile>> {
-            return SlowOperations.allowSlowOperations<Collection<Pair<EmberName, VirtualFile>>, Throwable> {
-                 CachedValuesManager.getManager(project).getCachedValue(project) {
+            return CachedValuesManager.getManager(project).getCachedValue(project) {
                     val results = mutableListOf<Pair<EmberName, VirtualFile>>()
                     for (file in index.getContainingFiles(NAME, true, GlobalSearchScope.projectScope(project))) {
                         ProgressManager.checkCanceled()
-                        results.addIfNotNull(EmberName.from(file)?.let { it to file })
+                        val v = EmberName.from(file)?.let { it to file }
+                        if (v !== null) {
+                            results.add(v)
+                        }
                     }
                     CachedValueProvider.Result.create(results, VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS)
-                }
             }
         }
 

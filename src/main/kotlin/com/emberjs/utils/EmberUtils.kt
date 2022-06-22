@@ -231,10 +231,10 @@ class EmberUtils {
 
 
         fun findFirstHbsParamFromParam(psiElement: PsiElement?): PsiElement? {
-            val parent = psiElement?.parents(false)
+            val parent = psiElement?.parents()
                     ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN_SEXPR }
                     ?:
-                    psiElement?.parents(false)
+                    psiElement?.parents()
                             ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN }
             if (parent == null) {
                 return null
@@ -249,7 +249,7 @@ class EmberUtils {
 
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {
-            val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
+            val insideImport = element.parents().find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
 
             if (insideImport && element.text != "from" && element.text != "import") {
                 return null
@@ -400,10 +400,12 @@ class EmberUtils {
             }
 
             val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?: containingFile
-            val cls = findDefaultExportClass(tsFile)
+            var cls = findDefaultExportClass(tsFile)
                     ?: findDefaultExportClass(containingFile)
                     ?: file
-
+            if (cls is PsiFile && cls.name == "intellij-emberjs/internal/components-stub") {
+                cls = f;
+            }
             var jsTemplate: Any? = null;
             if (cls is JSElement) {
                 val argsElem = findComponentArgsType(cls)
