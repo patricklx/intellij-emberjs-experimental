@@ -16,6 +16,10 @@ class HbsComponentReference(element: PsiElement) : HbsModuleReference(element, "
             val prop = internalComponents.properties.find { it.name == element.text }
             return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
         }
+        if (internalHelpers.properties.map { it.name }.contains(element.text)) {
+            val prop = internalHelpers.properties.find { it.name == element.text }
+            return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
+        }
         return super.multiResolve(incompleteCode)
     }
 }

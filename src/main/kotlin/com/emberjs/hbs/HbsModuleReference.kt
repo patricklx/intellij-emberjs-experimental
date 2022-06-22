@@ -21,7 +21,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     private val internalModifiersFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-modifiers.ts").readText())
     private val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
 
-    private val internalHelpers = EmberUtils.resolveDefaultExport(internalHelpersFile) as JSObjectLiteralExpression
+    protected val internalHelpers = EmberUtils.resolveDefaultExport(internalHelpersFile) as JSObjectLiteralExpression
     private val internalModifiers = EmberUtils.resolveDefaultExport(internalModifiersFile) as JSObjectLiteralExpression
     protected val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 
@@ -33,7 +33,14 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     override fun multiResolve(incompleteCode: Boolean): Array<out ResolveResult> {
         // Collect all components from the index
 
-        if (moduleType == "helper") {
+       if (moduleType == "helper") {
+            if (internalHelpers.properties.map { it.name }.contains(element.text)) {
+                val prop = internalHelpers.properties.find { it.name == element.text }
+                return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
+            }
+        }
+
+        if (moduleType == "component") {
             if (internalHelpers.properties.map { it.name }.contains(element.text)) {
                 val prop = internalHelpers.properties.find { it.name == element.text }
                 return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())

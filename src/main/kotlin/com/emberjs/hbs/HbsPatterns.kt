@@ -8,7 +8,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 
 object HbsPatterns {
-    val SIMPLE_MUSTACHE_NAME: Capture<HbMustacheName> = psiElement(HbMustacheName::class.java)
+    val SIMPLE_MUSTACHE_NAME: Capture<PsiElement> = psiElement(HbTokenTypes.MUSTACHE_NAME)
             .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.MUSTACHE))
             .afterLeaf(psiElement(HbTokenTypes.OPEN))
@@ -17,7 +17,7 @@ object HbsPatterns {
             .withTextLengthLongerThan(0)
             .withSuperParent(3, SIMPLE_MUSTACHE_NAME)
 
-    val BLOCK_MUSTACHE_NAME: Capture<HbMustacheName> = psiElement(HbMustacheName::class.java)
+    val BLOCK_MUSTACHE_NAME: Capture<PsiElement> = psiElement(HbTokenTypes.MUSTACHE_NAME)
             .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.OPEN_BLOCK_STACHE))
             .afterLeaf(psiElement(HbTokenTypes.OPEN_BLOCK))
@@ -33,7 +33,7 @@ object HbsPatterns {
     val MUSTACHE_ID_MISSING: Capture<PsiElement> = psiElement(HbTokenTypes.ID).withParent(psiElement(HbPsiElement::class.java)
             .afterSibling(psiElement(HbTokenTypes.SEP).afterSibling(psiElement(HbTokenTypes.ID))))
 
-    val SUB_EXPR_NAME: Capture<HbMustacheName> = psiElement(HbMustacheName::class.java)
+    val SUB_EXPR_NAME: Capture<PsiElement> = psiElement(HbTokenTypes.MUSTACHE_NAME)
             .withParent(psiElement(HbTokenTypes.PARAM)
                     .afterLeaf(psiElement(HbTokenTypes.OPEN_SEXPR)))
 

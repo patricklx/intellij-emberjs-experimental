@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2020.3.31
+- fix: add reference to internal components
+
 ## 2021.3.11
 - fix: another assertion
 
