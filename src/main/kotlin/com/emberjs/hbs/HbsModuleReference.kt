@@ -40,6 +40,13 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
             }
         }
 
+        if (moduleType == "component") {
+            if (internalHelpers.properties.map { it.name }.contains(element.text)) {
+                val prop = internalHelpers.properties.find { it.name == element.text }
+                return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
+            }
+        }
+
         if (moduleType == "modifier") {
             if (internalModifiers.properties.map { it.name }.contains(element.text)) {
                 val prop = internalModifiers.properties.find { it.name == element.text }
