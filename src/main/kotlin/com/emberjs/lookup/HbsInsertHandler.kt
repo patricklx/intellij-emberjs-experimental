@@ -9,6 +9,7 @@ import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.openapi.vfs.newvfs.impl.VirtualFileImpl
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -26,7 +27,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gjs")) {
             return
         }
-        if (context.file.virtualFile is VirtualFileWindow) {
+        if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs")) {
             val psiManager = PsiManager.getInstance(context.project)
             val f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
 

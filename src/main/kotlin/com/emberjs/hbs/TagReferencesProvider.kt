@@ -99,12 +99,15 @@ class TagReferencesProvider : PsiReferenceProvider() {
     companion object {
 
         fun resolveToLocalJs(element: XmlTag): PsiElement? {
-            if (element.originalVirtualFile !is VirtualFileWindow) {
+            if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs")) {
                 return null
             }
             val psiManager = PsiManager.getInstance(element.project)
-            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
-            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.name, listOf(f as PsiElement))
+            var f = element.originalVirtualFile as PsiElement
+            if (element.originalVirtualFile is VirtualFileWindow) {
+                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) as PsiElement
+            }
+            val collection = ES6PsiUtil.createResolver(f).getLocalElements(element.name, listOf(f))
             return collection.firstOrNull()
         }
 
