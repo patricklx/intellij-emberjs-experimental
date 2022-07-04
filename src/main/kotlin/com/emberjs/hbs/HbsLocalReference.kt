@@ -365,6 +365,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, importRef)
             }
 
+            if (element.parent is HbOpenBlockMustache && element.parent.children[0] != element) {
+                return HbsLocalRenameReference(element, element)
+            }
+
             return referenceBlocks(element, name) ?:
             resolveToLocalJs(element)
         }
