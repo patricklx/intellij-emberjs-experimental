@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2020.3.32
+- fix: some null access violations
+- fix: use ember-cli-build.js to detect framework
+
 ## 2020.3.31
 - fix: add reference to internal components
 
