@@ -21,10 +21,10 @@ class EmberNameIndexTest : BasePlatformTestCase() {
     }
 
     fun testExample() = doTest(
-            "controller:application",
-            "controller:user/index",
-            "controller:user/new",
-            "route:index",
+            "controller:application:~/controllers/application",
+            "controller:user/index:~/controllers/user/index",
+            "controller:user/new:~/controllers/user/new",
+            "route:index:~/routes/index",
             "helper-test:format-number",
             "acceptance-test:user-page")
 

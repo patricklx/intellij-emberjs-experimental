@@ -54,6 +54,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
         assert(type == "component" || isComponentTemplate)
 
         var baseName = if (isComponentTemplate) name.removePrefix("components/") else name
+        if (baseName.firstOrNull() == null) {
+            return@lazy ""
+        }
         baseName = baseName.first().uppercase() + baseName.subSequence(1, baseName.lastIndex+1)
 
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
