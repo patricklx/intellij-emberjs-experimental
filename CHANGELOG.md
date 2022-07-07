@@ -2,9 +2,12 @@
 
 Changelog
 ===============================================================================
-## 2022.1.8
+## 2022.1.9
 - fix: null access violation
 - fix: detect framework with ember-cli-build.js
+
+## 2022.1.8
+- fix: fix plugin release
 
 ## 2022.1.7
 - fix: internal components did not have a reference
