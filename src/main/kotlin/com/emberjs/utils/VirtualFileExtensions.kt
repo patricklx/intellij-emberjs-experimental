@@ -4,10 +4,9 @@ import com.google.gson.stream.JsonReader
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.text.CharSequenceReader
-import java.io.IOException
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.intellij.psi.PsiElement
-import org.jetbrains.annotations.Nullable
+import com.intellij.xml.XmlExtension
 import org.mozilla.javascript.ast.AstNode
 
 val VirtualFile.parents: Iterable<VirtualFile>

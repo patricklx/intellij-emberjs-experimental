@@ -103,12 +103,13 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return null
             }
             val psiManager = PsiManager.getInstance(element.project)
-            var f = element.originalVirtualFile as PsiElement
+            var f = psiManager.findFile(element.originalVirtualFile!!)
             if (element.originalVirtualFile is VirtualFileWindow) {
-                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) as PsiElement
+                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
             }
-            val collection = ES6PsiUtil.createResolver(f).getLocalElements(element.name, listOf(f))
-            return collection.firstOrNull()
+            val collection = ES6PsiUtil.createResolver(f!!.originalElement).getLocalElements(element.name, listOf(f))
+            collection += ES6PsiUtil.createResolver(f!!.originalElement).getTopLevelElements(element.name, false)
+            return (collection.firstOrNull() as? PsiNameIdentifierOwner)?.nameIdentifier ?: collection.firstOrNull()
         }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
@@ -208,10 +209,6 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
             val templates = EmberNameIndex.getFilteredFiles(scope) { it.isComponentTemplate && it.angleBracketsName == name }
                     .mapNotNull { psiManager.findFile(it) }
-            // find name.hbs first, then template.hbs
-            val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
-
-            if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
 
             val components = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
                     .mapNotNull { psiManager.findFile(it) }
@@ -219,6 +216,12 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
 
             if (component != null) return EmberUtils.resolveToEmber(component)
+
+            // find name.hbs first, then template.hbs
+            val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
+
+            if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
+
             return null
         }
     }

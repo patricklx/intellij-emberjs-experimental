@@ -29,7 +29,11 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         }
         if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs")) {
             val psiManager = PsiManager.getInstance(context.project)
-            val f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
+            var f = context.file
+            if (context.file.virtualFile is VirtualFileWindow) {
+                f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
+            }
+
 
             val names = f.children.filter { it is ES6ImportDeclaration }
                     .map { it as ES6ImportDeclaration }

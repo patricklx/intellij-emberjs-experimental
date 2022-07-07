@@ -115,7 +115,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
     }
 
     override fun getText(): String {
-        return target.text
+        return (target as? PsiFile)?.name ?: target.text
     }
 
     override fun textToCharArray(): CharArray {
@@ -301,6 +301,12 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
             }
             val r = IntRange(start, end)
             return target.text.substring(r)
+        }
+        if (target is PsiFile) {
+            return target.name;
+        }
+        if (target is PsiNameIdentifierOwner) {
+            return target.nameIdentifier?.text ?: target.text;
         }
         return target.text
     }

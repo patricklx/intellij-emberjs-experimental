@@ -26,6 +26,7 @@ import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
+import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -67,7 +68,7 @@ class EmberUtils {
         }
 
         fun resolveDefaultExport(file: PsiFile): PsiElement? {
-            var exp = ES6PsiUtil.findDefaultExport(file)
+            var exp: PsiElement? = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {
                 exp = ES6PsiUtil.resolveDefaultExport(exportImport).firstOrNull() as? JSElement? ?: exp
@@ -77,7 +78,17 @@ class EmberUtils {
                         return hbs
                     }
                 }
-                exp = exp ?: exportImport.fromClause?.references?.findLast { it.resolve() != null }?.resolve() as? JSElement
+                val resolved = exp ?: exportImport.fromClause?.references
+                        ?.map { (it as? FileReference)?.multiResolve(false)
+                        ?.firstOrNull() ?: it.resolve() }
+                        ?.filterNotNull()
+                        ?.lastOrNull()
+                if (resolved is ResolveResult) {
+                    exp = resolved.element
+                }
+                if (exp is PsiFile) {
+                    return resolveDefaultExport(exp)
+                }
             }
             var ref: Any? = exp?.children?.find { it is JSReferenceExpression } as JSReferenceExpression?
             while (ref is JSReferenceExpression && ref.resolve() != null) {
@@ -88,7 +99,7 @@ class EmberUtils {
                 return ref as PsiElement
             }
 
-            ref = ref as JSElement? ?: exp
+            ref = ref as PsiElement? ?: exp
             val func = ref?.children?.find { it is JSCallExpression }
             if (func is JSCallExpression) {
                 return func
@@ -192,7 +203,10 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is ES6ImportedBinding) {
-                val ref = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference
+                val ref = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
+                if (ref == null) {
+                    return ref
+                }
                 return followReferences(ref.fileReferenceSet.lastReference?.multiResolve(false)?.filterNotNull()?.firstOrNull()?.element)
             }
 

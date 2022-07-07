@@ -14,15 +14,24 @@ import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.javascript.completion.JSCompletionContributor
+import com.intellij.lang.javascript.completion.JSCompletionUtil
+import com.intellij.lang.javascript.psi.util.JSUtils
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiNameIdentifierOwner
 import com.intellij.psi.impl.source.html.HtmlFileImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -207,10 +216,27 @@ class EmberTagNameProvider : XmlTagNameProvider {
         }
     }
 
+    fun fromLocalJs(element: XmlTag, elements: MutableList<LookupElement>) {
+        if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs")) {
+            return
+        }
+        val psiManager = PsiManager.getInstance(element.project)
+        var f = psiManager.findFile(element.originalVirtualFile!!)
+        if (element.originalVirtualFile is VirtualFileWindow) {
+            f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+        }
+
+        val namedElements = PsiTreeUtil.collectElements(f!!.originalElement) { it is PsiNameIdentifierOwner }
+        val collection = namedElements.map { ES6PsiUtil.createResolver(f!!.originalElement).getLocalElements((it as PsiNameIdentifierOwner).name!!, listOf(f)) }.flatten().toMutableList()
+        collection += namedElements.map { ES6PsiUtil.createResolver(f!!.originalElement).getTopLevelElements((it as PsiNameIdentifierOwner).name!!, false) }.flatten()
+        elements.addAll(collection.map { it as? PsiNameIdentifierOwner}.filterNotNull().map {  LookupElementBuilder.create(it, it.name!!) })
+    }
+
     override fun addTagNameVariants(elements: MutableList<LookupElement>?, tag: XmlTag, prefix: String?) {
         if (elements == null) return
         fromLocalParams(tag, elements)
         fromImports(tag, elements)
+        fromLocalJs(tag, elements)
         if (tag.name.startsWith(":")) {
             return
         }
