@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.10
+- fix: no need to setup node_modules as library
+
 ## 2022.1.9
 - fix: null access violation
 - fix: detect framework with ember-cli-build.js

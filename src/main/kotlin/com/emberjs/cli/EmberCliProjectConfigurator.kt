@@ -60,9 +60,6 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             // Adjust JavaScript settings for the project
             setES6LanguageLevel(project)
 
-            // Add node_modules and bower_components as library folders
-            setupLibraries(project, root)
-
             // Mark source and exclude directories
             setupModule(entry, root)
         }
