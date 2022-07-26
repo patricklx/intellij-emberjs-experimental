@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.1.11
+- fix: references inside tests folder did not work
+- fix: references to components in form {{abc}} did not work
+- improve: configure project to include node_modules which are relevant to ember
+
 ## 2022.1.10
 - fix: no need to setup node_modules as library
 

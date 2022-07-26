@@ -114,10 +114,11 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             val integrationTestsFolder = testsFolder?.findChild("integration")
             val acceptanceTestsFolder = testsFolder?.findChild("acceptance")
             val dummyAppFolder = testsFolder?.findFileByRelativePath("dummy/app")
+            val dummyAppUiFolder = testsFolder?.findFileByRelativePath("dummy/app/ui")
 
             return fromPod(appFolder, file) ?: fromPod(addonFolder, file) ?: fromPodTest(unitTestsFolder, file)
             ?: fromPodTest(integrationTestsFolder, file) ?: fromClassic(appFolder, file) ?: fromClassic(uiFolder, file)
-            ?: fromClassic(addonFolder, file) ?: fromClassic(dummyAppFolder, file)
+            ?: fromClassic(addonFolder, file) ?: fromClassic(dummyAppFolder, file) ?: fromClassic(dummyAppUiFolder, file)
             ?: fromClassicTest(unitTestsFolder, file) ?: fromClassicTest(integrationTestsFolder, file)
             ?: fromAcceptanceTest(acceptanceTestsFolder, file)
         }

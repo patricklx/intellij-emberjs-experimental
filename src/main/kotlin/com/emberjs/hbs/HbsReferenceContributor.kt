@@ -76,13 +76,23 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         val parts = path.split("/")
 
         val name = findMainProjectName(element.originalVirtualFile!!)
+        var isInTestFolder = false
+        if (element.originalVirtualFile!!.path.contains("$name/tests")) {
+            isInTestFolder = true
+        }
 
         if (parts[0] == name) {
             path = path.replace(Regex("^$name/"), "~/")
         }
 
         if (path.startsWith("~")) {
-            resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
+            if (isInTestFolder) {
+                val folder = element.originalVirtualFile!!.parents.find { it.path.endsWith("$name/tests/dummy") }
+                resolvedFile = psiManager.findDirectory(folder!!)
+            } else {
+                resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
+            }
+
         }
         if (!path.startsWith("~") && !path.startsWith(".")) {
             var parent = element.originalVirtualFile!!.parentEmberModule
@@ -198,6 +208,7 @@ class HbsReferenceContributor : PsiReferenceContributor() {
             register(PlatformPatterns.psiElement(XmlAttribute::class.java)) { toAttributeReference(it as XmlAttribute) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
             register(HbsPatterns.BLOCK_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
+            register(HbsPatterns.BLOCK_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "component") } }
             register(HbsPatterns.MUSTACHE_ID) { HbsLocalReference.createReference(it) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "modifier") } }

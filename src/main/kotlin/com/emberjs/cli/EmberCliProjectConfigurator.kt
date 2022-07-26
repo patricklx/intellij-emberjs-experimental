@@ -14,7 +14,9 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ContentEntry
+import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.libraries.Library.ModifiableModel
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.DirectoryProjectConfigurator
@@ -134,6 +136,15 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             if (EmberApplicationOptions.excludeBowerComponents)
                 entry.addExcludeFolder("$rootUrl/bower_components")
+
+            baseDir.findChild("node_modules")!!.children.forEach {
+                if (it.name.contains("ember")) {
+                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                }
+                if (it.name.contains("glimmer")) {
+                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                }
+            }
         }
 
         private val RESOURCE_IF_AVAILABLE: JpsModuleSourceRootType<out JpsElement> = when {
