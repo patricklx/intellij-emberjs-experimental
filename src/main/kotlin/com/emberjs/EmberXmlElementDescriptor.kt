@@ -1,4 +1,5 @@
 package com.emberjs
+import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
@@ -16,7 +17,7 @@ import com.intellij.xml.XmlNSDescriptor
 
 class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement) : XmlElementDescriptor {
     val project = tag.project
-    val version = "v2020.3.10"
+    val version = "v2022.1.11"
 
     override fun equals(other: Any?): Boolean {
         return (other as EmberXmlElementDescriptor).tag == this.tag && other.version == this.version
@@ -63,6 +64,11 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         override fun resolve(): PsiElement? {
             return yieldBlock
         }
+    }
+
+    override fun getDependences(): Array<Any> {
+        val data = this.getReferenceData()
+        return arrayOf(data.template, data.component, EmberNameIndex).filterNotNull().toTypedArray()
     }
 
     /**

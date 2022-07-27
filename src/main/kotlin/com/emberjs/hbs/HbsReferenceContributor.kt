@@ -72,7 +72,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<RangedReference> {
         val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
         var path = element.text.substring(1, element.text.lastIndex)
-        var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent
+        var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.originalFile.parent
         val parts = path.split("/")
 
         val name = findMainProjectName(element.originalVirtualFile!!)

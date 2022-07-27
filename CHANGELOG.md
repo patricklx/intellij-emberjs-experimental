@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.12
+- fix: tag attributes autocompletion was not always up to date
+
 ## 2022.1.11
 - fix: references inside tests folder did not work
 - fix: references to components in form {{abc}} did not work

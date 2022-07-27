@@ -42,7 +42,9 @@ class ArgData(
 class ComponentReferenceData(
         val hasSplattributes: Boolean = false,
         val yields: MutableList<EmberXmlElementDescriptor.YieldReference> = mutableListOf(),
-        val args: MutableList<ArgData> = mutableListOf()
+        val args: MutableList<ArgData> = mutableListOf(),
+        val template: PsiFile? = null,
+        val component: PsiFile? = null
 ) {
 
 }
@@ -510,7 +512,7 @@ class EmberUtils {
             }
 
             val hasSplattributes = template?.text?.contains("...attributes") ?: false
-            return ComponentReferenceData(hasSplattributes, tplYields, tplArgs)
+            return ComponentReferenceData(hasSplattributes, tplYields, tplArgs, template, tsFile)
         }
     }
 }
