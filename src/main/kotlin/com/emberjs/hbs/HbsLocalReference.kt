@@ -103,7 +103,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             val tag = res.context as XmlTag
             val index = tag.attributes.indexOfFirst { it.text == "as" }
             val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
-            val r = blockParams.find { it.text.matches(Regex("^\\|*$name\\|*$")) }
+            val r = blockParams.find { it.text.matches(Regex("^\\|*\\b$name\\b\\|*$")) }
             val idx = blockParams.indexOf(r)
             var ref = tag.attributes[index] as PsiElement?
             ref = EmberUtils.followReferences(ref)
@@ -281,7 +281,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             // as html tag
             val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
             val angleBracketBlocks = PsiTreeUtil.collectElements(htmlView, { it is XmlAttribute && it.text.startsWith("|") })
-                    .filter{ (it.parent as HtmlTag).attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*$name.*\\|")) }
+                    .filter{ (it.parent as HtmlTag).attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|")) }
                     .map { it.parent }
 
             // validate if the element is a child of the tag
@@ -289,7 +289,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 it.textRange.contains(element.textRange)
             }.firstOrNull()
 
-            val blockRef = hbblockRefs.find { it.text.contains(Regex("\\|.*$name.*\\|")) }
+            val blockRef = hbblockRefs.find { it.text.contains(Regex("\\|.*\\b$name\\b.*\\|")) }
             val blockVal = blockRef?.children?.filter { it.elementType == HbTokenTypes.ID }?.find { it.text == name }
 
 
@@ -298,7 +298,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val tag  = validBlock as HtmlTagImpl
                     val index = tag.attributes.indexOfFirst { it.text == "as" }
                     val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
-                    val r = blockParams.find { it.text.matches(Regex("^\\|*$name\\|*$")) }
+                    val r = blockParams.find { it.text.matches(Regex("^\\|*\\b$name\\b\\|*$")) }
                     return r?.let { HbsLocalReference(element, it) }
                 }
                 return HbsLocalReference(element, blockVal ?: blockRef)

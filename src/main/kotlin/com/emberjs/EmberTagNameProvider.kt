@@ -113,7 +113,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
             val endIdx = angleBracketBlock.attributes.size
             val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
-            val refPsi = params.find { Regex("\\|*.*$name.*\\|*").matches(it.text) }
+            val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
             val blockParamIdx = params.indexOf(refPsi)
             val param = dereferenceYield.reference?.resolve()?.children?.filter { it is HbParam }?.getOrNull(blockParamIdx)
             resolve(param, path, result)

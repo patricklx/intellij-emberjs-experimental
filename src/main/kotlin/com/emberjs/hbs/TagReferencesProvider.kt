@@ -137,21 +137,21 @@ class TagReferencesProvider : PsiReferenceProvider() {
             var refPsi: PsiElement? = null
             val angleBracketBlock: XmlTag? = tag.parentsWithSelf
                     .find {
-                        it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*$name.*\\|"))
+                        it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|"))
                     } as XmlTag?
 
             if (angleBracketBlock != null) {
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
                 val endIdx = angleBracketBlock.attributes.size
                 val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
-                refPsi = params.find { Regex("\\|*.*$name.*\\|*").matches(it.text) }
+                refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
                 blockParamIdx = params.indexOf(refPsi)
             }
 
             // find mustache block |params| which has tag as a child
             val hbsView = tag.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val hbBlockRef = PsiTreeUtil.collectElements(hbsView, { it is HbOpenBlockMustacheImpl })
-                    .filter { it.text.contains(Regex("\\|.*$name.*\\|")) }
+                    .filter { it.text.contains(Regex("\\|.*\\b$name\\b.*\\|")) }
                     .map { it.parent }
                     .find { block ->
                         block.textRange.contains(tag.textRange)

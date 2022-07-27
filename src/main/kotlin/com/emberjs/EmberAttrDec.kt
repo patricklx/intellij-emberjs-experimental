@@ -21,7 +21,7 @@ import org.jetbrains.annotations.Nullable
 import javax.swing.Icon
 
 class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiReference?, private val references: Array<PsiReference>?) : XmlAttributeDecl {
-    private val userDataMap = HashMap<Any, Any>()
+    private val userDataMap = HashMap<Any, Any?>()
     private val reference: PsiReference?
     private var name: String
     override fun <T> getUserData(key: Key<T>): T? {
@@ -34,7 +34,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     override fun <T> putUserData(key: Key<T>, value: T?) {
-        this.userDataMap[key] = value as Any
+        this.userDataMap[key] = value as Any?
     }
 
     override fun getIcon(flags: Int): Icon? {

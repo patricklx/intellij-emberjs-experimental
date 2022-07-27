@@ -228,9 +228,17 @@ class EmberUtils {
                 return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
             }
 
-            val resYield = findTagYield(element)
-            if (resYield != null) {
-                return followReferences(resYield, path)
+            val resYield: XmlAttribute? = findTagYield(element)
+            if (resYield != null && resYield.reference != null && element != null) {
+                val name = element.text.replace("|", "")
+                val yieldParams = resYield.reference!!.resolve()!!.children.filter { it is HbParam }
+                val angleBracketBlock = resYield.parent
+                val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
+                val endIdx = angleBracketBlock.attributes.size
+                val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
+                val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
+                val blockParamIdx = params.indexOf(refPsi)
+                return followReferences(yieldParams.getOrNull(blockParamIdx), path)
             }
 
             if (element?.references != null && element.references.isNotEmpty()) {
@@ -306,7 +314,7 @@ class EmberUtils {
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
-                val helpers = arrayOf("let", "each", "with", "component")
+                val helpers = arrayOf("let", "each", "with", "component", "yield")
                 if (helpers.contains(mustacheName)) {
                     val param = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.PARAM, null)
                     if (param == null) {

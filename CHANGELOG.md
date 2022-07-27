@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.1.13
+- fix: tag reference was not always correct when following yields
+
 ## 2022.1.12
 - fix: tag attributes autocompletion was not always up to date
 
