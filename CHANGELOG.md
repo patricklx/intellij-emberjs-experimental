@@ -2,8 +2,8 @@
 
 Changelog
 ===============================================================================
-## 2022.2.1
-- feature: upgrade intellij idea
+## 2022.1.14
+- fix: null pointer exception
 
 ## 2022.1.13
 - fix: tag reference was not always correct when following yields
