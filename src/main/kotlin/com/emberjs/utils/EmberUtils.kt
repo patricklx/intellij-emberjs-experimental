@@ -229,7 +229,7 @@ class EmberUtils {
             }
 
             val resYield: XmlAttribute? = findTagYield(element)
-            if (resYield != null && resYield.reference != null && element != null) {
+            if (resYield != null && resYield.reference != null && element != null && resYield.reference!!.resolve() != null) {
                 val name = element.text.replace("|", "")
                 val yieldParams = resYield.reference!!.resolve()!!.children.filter { it is HbParam }
                 val angleBracketBlock = resYield.parent
@@ -294,7 +294,7 @@ class EmberUtils {
             if (ref == null) {
                 return null
             }
-            val index = Regex("\\b$name\\b").find(ref.children[2].text)!!.range.first
+            val index = Regex("$name").find(ref.children[2].text)!!.range.first
             val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
             return file?.resolve() ?: ref
         }
