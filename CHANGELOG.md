@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.3
+- fix: performance improvemnt 
+
 ## 2022.2.2
 - fix: null pointer exception
 

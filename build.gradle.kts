@@ -7,7 +7,7 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.6.20"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.5.2"
+    id("org.jetbrains.intellij") version "1.7.0"
 }
 
 
@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2022.2")
+    version.set("2022.3")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
@@ -65,4 +65,8 @@ tasks {
 
 tasks.test {
     systemProperty("idea.force.use.core.classloader", "true")
+}
+
+tasks.buildSearchableOptions {
+    enabled = false
 }

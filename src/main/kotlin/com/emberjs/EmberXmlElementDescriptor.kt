@@ -66,11 +66,6 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         }
     }
 
-    override fun getDependences(): Array<Any> {
-        val data = this.getReferenceData()
-        return arrayOf(data.template, data.component, EmberNameIndex).filterNotNull().toTypedArray()
-    }
-
     /**
      * finds yields and data mustache `@xxx`
      * also check .ts/d.ts files for Component<Args>
