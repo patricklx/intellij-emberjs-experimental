@@ -13,7 +13,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2022.2.2"
+version = "2022.2.4"
 
 // Configure project's dependencies
 repositories {
@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2022.3")
+    version.set("2022.2")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
