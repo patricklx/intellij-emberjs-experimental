@@ -81,19 +81,19 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             isInTestFolder = true
         }
 
+        if (path.startsWith("~") && isInTestFolder) {
+            val folder = element.originalVirtualFile!!.parents.find { it.path.endsWith("$name/tests/dummy") }
+            resolvedFile = psiManager.findDirectory(folder!!)
+        }
+
         if (parts[0] == name) {
             path = path.replace(Regex("^$name/"), "~/")
         }
 
         if (path.startsWith("~")) {
-            if (isInTestFolder) {
-                val folder = element.originalVirtualFile!!.parents.find { it.path.endsWith("$name/tests/dummy") }
-                resolvedFile = psiManager.findDirectory(folder!!)
-            } else {
-                resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
-            }
-
+            resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
         }
+
         if (!path.startsWith("~") && !path.startsWith(".")) {
             var parent = element.originalVirtualFile!!.parentEmberModule
             while (parent?.parentEmberModule != null) {
