@@ -8,6 +8,7 @@ import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.frameworks.react.ReactXmlExtension
 import com.intellij.openapi.fileTypes.FileType
@@ -15,7 +16,9 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableModelsProvider
+import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.ui.configuration.DefaultModulesProvider
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.ElementPattern
@@ -40,8 +43,38 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
         XmlExtension.EP_NAME.point.unregisterExtensions({it !is DefaultXmlExtension })
         XmlTagNameProvider.EP_NAME.point.unregisterExtensions({ it !is ReactXmlExtension && it !is EmberTagNameProvider })
         val rootDir = newFiles.firstOrNull()?.parent
+
         if (rootDir != null && !isConfigured(newFiles, context.project)) {
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles))
+        } else if (rootDir != null) {
+            // setup reconfigure on package.json change.
+            val nodeModulesManager = NodeModulesDirectoryManager.getInstance(context.project!!)
+            val modulesProvider = DefaultModulesProvider.createForProject(context.project)
+            val modifiableModelsProvider = ModifiableModelsProvider.getInstance()
+            modulesProvider.modules
+                    .filter { ModuleRootManager.getInstance(it).contentRoots.contains(rootDir) }
+                    .forEach { module ->
+                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                        val entry = MarkRootActionBase.findContentEntry(model, rootDir)
+                        if (entry != null) {
+                            nodeModulesManager.addNodeModulesPackageJsonListener({ var1, var2, var3 ->
+                                val m = modifiableModelsProvider.getModuleModifiableModel(module)
+                                val e = MarkRootActionBase.findContentEntry(m, rootDir)!!
+                                rootDir.findChild("node_modules")!!.children.forEach {
+                                    if (it.name.contains("ember")) {
+                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                    }
+                                    if (it.name.contains("glimmer")) {
+                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                    }
+                                }
+                                modifiableModelsProvider.commitModuleModifiableModel(m)
+                            }, null)
+                            modifiableModelsProvider.commitModuleModifiableModel(model)
+                        } else {
+                            modifiableModelsProvider.disposeModuleModifiableModel(model)
+                        }
+                    }
         }
         return mutableListOf()
     }

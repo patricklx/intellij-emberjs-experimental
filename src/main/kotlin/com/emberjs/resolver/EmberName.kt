@@ -114,11 +114,13 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             val integrationTestsFolder = testsFolder?.findChild("integration")
             val acceptanceTestsFolder = testsFolder?.findChild("acceptance")
             val dummyAppFolder = testsFolder?.findFileByRelativePath("dummy/app")
+            val v2AddonFolder = root.findChild("dist")
             val dummyAppUiFolder = testsFolder?.findFileByRelativePath("dummy/app/ui")
 
             return fromPod(appFolder, file) ?: fromPod(addonFolder, file) ?: fromPodTest(unitTestsFolder, file)
             ?: fromPodTest(integrationTestsFolder, file) ?: fromClassic(appFolder, file) ?: fromClassic(uiFolder, file)
             ?: fromClassic(addonFolder, file) ?: fromClassic(dummyAppFolder, file) ?: fromClassic(dummyAppUiFolder, file)
+            ?: fromClassic(v2AddonFolder, file)
             ?: fromClassicTest(unitTestsFolder, file) ?: fromClassicTest(integrationTestsFolder, file)
             ?: fromAcceptanceTest(acceptanceTestsFolder, file)
         }
@@ -145,6 +147,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
 
             path = path.replace("/app/", "/")
             path = path.replace("/addon/", "/")
+            path = path.replace("/dist/", "/")
             if (path.startsWith("app/")) {
                 path = path.replace(Regex("^app/"), "~/")
             }

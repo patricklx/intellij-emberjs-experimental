@@ -4,6 +4,9 @@ import com.emberjs.settings.EmberApplicationOptions
 import com.emberjs.utils.isEmberFolder
 import com.emberjs.utils.isInRepoAddon
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
+import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
+import com.intellij.javascript.nodejs.library.NodeModulesPackageJsonListener
 import com.intellij.lang.javascript.dialects.JSLanguageLevel
 import com.intellij.lang.javascript.library.JSLibraryManager
 import com.intellij.lang.javascript.linter.jshint.JSHintConfiguration

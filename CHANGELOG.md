@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.5
+- feature: support v2 addon format
+- feature: support css imports for ember-hbs-imports
+
 ## 2022.2.4
 - fix: reference inside tests folder
 

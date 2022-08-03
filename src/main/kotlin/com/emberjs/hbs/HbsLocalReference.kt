@@ -25,6 +25,9 @@ import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.css.CssRulesetList
+import com.intellij.psi.css.CssSelector
+import com.intellij.psi.css.impl.CssRulesetImpl
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.html.HtmlTagImpl
 import com.intellij.psi.util.PsiTreeUtil
@@ -162,6 +165,25 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
             if (any is EmberNamedElement) {
                 return resolveToJs(any.target, path, resolveIncomplete)
+            }
+
+            if (any is PsiFile) {
+                val styleSheetLanguages = arrayOf("sass", "scss", "less")
+                if (styleSheetLanguages.contains(any.language.id.lowercase())) {
+                    PsiTreeUtil.collectElements(any) { it is CssRulesetList }.first().children.forEach { (it as CssRulesetImpl).selectors.forEach {
+                        if (it.text == "." + path.first()) {
+                            return it
+                        }
+                    }}
+                }
+            }
+
+            if (any is CssSelector && any.ruleset?.block != null) {
+                any.ruleset!!.block!!.children.map { it as? CssRulesetImpl }.filterNotNull().forEach{ it.selectors.forEach {
+                    if (it.text == "." + path.first()) {
+                        return it
+                    }
+                }}
             }
 
             if (any is PsiElement) {
@@ -328,13 +350,17 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             // for this.x.y
-            if (sibling != null && sibling.references.find { it is HbsLocalReference } != null) {
-                val ref = sibling.references.find { it is HbsLocalReference } as HbsLocalReference
-                val yieldRef = ref.resolveYield()
+            if (sibling != null && sibling.references.find { it is HbsLocalReference || it is HbsLocalRenameReference } != null) {
+                val ref = sibling.references.find { it is HbsLocalReference } as? HbsLocalReference
+                val yieldRef = ref?.resolveYield()
                 if (yieldRef != null) {
                     return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
                 }
-                return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
+                if (ref != null) {
+                    return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
+                }
+                val ref2 = sibling.references.find { it is HbsLocalRenameReference } as HbsLocalRenameReference
+                return HbsLocalReference(element, resolveToJs(ref2.resolve(), listOf(element.text)))
             }
 
             if (element.parent is HbData) {

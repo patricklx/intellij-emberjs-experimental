@@ -25,6 +25,10 @@ import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.css.CssRulesetList
+import com.intellij.psi.css.CssSelector
+import com.intellij.psi.css.impl.CssRulesetImpl
+import com.intellij.psi.css.impl.util.CssUtil
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -62,6 +66,27 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     fun resolve(anything: PsiElement?, result: CompletionResultSet) {
         var refElement: Any? = anything
         if (anything == null) {
+            return
+        }
+
+        if (anything is PsiFile) {
+            val styleSheetLanguages = arrayOf("sass", "scss", "less")
+            if (styleSheetLanguages.contains(anything.language.id.lowercase())) {
+                PsiTreeUtil.collectElements(anything) { it is CssRulesetList }.first().children.forEach { (it as CssRulesetImpl).selectors.forEach {
+                    result.addElement(LookupElementBuilder.create(it.text.substring(1)))
+                }}
+            }
+            return
+        }
+
+        if (anything is CssSelector && anything.ruleset?.block != null) {
+            anything.ruleset!!.block!!.children.map { it as? CssRulesetImpl }.filterNotNull().forEach{ it.selectors.forEach {
+                result.addElement(LookupElementBuilder.create(it.text.substring(1)))
+            }}
+        }
+
+        if (anything.references.isNotEmpty() && anything.references[0] is HbsLocalRenameReference && anything.references[0].resolve() != anything) {
+            resolve(anything.references[0].resolve(), result)
             return
         }
 
