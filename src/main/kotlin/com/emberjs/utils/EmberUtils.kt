@@ -309,7 +309,7 @@ class EmberUtils {
                 return param
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
-                return element.children.find { it is HbParam && it.text != "or" && it.children[0].children[0].references.isNotEmpty() } ?:
+                return element.children.find { it is HbParam && it.text != "or" && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {

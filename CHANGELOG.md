@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.6
+- fix: sometimes no completions for args in templates (@abc...)
+- fix: null pointer exception
+
 ## 2022.2.5
 - feature: support v2 addon format
 - feature: support css imports for ember-hbs-imports
