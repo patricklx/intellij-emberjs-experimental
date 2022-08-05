@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.7
+- fix: sometimes ember-hbs-imports was not detected
+- fix: on package json change include all ember node_modules in project
+
 ## 2022.2.6
 - fix: sometimes no completions for args in templates (@abc...)
 - fix: null pointer exception

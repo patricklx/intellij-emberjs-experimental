@@ -20,6 +20,7 @@ import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.completion.JSCompletionContributor
@@ -254,7 +255,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
 //        val useImports = false;
-        val useImports = (project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") != null)
+        val hasHbsImports = NodeModuleManager.getInstance(tag.project).collectVisibleNodeModules(tag.containingFile.originalVirtualFile).find { it.name == "ember-hbs-imports" }
+        val useImports = hasHbsImports != null
 
 
         val componentMap = hashMapOf<String, LookupElement>()

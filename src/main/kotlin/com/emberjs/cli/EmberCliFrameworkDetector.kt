@@ -8,7 +8,10 @@ import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
+import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.frameworks.react.ReactXmlExtension
 import com.intellij.openapi.fileTypes.FileType
@@ -39,6 +42,33 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
 
     override fun getFrameworkType(): FrameworkType = EmberFrameworkType
 
+    private fun listenNodeModules(rootDir: VirtualFile, modulesProvider: ModulesProvider) {
+        val modifiableModelsProvider = ModifiableModelsProvider.getInstance()
+        modulesProvider.modules
+                .filter { ModuleRootManager.getInstance(it).contentRoots.contains(rootDir) }
+                .forEach { module ->
+                    val p = modifiableModelsProvider.getModuleModifiableModel(module).project
+                    p.messageBus.connect().subscribe(PackageJsonFileManager.TOPIC, PackageJsonFileManager.PackageJsonChangeListener {
+                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                        val entry = MarkRootActionBase.findContentEntry(model, rootDir)
+                        if (entry != null) {
+                            val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
+                            rootDir.findChild("node_modules")!!.children.forEach {
+                                if (it.name.contains("ember")) {
+                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                }
+                                if (it.name.contains("glimmer")) {
+                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                }
+                            }
+                            modifiableModelsProvider.commitModuleModifiableModel(model)
+                        } else {
+                            modifiableModelsProvider.disposeModuleModifiableModel(model)
+                        }
+                    })
+                }
+    }
+
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
         XmlExtension.EP_NAME.point.unregisterExtensions({it !is DefaultXmlExtension })
         XmlTagNameProvider.EP_NAME.point.unregisterExtensions({ it !is ReactXmlExtension && it !is EmberTagNameProvider })
@@ -48,33 +78,8 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles))
         } else if (rootDir != null) {
             // setup reconfigure on package.json change.
-            val nodeModulesManager = NodeModulesDirectoryManager.getInstance(context.project!!)
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
-            val modifiableModelsProvider = ModifiableModelsProvider.getInstance()
-            modulesProvider.modules
-                    .filter { ModuleRootManager.getInstance(it).contentRoots.contains(rootDir) }
-                    .forEach { module ->
-                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                        val entry = MarkRootActionBase.findContentEntry(model, rootDir)
-                        if (entry != null) {
-                            nodeModulesManager.addNodeModulesPackageJsonListener({ var1, var2, var3 ->
-                                val m = modifiableModelsProvider.getModuleModifiableModel(module)
-                                val e = MarkRootActionBase.findContentEntry(m, rootDir)!!
-                                rootDir.findChild("node_modules")!!.children.forEach {
-                                    if (it.name.contains("ember")) {
-                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                    }
-                                    if (it.name.contains("glimmer")) {
-                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                    }
-                                }
-                                modifiableModelsProvider.commitModuleModifiableModel(m)
-                            }, null)
-                            modifiableModelsProvider.commitModuleModifiableModel(model)
-                        } else {
-                            modifiableModelsProvider.disposeModuleModifiableModel(model)
-                        }
-                    }
+            listenNodeModules(rootDir, modulesProvider)
         }
         return mutableListOf()
     }
@@ -98,6 +103,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
         override fun hashCode() = files.hashCode()
 
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
+            listenNodeModules(root, modulesProvider)
             modulesProvider.modules
                 .filter { ModuleRootManager.getInstance(it).contentRoots.contains(root) }
                 .forEach { module ->

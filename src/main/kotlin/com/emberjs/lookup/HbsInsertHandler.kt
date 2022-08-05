@@ -8,6 +8,7 @@ import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
@@ -46,7 +47,8 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             return
         }
 
-        if (context.project.projectFile?.parentModule?.findChild("node_modules")?.findChild("ember-hbs-imports") == null) {
+        val hasHbsImports = NodeModuleManager.getInstance(context.project).collectVisibleNodeModules(context.file.virtualFile).find { it.name == "ember-hbs-imports" }
+        if (hasHbsImports == null) {
             return
         }
 
