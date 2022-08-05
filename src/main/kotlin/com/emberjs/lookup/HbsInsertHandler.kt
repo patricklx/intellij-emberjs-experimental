@@ -19,10 +19,13 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (PsiTreeUtil.collectElements(item.psiElement) { it.references.find { it is HbsLocalReference } != null }.size > 0) {
             return
         }
-        val path = item.getUserData(PathKey)
+        var path = item.getUserData(PathKey)
         val fullPath = item.getUserData(FullPathKey)
-        if (path == null) {
+        if (path == null || fullPath == null) {
             return
+        }
+        if (!fullPath.endsWith("/component") && !fullPath.endsWith("/index")) {
+            path = fullPath
         }
         if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gjs")) {
             return

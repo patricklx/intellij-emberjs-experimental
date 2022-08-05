@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.8
+- fix: bad import for components whos name is not component or index
+
 ## 2022.2.7
 - fix: sometimes ember-hbs-imports was not detected
 - fix: on package json change include all ember node_modules in project
