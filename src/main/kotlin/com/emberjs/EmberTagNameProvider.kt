@@ -246,7 +246,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
         elements.add(LookupElementBuilder.create("Input"))
         elements.add(LookupElementBuilder.create("LinkTo"))
 
-        if (!tag.containingFile.name.endsWith(".gjs")) {
+        if (!tag.containingFile.name.endsWith(".gjs") && !tag.containingFile.name.endsWith(".gts")) {
             val containingFile = tag.containingFile as? HtmlFileImpl ?: return
             val language = containingFile.contentElementType?.language ?: return
             if (language.id !== "Handlebars") return

@@ -30,7 +30,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     companion object {
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
-            val res = tag.references.last().resolve()
+            val res: EmberNamedElement? = tag.references.last().resolve() as EmberNamedElement?
             if (res == null) {
                 return null
             }

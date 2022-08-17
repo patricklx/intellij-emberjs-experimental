@@ -30,7 +30,10 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gjs")) {
             return
         }
-        if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs")) {
+        if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gts")) {
+            return
+        }
+        if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs") || context.file.virtualFile.name.endsWith(".gts")) {
             val psiManager = PsiManager.getInstance(context.project)
             var f = context.file
             if (context.file.virtualFile is VirtualFileWindow) {

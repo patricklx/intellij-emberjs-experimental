@@ -15,6 +15,7 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
@@ -24,6 +25,7 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
+import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
@@ -205,7 +207,10 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is ES6ImportedBinding) {
-                val ref = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
+                var ref: JSModuleReferenceBase? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
+                if (ref == null) {
+                    ref = element.declaration?.fromClause?.references?.findLast { it is TypeScriptFileModuleReference && it.resolve() != null } as TypeScriptFileModuleReference?
+                }
                 if (ref == null) {
                     return ref
                 }
@@ -310,6 +315,7 @@ class EmberUtils {
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
                 return element.children.find { it is HbParam && it.text != "or" && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                element.children.find { it is HbParam && it.text != "or" && it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {

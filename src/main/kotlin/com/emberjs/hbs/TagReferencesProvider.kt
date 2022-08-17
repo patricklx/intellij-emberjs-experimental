@@ -57,7 +57,12 @@ class TagReference(val element: XmlTag, val fullName: String, val range: TextRan
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
             return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
-        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) } ?: element.references.find { it !is TagReference }?.resolve()
+        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
+    }
+
+    override fun isReferenceTo(element: PsiElement): Boolean {
+        val r = resolve() as EmberNamedElement?
+        return getElement().manager.areElementsEquivalent(r?.target, element)
     }
 
     override fun getRangeInElement(): TextRange {
@@ -99,17 +104,17 @@ class TagReferencesProvider : PsiReferenceProvider() {
     companion object {
 
         fun resolveToLocalJs(element: XmlTag): PsiElement? {
-            if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs")) {
+            if (element.originalVirtualFile !is VirtualFileWindow) {
                 return null
             }
             val psiManager = PsiManager.getInstance(element.project)
-            var f = psiManager.findFile(element.originalVirtualFile!!)
-            if (element.originalVirtualFile is VirtualFileWindow) {
-                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.name, listOf(f as PsiElement))
+
+            if (collection.isEmpty()) {
+                return null
             }
-            val collection = ES6PsiUtil.createResolver(f!!.originalElement).getLocalElements(element.name, listOf(f))
-            collection += ES6PsiUtil.createResolver(f!!.originalElement).getTopLevelElements(element.name, false)
-            return (collection.firstOrNull() as? PsiNameIdentifierOwner)?.nameIdentifier ?: collection.firstOrNull()
+            return collection.first()
         }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {

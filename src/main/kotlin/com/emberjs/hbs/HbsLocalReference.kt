@@ -119,6 +119,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         return null
     }
 
+    override fun isReferenceTo(element: PsiElement): Boolean {
+        return getElement().getManager().areElementsEquivalent(target, element);
+    }
+
     override fun resolve(): PsiElement? {
         if (target?.originalVirtualFile?.path != leaf.originalVirtualFile?.path) {
             return target
@@ -288,6 +292,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     }
                 }
             }
+            val followed = EmberUtils.followReferences(any as PsiElement?)
+            if (followed !== null) {
+                return resolveToJs(followed, path)
+            }
             return null
         }
 
@@ -329,6 +337,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         }
 
         fun createReference(element: PsiElement): PsiReference? {
+
             val name = element.text.replace("IntellijIdeaRulezzz", "")
 
             val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)

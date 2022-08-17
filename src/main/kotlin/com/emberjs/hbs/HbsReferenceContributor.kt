@@ -2,20 +2,26 @@ package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
+import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
+import com.intellij.lang.Language
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.patterns.XmlTagPattern
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtilBase
+import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
+import com.intellij.psi.xml.XmlTag
 import com.intellij.util.ProcessingContext
 
 fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference? {
@@ -63,6 +69,10 @@ class RangedReference(element: PsiElement, val target: PsiElement?, val range: T
             }
             attr.name = newName
             return element
+        }
+        if (element is HbStatementsImpl) {
+            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
+            tag.name = newElementName
         }
         return super.handleElementRename(newElementName)
     }
@@ -154,6 +164,17 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
     }
 }
 
+class ContentReferencesProvider : PsiReferenceProvider() {
+    override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
+        val range = element.textRange
+        val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+        val tags = PsiTreeUtil.collectElements(htmlView) { it is XmlTag && range.contains(it.textRange) }
+        return tags.map { it as XmlTag }.filter { it.references.find { it is TagReference } != null }.map {
+            RangedReference(element, it.references.find { it is TagReference }?.resolve(), TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
+        }.toTypedArray()
+    }
+}
+
 class ImportNameReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
         val names = element.text.replace("'", "").replace("\"", "").split(",")
@@ -213,6 +234,7 @@ class HbsReferenceContributor : PsiReferenceContributor() {
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "modifier") } }
             register(HbsPatterns.SUB_EXPR_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
+            registerReferenceProvider(HbsPatterns.CONTENT, ContentReferencesProvider())
             registerReferenceProvider(HbsPatterns.IMPORT_NAMES, ImportNameReferencesProvider())
             registerReferenceProvider(HbsPatterns.IMPORT_PATH_REF, ImportPathReferencesProvider())
             registerReferenceProvider(HbsPatterns.LINK_TO_BLOCK_TARGET, HbsLinkToReferenceProvider())

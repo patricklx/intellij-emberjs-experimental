@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.9
+- improvement: better support for gts/gjs
+
 ## 2022.2.8
 - fix: bad import for components whos name is not component or index
 

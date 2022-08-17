@@ -139,6 +139,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 resolveJsType(jstype, result)
             }
         }
+
+        resolve(EmberUtils.followReferences(anything), result)
     }
 
     fun addHelperCompletions(element: PsiElement, result: CompletionResultSet) {

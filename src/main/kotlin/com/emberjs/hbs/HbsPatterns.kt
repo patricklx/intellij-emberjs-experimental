@@ -8,6 +8,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
 
 object HbsPatterns {
+
     val SIMPLE_MUSTACHE_NAME: Capture<PsiElement> = psiElement(HbTokenTypes.MUSTACHE_NAME)
             .withTextLengthLongerThan(0)
             .withParent(psiElement(HbTokenTypes.MUSTACHE))
@@ -49,7 +50,6 @@ object HbsPatterns {
                     psiElement(HbTokenTypes.MUSTACHE_NAME).withText("import").afterSibling(psiElement(HbTokenTypes.OPEN))
             )
 
-
     val STRING_PARAM: Capture<HbParam> = psiElement(HbParam::class.java)
             .withChild(psiElement(HbMustacheName::class.java)
                     .withChild(psiElement(HbStringLiteral::class.java)))
@@ -72,4 +72,6 @@ object HbsPatterns {
     val TRANSLATION_KEY_IN_SEXPR: Capture<HbParam> = STRING_PARAM
             .withParent(psiElement(HbParam::class.java))
             .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbParam::class.java).withText("t"))
+
+    val CONTENT: Capture<PsiElement> = psiElement(HbTokenTypes.STATEMENTS)
 }
