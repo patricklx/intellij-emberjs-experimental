@@ -26,11 +26,12 @@ val VirtualFile.parents: Iterable<VirtualFile>
     }
 
 
-val cache = HashMap<String, Boolean>()
+val addonCache = HashMap<String, Boolean>()
+val emberCache = HashMap<String, Boolean>()
 
 val VirtualFile.isEmberAddonFolder: Boolean
     get() {
-        if (cache.contains(this.path)) return cache.getOrDefault(this.path, false)
+        if (addonCache.contains(this.path)) return addonCache.getOrDefault(this.path, false)
         val packageJsonFile = findFileByRelativePath("package.json") ?: return false
         val text: String
         try {
@@ -41,14 +42,14 @@ val VirtualFile.isEmberAddonFolder: Boolean
             while (reader.hasNext()) {
                 val key = reader.nextName()
                 if (key == "ember-addon") {
-                    cache[this.path] = true
+                    addonCache[this.path] = true
                     return true
                 }
                 if (key == "keywords") {
                     reader.beginArray()
                     while (reader.hasNext()) {
                         if (reader.nextString() == "ember-addon") {
-                            cache[this.path] = true
+                            addonCache[this.path] = true
                             return true
                         }
                     }
@@ -57,7 +58,7 @@ val VirtualFile.isEmberAddonFolder: Boolean
                 }
                 reader.skipValue()
             }
-            cache[this.path] = false
+            addonCache[this.path] = false
             return false
         } catch (var3: Exception) {
             return false
@@ -68,7 +69,7 @@ val VirtualFile.isEmberAddonFolder: Boolean
 val VirtualFile.isEmberFolder: Boolean
     get() {
         if (this.isEmberAddonFolder) return false
-        if (cache.contains(this.path)) return cache.getOrDefault(this.path, false)
+        if (emberCache.contains(this.path)) return emberCache.getOrDefault(this.path, false)
         val packageJsonFile = findFileByRelativePath("package.json") ?: return false
         val text: String
         try {
@@ -79,14 +80,14 @@ val VirtualFile.isEmberFolder: Boolean
             while (reader.hasNext()) {
                 val key = reader.nextName()
                 if (key == "ember") {
-                    cache[this.path] = true
+                    emberCache[this.path] = true
                     return true
                 }
                 if (key == "keywords") {
                     reader.beginArray()
                     while (reader.hasNext()) {
                         if (reader.nextString() == "ember") {
-                            cache[this.path] = true
+                            emberCache[this.path] = true
                             return true
                         }
                     }
@@ -97,16 +98,17 @@ val VirtualFile.isEmberFolder: Boolean
                     reader.beginObject()
                     while (reader.hasNext()) {
                         if (reader.nextName() == "ember-cli") {
-                            cache[this.path] = true
+                            emberCache[this.path] = true
                             return true
                         }
+                        reader.skipValue()
                     }
                     reader.endObject()
                     continue
                 }
                 reader.skipValue()
             }
-            cache[this.path] = false
+            emberCache[this.path] = false
             return false
         } catch (var3: Exception) {
             return false
