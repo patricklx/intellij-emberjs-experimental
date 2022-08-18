@@ -28,7 +28,6 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.css.CssRulesetList
 import com.intellij.psi.css.CssSelector
 import com.intellij.psi.css.impl.CssRulesetImpl
-import com.intellij.psi.css.impl.util.CssUtil
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -140,7 +139,13 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
         }
 
-        resolve(EmberUtils.followReferences(anything), result)
+        val followed = EmberUtils.followReferences(anything)
+
+        if (followed == anything) {
+            return
+        }
+
+        resolve(followed, result)
     }
 
     fun addHelperCompletions(element: PsiElement, result: CompletionResultSet) {
@@ -247,19 +252,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     }
 
     fun addArgsCompletion(element: PsiElement, result: CompletionResultSet) {
-        val fname = element.containingFile.name.split(".").first()
-        var fileName = fname
-        if (fileName == "template") {
-            fileName = "component"
-        }
-        val dir = element.containingFile.originalFile.containingDirectory
-        val file = dir?.findFile("$fileName.ts")
-                ?: dir?.findFile("$fileName.d.ts")
-                ?: dir?.findFile("$fileName.js")
-                ?: dir?.findFile("controller.ts")
-                ?: dir?.findFile("controller.js")
-        if (file != null) {
-            val cls = EmberUtils.findDefaultExportClass(file)
+        val cls = EmberUtils.findBackingJsClass(element)
+        if (cls != null) {
             val args = EmberUtils.findComponentArgsType(cls as JSElement)
             if (args?.properties != null) {
                 if (element.parent is HbData && !result.prefixMatcher.prefix.startsWith("@")) {

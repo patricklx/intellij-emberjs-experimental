@@ -9,6 +9,7 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
@@ -245,16 +246,14 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
             return LocalSearchScope(elements.toTypedArray())
         }
 
-        if (target.containingFile.name.endsWith(".gjs") || target.containingFile.name.endsWith(".gts")) {
-            val manager = InjectedLanguageManager.getInstance(target.project)
-            val templates = PsiTreeUtil.collectElements(target.containingFile) { it is JSStringTemplateExpression }
-            templates.forEach {
-                val injected = manager.findInjectedElementAt(target.containingFile, it.startOffset + 1)?.containingFile ?: return@forEach
-                val virtualFile = injected.virtualFile
-                if (virtualFile is VirtualFileWindow) {
-                    files.add(injected)
-                    elements.add(injected)
-                }
+        val manager = InjectedLanguageManager.getInstance(target.project)
+        val templates = PsiTreeUtil.collectElements(target.containingFile) { it is ES6TaggedTemplateExpression && it.tag?.name == "hbs" }
+        templates.forEach {
+            val injected = manager.findInjectedElementAt(target.containingFile, it.startOffset + 1)?.containingFile ?: return@forEach
+            val virtualFile = injected.virtualFile
+            if (virtualFile is VirtualFileWindow) {
+                files.add(injected)
+                elements.add(injected)
             }
         }
 

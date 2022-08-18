@@ -73,5 +73,5 @@ object HbsPatterns {
             .withParent(psiElement(HbParam::class.java))
             .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbParam::class.java).withText("t"))
 
-    val CONTENT: Capture<PsiElement> = psiElement(HbTokenTypes.STATEMENTS)
+    val CONTENT: Capture<PsiElement> = psiElement(HbTokenTypes.STATEMENTS).withParent(HbPsiFile::class.java)
 }

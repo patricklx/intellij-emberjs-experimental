@@ -14,6 +14,11 @@ class EmberXmlElementDescriptorProvider : XmlElementDescriptorProvider {
             return forTag(tag)
         }
 
+        if (tag.containingFile.name.endsWith(".gts")) {
+            return forTag(tag)
+        }
+
+
         val containingFile = tag.containingFile as? HtmlFileImpl ?: return null
         val language = containingFile.contentElementType?.language ?: return null
         if (language.id !== "Handlebars") return null

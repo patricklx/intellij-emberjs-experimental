@@ -20,8 +20,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path
                 .replace(Regex("/template$"), "")
                 .replace(Regex("/component$"), "")
+                .removePrefix("/index")
         } else {
-            path
+            path.removePrefix("/index")
         }
 
     }
@@ -108,8 +109,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
         fun from(root: VirtualFile, file: VirtualFile): EmberName? {
             val appFolder = root.findChild("app")
             val uiFolder = appFolder?.findChild("ui")
+            val v2srcFolder = appFolder?.findChild("src")
             val addonFolder = root.findChild("addon")
-            val testsFolder = root.findChild("tests")
+            val testsFolder = root.findChild("tests") ?: root.findChild("test-app")
             val unitTestsFolder = testsFolder?.findChild("unit")
             val integrationTestsFolder = testsFolder?.findChild("integration")
             val acceptanceTestsFolder = testsFolder?.findChild("acceptance")
@@ -119,6 +121,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
 
             return fromPod(appFolder, file) ?: fromPod(addonFolder, file) ?: fromPodTest(unitTestsFolder, file)
             ?: fromPodTest(integrationTestsFolder, file) ?: fromClassic(appFolder, file) ?: fromClassic(uiFolder, file)
+            ?: fromClassic(v2srcFolder, file)
             ?: fromClassic(addonFolder, file) ?: fromClassic(dummyAppFolder, file) ?: fromClassic(dummyAppUiFolder, file)
             ?: fromClassic(v2AddonFolder, file)
             ?: fromClassicTest(unitTestsFolder, file) ?: fromClassicTest(integrationTestsFolder, file)
@@ -137,6 +140,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
                         .map { it.name }
                         .reversed()
                         .joinToString("/")
+                if (path.split("/")[1] == "app") {
+                    path = path.replace(Regex(".*/app/"), "~/")
+                }
             } else {
                 path = file.parents
                         .takeWhile { it != file.parentEmberModule }

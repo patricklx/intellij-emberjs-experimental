@@ -1,8 +1,7 @@
 package com.emberjs.cli
 
 import com.emberjs.settings.EmberApplicationOptions
-import com.emberjs.utils.isEmberFolder
-import com.emberjs.utils.isInRepoAddon
+import com.emberjs.utils.*
 import com.intellij.ide.projectView.actions.MarkRootActionBase
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
@@ -39,8 +38,8 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
     }
     fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>) {
         val module = ModuleManager.getInstance(project).modules.singleOrNull()
-        System.out.println("configureProject: $module ${baseDir.isEmberFolder}")
-        if (module != null && baseDir.isEmberFolder) {
+        System.out.println("configureProject: $module ${baseDir.isEmber}")
+        if (module != null && baseDir.emberRoot == baseDir) {
             setupEmber(project, module, baseDir)
         }
     }
@@ -120,9 +119,15 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             // Mark special folders for each module
             val rootUrl = baseDir.url
             entry.addSourceFolder("$rootUrl/app", SOURCE)
+            entry.addSourceFolder("$rootUrl/src", SOURCE)
             entry.addSourceFolder("$rootUrl/addon", SOURCE)
             entry.addSourceFolder("$rootUrl/public", RESOURCE_IF_AVAILABLE)
             entry.addSourceFolder("$rootUrl/tests", TEST_SOURCE)
+            entry.addSourceFolder("$rootUrl/test-app", TEST_SOURCE)
+            entry.addSourceFolder("$rootUrl/test-app/tests/unit", TEST_SOURCE)
+            entry.addSourceFolder("$rootUrl/test-app/tests/integration", TEST_SOURCE)
+            entry.addSourceFolder("$rootUrl/test-app/tests/acceptance", TEST_SOURCE)
+            entry.addSourceFolder("$rootUrl/test-app/app", TEST_SOURCE)
             entry.addSourceFolder("$rootUrl/tests/unit", TEST_SOURCE)
             entry.addSourceFolder("$rootUrl/tests/integration", TEST_SOURCE)
             entry.addSourceFolder("$rootUrl/tests/acceptance", TEST_SOURCE)
@@ -142,6 +147,9 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             baseDir.findChild("node_modules")!!.children.forEach {
                 if (it.name.contains("ember")) {
+                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                }
+                if (it.name.contains("@types")) {
                     (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
                 }
                 if (it.name.contains("glimmer")) {

@@ -34,17 +34,30 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
     return fn(element)
 }
 
-class RangedReference(element: PsiElement, val target: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
-    private var namedXml: EmberNamedAttribute? = null
-    private var named: EmberNamedElement?
-
-    init {
-        this.named = target?.let { EmberNamedElement(it) }
-        if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
-            this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
-        }
-
+class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
+    private var targetRef: PsiReference? = null
+    constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
+        this.targetRef = targetRef
     }
+
+    val target by lazy {
+        if (targetPsi != null) {
+            return@lazy targetPsi
+        }
+        return@lazy targetRef?.resolve()
+    }
+
+
+    private val named: EmberNamedElement? by lazy {
+        target?.let { EmberNamedElement(it) }
+    }
+    private val namedXml: EmberNamedAttribute? by lazy {
+        if (target is XmlAttribute && (target as XmlAttribute).descriptor?.declaration is EmberAttrDec) {
+            return@lazy (target as XmlAttribute).let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+        }
+        return@lazy null
+    }
+
     override fun resolve(): PsiElement? {
         if (target is XmlAttribute) {
             return namedXml
@@ -87,7 +100,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
         val name = findMainProjectName(element.originalVirtualFile!!)
         var isInTestFolder = false
-        if (element.originalVirtualFile!!.path.contains("$name/tests")) {
+        if (element.originalVirtualFile!!.path.contains("$name/tests") || element.originalVirtualFile!!.path.contains("$name/test-app")) {
             isInTestFolder = true
         }
 
@@ -170,7 +183,7 @@ class ContentReferencesProvider : PsiReferenceProvider() {
         val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         val tags = PsiTreeUtil.collectElements(htmlView) { it is XmlTag && range.contains(it.textRange) }
         return tags.map { it as XmlTag }.filter { it.references.find { it is TagReference } != null }.map {
-            RangedReference(element, it.references.find { it is TagReference }?.resolve(), TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
+            RangedReference(element, it.references.find { it is TagReference }!!, TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
         }.toTypedArray()
     }
 }

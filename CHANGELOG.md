@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.2.10
+- improvement: better support for ember template imports
+- improvement: better support for v2 addon
+- improvement: better detection of ember framework
+
 ## 2022.2.9
 - improvement: better support for gts/gjs
 

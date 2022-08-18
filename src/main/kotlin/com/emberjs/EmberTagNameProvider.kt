@@ -218,7 +218,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
     }
 
     fun fromLocalJs(element: XmlTag, elements: MutableList<LookupElement>) {
-        if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs")) {
+        if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs") && !element.containingFile.name.endsWith(".gts")) {
             return
         }
         val psiManager = PsiManager.getInstance(element.project)
@@ -227,9 +227,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
             f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
         }
 
-        val namedElements = PsiTreeUtil.collectElements(f!!.originalElement) { it is PsiNameIdentifierOwner }
-        val collection = namedElements.map { ES6PsiUtil.createResolver(f!!.originalElement).getLocalElements((it as PsiNameIdentifierOwner).name!!, listOf(f)) }.flatten().toMutableList()
-        collection += namedElements.map { ES6PsiUtil.createResolver(f!!.originalElement).getTopLevelElements((it as PsiNameIdentifierOwner).name!!, false) }.flatten()
+        val namedElements = PsiTreeUtil.collectElements(f!!) { it is PsiNameIdentifierOwner && it.name != null }
+        val collection = namedElements.map { ES6PsiUtil.createResolver(f).getLocalElements((it as PsiNameIdentifierOwner).name!!, listOf(f)) }.flatten().toMutableList()
+        collection += namedElements.map { ES6PsiUtil.createResolver(f).getTopLevelElements((it as PsiNameIdentifierOwner).name!!, false) }.flatten()
         elements.addAll(collection.map { it as? PsiNameIdentifierOwner}.filterNotNull().map {  LookupElementBuilder.create(it, it.name!!) })
     }
 
@@ -246,16 +246,15 @@ class EmberTagNameProvider : XmlTagNameProvider {
         elements.add(LookupElementBuilder.create("Input"))
         elements.add(LookupElementBuilder.create("LinkTo"))
 
-        if (!tag.containingFile.name.endsWith(".gjs") && !tag.containingFile.name.endsWith(".gts")) {
-            val containingFile = tag.containingFile as? HtmlFileImpl ?: return
-            val language = containingFile.contentElementType?.language ?: return
-            if (language.id !== "Handlebars") return
-        }
-
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
 //        val useImports = false;
-        val hasHbsImports = NodeModuleManager.getInstance(tag.project).collectVisibleNodeModules(tag.containingFile.originalVirtualFile).find { it.name == "ember-hbs-imports" }
+        var virtualFile = tag.containingFile.originalVirtualFile
+        if (virtualFile is VirtualFileWindow) {
+            val psiManager = PsiManager.getInstance(tag.project)
+            virtualFile = psiManager.findFile((virtualFile as VirtualFileWindow).delegate)!!.virtualFile
+        }
+        val hasHbsImports = NodeModuleManager.getInstance(tag.project).collectVisibleNodeModules(virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
         val useImports = hasHbsImports != null
 
 
@@ -284,8 +283,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
 }
 
 class PathKeyClass : Key<String>("PATH")
+class FullPathKeyClass : Key<String>("FULLPATH")
 val PathKey = PathKeyClass()
-val FullPathKey = PathKeyClass()
+val FullPathKey = FullPathKeyClass()
 
 
 

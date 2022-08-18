@@ -3,9 +3,15 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
+import com.intellij.lang.Language
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.psi.JSFile
+import com.intellij.lang.javascript.psi.JSNamedElement
+import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlAttributeDescriptor
@@ -79,7 +85,10 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         } else {
             target = this.declaration
         }
-        f = EmberUtils.followReferences(target)?.containingFile?.originalFile
+        val followed = EmberUtils.followReferences(target)
+        if (followed is JSNamedElement || followed is JSFile) {
+            return EmberUtils.getComponentReferenceData(followed)
+        }
         val file = f ?: target.containingFile.originalFile
 
         if (file.name == "intellij-emberjs/internal/components-stub") {

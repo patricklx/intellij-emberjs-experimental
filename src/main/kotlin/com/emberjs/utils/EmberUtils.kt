@@ -11,10 +11,12 @@ import com.emberjs.hbs.ImportNameReferences
 import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
@@ -35,6 +37,7 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.suggested.startOffset
 
 class ArgData(
         var value: String = "",
@@ -133,6 +136,20 @@ class EmberUtils {
             return null
         }
 
+        fun resolveTemplateExport(file: PsiFile): ES6TaggedTemplateExpression? {
+            val cls = resolveDefaultExport(file)
+            if (cls is JSCallExpression && cls.argumentList != null) {
+                var func: PsiElement? = cls.argumentList!!.arguments.last()
+                while (func is JSReferenceExpression) {
+                    func = func.resolve()
+                }
+                if (func is JSVariable) {
+                    return func.children.find { it is ES6TaggedTemplateExpression } as ES6TaggedTemplateExpression?
+                }
+            }
+            return PsiTreeUtil.findChildOfType(cls, ES6TaggedTemplateExpression::class.java)
+        }
+
         fun resolveComponent(file: PsiFile): PsiElement? {
             val cls = resolveDefaultExport(file)
             if (cls is JSClass) {
@@ -170,17 +187,38 @@ class EmberUtils {
             return cls as JSClass?
         }
 
-
-        fun findComponentArgsType(cls: JSElement): JSRecordType? {
-            val typeList: TypeScriptTypeArgumentList?
-            if (cls is TypeScriptClassImpl) {
-                typeList = cls.extendsList?.children?.first()?.children?.getOrNull(1) as TypeScriptTypeArgumentList?
-            } else {
-                typeList = PsiTreeUtil.findChildOfType(cls, TypeScriptTypeArgumentList::class.java)
+        fun findBackingJsClass(element: PsiElement): PsiElement? {
+            val fname = element.containingFile.name.split(".").first()
+            var fileName = fname
+            if (fileName == "template") {
+                fileName = "component"
             }
-            val type = typeList?.typeArguments?.first()?.calculateType()
-            val recordType = type?.asRecordType()
-            return recordType
+            var dir = element.containingFile.originalFile.containingDirectory
+            var cls: JSElement? = null
+            if (element.originalVirtualFile is VirtualFileWindow) {
+                val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
+                val psiManager = PsiManager.getInstance(element.project)
+                val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+                val inJs = f.findElementAt(offset + 1)
+                cls = PsiTreeUtil.findFirstParent(inJs, { it is JSClass }) as JSElement?
+            }
+            val file = dir?.findFile("$fileName.ts")
+                    ?: dir?.findFile("$fileName.d.ts")
+                    ?: dir?.findFile("$fileName.js")
+                    ?: dir?.findFile("controller.ts")
+                    ?: dir?.findFile("controller.js")
+            return cls ?: file?.let { findDefaultExportClass(it) }
+        }
+
+        fun findComponentArgsType(element: JSElement): JSRecordType? {
+            var cls: PsiElement? = element
+            if (cls !is TypeScriptClassImpl) {
+                cls = PsiTreeUtil.findChildOfType(cls, TypeScriptClassImpl::class.java)
+            }
+            if (cls is TypeScriptClassImpl) {
+                return cls.jsType.asRecordType().properties.find { it.memberName == "args" }?.jsType?.asRecordType()
+            }
+            return null
         }
 
 
@@ -314,8 +352,8 @@ class EmberUtils {
                 return param
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
-                return element.children.find { it is HbParam && it.text != "or" && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                element.children.find { it is HbParam && it.text != "or" && it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                return element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
@@ -420,6 +458,10 @@ class EmberUtils {
 
             val fullPathToTs = "$name.ts"
             val fullPathToDts = "$name.d.ts"
+
+            val fullPathToIndexTs = "index.ts"
+            val fullPathToIndexDts = "index.d.ts"
+
             var containingFile = file.containingFile
             if (containingFile == null) {
                 return ComponentReferenceData()
@@ -429,53 +471,69 @@ class EmberUtils {
                         ?: containingFile
             }
 
-            val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?: containingFile
+            val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?:
+                         getFileByPath(parentModule, fullPathToIndexTs) ?: getFileByPath(parentModule, fullPathToIndexDts) ?:containingFile
             var cls = findDefaultExportClass(tsFile)
                     ?: findDefaultExportClass(containingFile)
                     ?: file
+
+            if (f is JSElement && f !is PsiFile) {
+                cls = f;
+            }
 
             if (cls is PsiFile && cls.name == "intellij-emberjs/internal/components-stub") {
                 cls = f;
             }
             var jsTemplate: Any? = null;
             if (cls is JSElement) {
-                val argsElem = findComponentArgsType(cls)
-                val signatures = argsElem?.properties ?: emptyList()
-                for (sign in signatures) {
-                    val comment = sign.memberSource.singleElement?.children?.find { it is JSDocComment }
-//                val s: TypeScriptSingleTypeImpl? = sign.children.find { it is TypeScriptSingleTypeImpl } as TypeScriptSingleTypeImpl?
-                    val attr = sign.toString().split(":").last()
-                    val data = tplArgs.find { it.value == attr } ?: ArgData()
-                    data.value = attr
-                    data.reference = AttrPsiReference(sign.memberSource.singleElement!!)
-                    data.description = comment?.text ?: ""
-                    if (tplArgs.find { it.value == attr } == null) {
-                        tplArgs.add(data)
-                    }
-                }
+
+                jsTemplate = cls as? JSStringTemplateExpression ?: PsiTreeUtil.findChildOfType(cls, JSStringTemplateExpression::class.java)
 
                 if (cls is JSClass) {
-                    jsTemplate = cls.fields.find { it.name == "layout" }
-                    if (jsTemplate is TypeScriptField) {
-                        jsTemplate = jsTemplate.initializer
+                    val argsElem = findComponentArgsType(cls)
+                    val signatures = argsElem?.properties ?: emptyList()
+                    for (sign in signatures) {
+                        val comment = sign.memberSource.singleElement?.children?.find { it is JSDocComment }
+//                val s: TypeScriptSingleTypeImpl? = sign.children.find { it is TypeScriptSingleTypeImpl } as TypeScriptSingleTypeImpl?
+                        val attr = sign.memberName
+                        val data = tplArgs.find { it.value == attr } ?: ArgData()
+                        data.value = attr
+                        data.reference = AttrPsiReference(sign.memberSource.singleElement!!)
+                        data.description = comment?.text ?: ""
+                        if (tplArgs.find { it.value == attr } == null) {
+                            tplArgs.add(data)
+                        }
+                    }
 
-                    }
-                    if (jsTemplate is ES6TaggedTemplateExpression) {
-                        jsTemplate = jsTemplate.templateExpression
-                    }
-                    if (jsTemplate is JSStringTemplateExpression) {
-                        jsTemplate = jsTemplate.text
-                    }
-
-                    if (jsTemplate is JSLiteralExpression) {
-                        jsTemplate = jsTemplate.text
-                    }
-
-                    if (jsTemplate is String) {
-                        jsTemplate = jsTemplate.substring(1, jsTemplate.lastIndex)
-                        jsTemplate = PsiFileFactory.getInstance(file.project).createFileFromText("$name-virtual", Language.findLanguageByID("Handlebars")!!, jsTemplate)
-                    }
+                    jsTemplate = cls.fields.find { it.name == "layout" } ?: jsTemplate
+                    jsTemplate = jsTemplate ?: cls.fields.find { it.name == "template" }
+                    jsTemplate = followReferences(jsTemplate as PsiElement?)
                 }
+            }
+
+            template = dir?.findFile("$name.hbs") ?: dir?.findFile("template.hbs") ?: dir?.findFile("template.ts") ?: dir?.findFile("template.js")
+            if (template is JSFile) {
+                jsTemplate = resolveTemplateExport(template)
+            }
+
+            if (jsTemplate is TypeScriptField) {
+                jsTemplate = jsTemplate.initializer
+            }
+            if (jsTemplate is ES6TaggedTemplateExpression) {
+                jsTemplate = jsTemplate.templateExpression
+            }
+            if (jsTemplate is JSStringTemplateExpression) {
+                val manager = InjectedLanguageManager.getInstance(jsTemplate.project)
+                val injected = manager.findInjectedElementAt(jsTemplate.containingFile, jsTemplate.startOffset + 1)?.containingFile
+                jsTemplate = injected?.containingFile?.viewProvider?.getPsi(Language.findLanguageByID("Handlebars")!!)?.containingFile
+            }
+            if (jsTemplate is JSLiteralExpression) {
+                jsTemplate = jsTemplate.text
+            }
+
+            if (jsTemplate is String) {
+                jsTemplate = jsTemplate.substring(1, jsTemplate.lastIndex)
+                jsTemplate = PsiFileFactory.getInstance(file.project).createFileFromText("$name-virtual", Language.findLanguageByID("Handlebars")!!, jsTemplate)
             }
 
             if (dir != null || jsTemplate != null) {
@@ -483,7 +541,6 @@ class EmberUtils {
                 if (name == "component") {
                     name = "template"
                 }
-                template = dir?.findFile("$name.hbs")
 
                 val parents = emptyList<PsiFileSystemItem>().toMutableList()
                 var fileItem: PsiFileSystemItem? = containingFile
@@ -503,10 +560,10 @@ class EmberUtils {
 
                 val fullPathToHbs = path.replace("app/", "addon/") + "/$name.hbs"
 
-                template = template
+                template = jsTemplate as? PsiFile?
+                        ?: template
                         ?: getFileByPath(parentModule, fullPathToHbs)
-                                ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
-                                ?: jsTemplate as PsiFile?
+                        ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
 
 
                 if (template?.node?.psi != null) {

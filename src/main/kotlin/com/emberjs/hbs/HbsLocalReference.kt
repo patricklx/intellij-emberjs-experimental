@@ -35,7 +35,6 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
-import org.mozilla.javascript.annotations.JSGetter
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -252,15 +251,6 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return any as PsiElement?
             }
 
-            if (any is JSClass) {
-                val n = path.first()
-                val f = any.fields.find { it.name == n } ?: any.functions.find { it.name == n }
-                if (f == null && resolveIncomplete) {
-                    return any;
-                }
-                return resolveToJs(f, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
-            }
-
             var jsType: JSType? = null
             if (any is JSTypedEntity) {
                 jsType = any.jsType
@@ -293,7 +283,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
             }
             val followed = EmberUtils.followReferences(any as PsiElement?)
-            if (followed !== null) {
+            if (followed !== null && followed != any) {
                 return resolveToJs(followed, path)
             }
             return null
@@ -342,19 +332,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
             val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
             if (name == "this" && sibling == null) {
-                val fname = element.containingFile.name.split(".").first()
-                var fileName = fname
-                if (fileName == "template") {
-                    fileName = "component"
-                }
-                val dir = element.containingFile.originalFile.containingDirectory
-                val file = dir?.findFile("$fileName.ts")
-                        ?: dir?.findFile("$fileName.d.ts")
-                        ?: dir?.findFile("$fileName.js")
-                        ?: dir?.findFile("controller.ts")
-                        ?: dir?.findFile("controller.js")
-                if (file != null) {
-                    return HbsLocalReference(element, resolveToJs(file, listOf()))
+                val cls = EmberUtils.findBackingJsClass(element)
+                if (cls != null) {
+                    return HbsLocalReference(element, cls)
                 }
             }
 
@@ -373,19 +353,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             if (element.parent is HbData) {
-                val fname = element.containingFile.name.split(".").first()
-                var fileName = fname
-                if (fileName == "template") {
-                    fileName = "component"
-                }
-                val dir = element.containingFile.originalFile.containingDirectory
-                val file = dir?.findFile("$fileName.ts")
-                        ?: dir?.findFile("$fileName.d.ts")
-                        ?: dir?.findFile("$fileName.js")
-                        ?: dir?.findFile("controller.ts")
-                        ?: dir?.findFile("controller.js")
-                if (file != null) {
-                    val cls = EmberUtils.findDefaultExportClass(file)
+                val cls = EmberUtils.findBackingJsClass(element)
+                if (cls != null) {
                     val args = EmberUtils.findComponentArgsType(cls as JSElement)
                     val prop = args?.properties?.find { it.memberName == name }
                     if (prop != null) {

@@ -27,19 +27,17 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (!fullPath.endsWith("/component") && !fullPath.endsWith("/index")) {
             path = fullPath
         }
-        if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gjs")) {
-            return
-        }
-        if (context.file.virtualFile is VirtualFileWindow && !context.file.virtualFile.name.endsWith(".gts")) {
-            return
-        }
+
         if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs") || context.file.virtualFile.name.endsWith(".gts")) {
             val psiManager = PsiManager.getInstance(context.project)
             var f = context.file
             if (context.file.virtualFile is VirtualFileWindow) {
                 f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
             }
-
+            val hasTemplateImports = NodeModuleManager.getInstance(context.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-template-imports" } != null
+            if (!hasTemplateImports) {
+                return
+            }
 
             val names = f.children.filter { it is ES6ImportDeclaration }
                     .map { it as ES6ImportDeclaration }

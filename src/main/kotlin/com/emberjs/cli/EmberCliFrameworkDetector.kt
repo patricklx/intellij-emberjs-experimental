@@ -1,17 +1,19 @@
 package com.emberjs.cli
 
 import com.emberjs.EmberTagNameProvider
-import com.emberjs.utils.NotLibrary
+import com.emberjs.utils.*
 import com.intellij.framework.FrameworkType
 import com.intellij.framework.detection.DetectedFrameworkDescription
 import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
 import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.json.JsonFileType
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.frameworks.react.ReactXmlExtension
 import com.intellij.openapi.fileTypes.FileType
@@ -25,19 +27,30 @@ import com.intellij.openapi.roots.ui.configuration.DefaultModulesProvider
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.ElementPattern
+import com.intellij.patterns.PatternCondition
+import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
 import com.intellij.xml.DefaultXmlExtension
 import com.intellij.xml.XmlExtension
 import com.intellij.xml.XmlTagNameProvider
 
-class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
-    /** The `.ember-cli` file is detected as plain text */
-    override fun getFileType(): FileType = JavaScriptFileType.INSTANCE
+class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
+    /** Use package json keys to detect ember */
+    override fun getFileType(): FileType = JsonFileType.INSTANCE
 
     override fun createSuitableFilePattern(): ElementPattern<FileContent> {
         return FileContentPattern.fileContent()
-                .withName("ember-cli-build.js")
-                .with(NotLibrary)
+                .with(object : PatternCondition<FileContent>("emberKey") {
+                    override fun accepts(fileContent:FileContent, context: ProcessingContext): Boolean {
+                        if (fileContent.fileName != "package.json") {
+                            return false
+                        }
+                        if (fileContent.file.parent != fileContent.file.emberRoot) {
+                            return false
+                        }
+                        return fileContent.file.parent.isEmber
+                    }
+                })
     }
 
     override fun getFrameworkType(): FrameworkType = EmberFrameworkType
@@ -57,6 +70,9 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
                                 if (it.name.contains("ember")) {
                                     (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
                                 }
+                                if (it.name.contains("@types")) {
+                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                }
                                 if (it.name.contains("glimmer")) {
                                     (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
                                 }
@@ -72,6 +88,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember") {
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
         XmlExtension.EP_NAME.point.unregisterExtensions({it !is DefaultXmlExtension })
         XmlTagNameProvider.EP_NAME.point.unregisterExtensions({ it !is ReactXmlExtension && it !is EmberTagNameProvider })
+        newFiles.removeIf { createSuitableFilePattern().accepts(it) }
         val rootDir = newFiles.firstOrNull()?.parent
 
         if (rootDir != null && !isConfigured(newFiles, context.project)) {

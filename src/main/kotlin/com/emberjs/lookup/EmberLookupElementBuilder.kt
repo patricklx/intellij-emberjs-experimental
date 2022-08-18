@@ -1,5 +1,6 @@
 package com.emberjs.lookup
 
+import com.emberjs.FullPathKey
 import com.emberjs.PathKey
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.icons.EmberIcons
@@ -17,6 +18,7 @@ object EmberLookupElementBuilder {
                 .withCaseSensitivity(true)
                 .withInsertHandler(HbsInsertHandler())
         element.putUserData(PathKey, it.importPath)
+        element.putUserData(FullPathKey, it.fullImportPath)
         return element
     }
 }

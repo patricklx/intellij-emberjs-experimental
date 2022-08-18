@@ -29,7 +29,6 @@ val VirtualFile.parents: Iterable<VirtualFile>
 val cache = HashMap<String, Boolean>()
 
 val VirtualFile.isEmberAddonFolder: Boolean
-
     get() {
         if (cache.contains(this.path)) return cache.getOrDefault(this.path, false)
         val packageJsonFile = findFileByRelativePath("package.json") ?: return false
@@ -41,6 +40,10 @@ val VirtualFile.isEmberAddonFolder: Boolean
             reader.beginObject()
             while (reader.hasNext()) {
                 val key = reader.nextName()
+                if (key == "ember-addon") {
+                    cache[this.path] = true
+                    return true
+                }
                 if (key == "keywords") {
                     reader.beginArray()
                     while (reader.hasNext()) {
@@ -49,8 +52,8 @@ val VirtualFile.isEmberAddonFolder: Boolean
                             return true
                         }
                     }
-                    cache[this.path] = false
-                    return false
+                    reader.endArray()
+                    continue
                 }
                 reader.skipValue()
             }
@@ -63,9 +66,52 @@ val VirtualFile.isEmberAddonFolder: Boolean
 
 
 val VirtualFile.isEmberFolder: Boolean
-    get() = findFileByRelativePath("app/app.js") != null ||
-            findFileByRelativePath(".ember-cli") != null ||
-            findFileByRelativePath(".ember-cli.js") != null
+    get() {
+        if (this.isEmberAddonFolder) return false
+        if (cache.contains(this.path)) return cache.getOrDefault(this.path, false)
+        val packageJsonFile = findFileByRelativePath("package.json") ?: return false
+        val text: String
+        try {
+            text = String(packageJsonFile.contentsToByteArray())
+            val reader = JsonReader(CharSequenceReader(text))
+            reader.isLenient = true
+            reader.beginObject()
+            while (reader.hasNext()) {
+                val key = reader.nextName()
+                if (key == "ember") {
+                    cache[this.path] = true
+                    return true
+                }
+                if (key == "keywords") {
+                    reader.beginArray()
+                    while (reader.hasNext()) {
+                        if (reader.nextString() == "ember") {
+                            cache[this.path] = true
+                            return true
+                        }
+                    }
+                    reader.endArray()
+                    continue
+                }
+                if (key.lowercase().contains("dependencies")) {
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        if (reader.nextName() == "ember-cli") {
+                            cache[this.path] = true
+                            return true
+                        }
+                    }
+                    reader.endObject()
+                    continue
+                }
+                reader.skipValue()
+            }
+            cache[this.path] = false
+            return false
+        } catch (var3: Exception) {
+            return false
+        }
+    }
 
 val VirtualFile.isInRepoAddon: Boolean
     get() = findFileByRelativePath("package.json") != null &&
@@ -84,6 +130,15 @@ val VirtualFile.parentModule: VirtualFile?
  */
 val VirtualFile.parentEmberModule: VirtualFile?
     get() = this.parentModule?.let { if (it.isEmberFolder || it.isInRepoAddon || it.isEmberAddonFolder) it else null }
+
+
+val VirtualFile.isEmber: Boolean
+    get() = this.isEmberFolder || this.isEmberAddonFolder
+
+val VirtualFile.emberRoot: VirtualFile?
+    get() {
+        return this.parents.reversed().find { it.isEmber } ?: (if (this.isEmber) this else null)
+    }
 
 fun findMainPackageJsonFile(file: VirtualFile) = file.parents.asSequence()
         .filter { it.isEmberFolder }
