@@ -66,7 +66,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                         val entry = MarkRootActionBase.findContentEntry(model, rootDir)
                         if (entry != null) {
                             val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                            rootDir.findChild("node_modules")!!.children.forEach {
+                            rootDir.findChild("node_modules")?.children?.forEach {
                                 if (it.name.contains("ember")) {
                                     (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
                                 }
