@@ -2,15 +2,15 @@ import com.emberjs.icons.EmberIcons
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
-import com.intellij.execution.process.BaseOSProcessHandler
-import com.intellij.execution.process.KillableColoredProcessHandler
-import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.process.ProcessOutput
+import com.intellij.execution.process.*
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.linter.*
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -23,9 +23,13 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+var glint: KillableColoredProcessHandler? = null
+val cache = HashMap<String, MutableList<JSLinterError>>()
+
 class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
     companion object {
         private val LOG = Logger.getInstance(TemplateLintExternalRunner::class.java)
+
 
         private fun templateLint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
             val startNanoTime = System.nanoTime()
@@ -34,8 +38,92 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             return result
         }
 
+        private fun startGlint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData) {
+            if (glint != null) {
+                return
+            }
+            val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
+            val commandLine = GeneralCommandLine()
+                    .withCharset(StandardCharsets.UTF_8)
+                    .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
+                    .withWorkDirectory(workDirectory)
+
+            val glintPkg = NodeModuleManager.getInstance(input.project).collectVisibleNodeModules(input.virtualFile).find { it.name == "@glint/core" }!!.virtualFile
+            if (glintPkg == null) {
+                return
+            }
+            val file = glintPkg.findFileByRelativePath("bin/glint.js")
+            if (file == null) {
+                return
+            }
+            commandLine.addParameter(file.path)
+            commandLine.addParameter("--watch")
+
+            val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
+
+             NodeCommandLineConfigurator
+                .find(sessionData.interpreter)
+                .configure(commandLine)
+
+            val processHandler = KillableColoredProcessHandler(commandLine)
+            processHandler.addProcessListener(object : ProcessListener {
+                var currentText = ""
+                override fun startNotified(event: ProcessEvent) {
+
+                }
+
+                override fun processTerminated(event: ProcessEvent) {
+                    glint = null
+                    startGlint(input, sessionData)
+                }
+
+                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                    currentText += event.text
+                    val ready = currentText.contains("Watching for file changes")
+                    if (!ready) {
+                        return
+                    }
+                    cache.clear()
+                    val lines = currentText.split("\n")
+                    var started = false
+                    var file = ""
+                    var text = ""
+                    var column = 0
+                    var line = 0
+                    val highlightSeverity = HighlightSeverity.ERROR
+                    lines.forEach {
+                        val start = it.contains("- error TS")
+                        if (start) {
+                            started = true
+                            val parts = it.split(":")
+                            file = parts[0]
+                            line = parts[1].toInt()
+                            column = parts[2].split(" ")[0].toInt()
+                            text = parts[2].split(" ")[1]
+                            return
+                        }
+                        if (!started) {
+                            return
+                        }
+                        if (it == "\n" && text.contains("\n\n")) {
+                            //end
+                            started = false
+                            val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
+                            cache[file] = cache.get(file) ?: mutableListOf()
+                            cache[file]!!.add(err)
+                        }
+                        text += it + "\n"
+                    }
+                    currentText = ""
+                }
+            })
+            glint = processHandler
+            processHandler.startNotify()
+        }
+
         private fun runProcess(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
             try {
+                startGlint(input, sessionData)
                 val commandLine = createCommandLine(sessionData)
                 logStart(sessionData, commandLine)
                 val processHandler = KillableColoredProcessHandler(commandLine, false)
@@ -55,14 +143,18 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
                 val templateLintResultParser = TemplateLintResultParser()
                 val stdout = output.stdout
                 try {
-                    val errors = templateLintResultParser.parse(stdout)
-                    if (errors == null) {
+                    val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
+                    val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
+                    val relativePath = FileUtil.getRelativePath(workDirectory.absolutePath, pathToLint, File.separatorChar)
+                    val errors: List<JSLinterError> = cache.getOrDefault(relativePath, mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
+
+                    if (errors.isEmpty()) {
                         if (StringUtil.isEmptyOrSpaces(stdout)) {
                             return JSLinterAnnotationResult.createLinterResult(input, emptyList(), null as VirtualFile?)
                         }
                         return createFileLevelWarning(stdout, input, commandLine, processHandler, output)
                     }
-                    return JSLinterAnnotationResult.createLinterResult(input, errors, null as VirtualFile?)
+                    return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
                 } catch (exception: Exception) {
                     return createFileLevelWarning(exception.message!!, input, commandLine, processHandler, output)
                 }
@@ -74,7 +166,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
         @Throws(IOException::class)
         private fun writeFileContentToStdin(processHandler: KillableColoredProcessHandler, sessionData: TemplateLintSessionData, charset: Charset) {
             //for projects using hbs-imports, filter out the imports, but keep empty lines
-            val content = sessionData.fileToLintContent.replace(Regex("\\{\\{\\s*import\\s+([A-Z-a-z\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"), "")
+            val content = sessionData.fileToLintContent
             try {
                 val stdin = ObjectUtils.assertNotNull(processHandler.processInput)
                 var throwable: Throwable? = null

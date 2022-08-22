@@ -16,6 +16,9 @@ import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.json.JsonFileType
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.frameworks.react.ReactXmlExtension
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.module.ModuleUtilCore
@@ -62,31 +65,33 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                 .forEach { module ->
                     val p = modifiableModelsProvider.getModuleModifiableModel(module).project
                     p.messageBus.connect().subscribe(PackageJsonFileManager.TOPIC, PackageJsonFileManager.PackageJsonChangeListener {
-                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                        val entry = MarkRootActionBase.findContentEntry(model, rootDir)
-                        if (entry != null) {
-                            val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                            rootDir.findChild("node_modules")!!.children.forEach {
-                                if (it.name.contains("ember")) {
-                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                        ApplicationManager.getApplication().invokeLater(
+                         {
+                            val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                            val entry = MarkRootActionBase.findContentEntry(model, rootDir)
+                            if (entry != null) {
+                                val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
+                                rootDir.findChild("node_modules")!!.children.forEach {
+                                    if (it.name.contains("ember")) {
+                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                    }
+                                    if (it.name.contains("@types")) {
+                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                    }
+                                    if (it.name.contains("glimmer")) {
+                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                    }
                                 }
-                                if (it.name.contains("@types")) {
-                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                }
-                                if (it.name.contains("glimmer")) {
-                                    (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                }
+                                modifiableModelsProvider.commitModuleModifiableModel(model)
+                            } else {
+                                modifiableModelsProvider.disposeModuleModifiableModel(model)
                             }
-                            modifiableModelsProvider.commitModuleModifiableModel(model)
-                        } else {
-                            modifiableModelsProvider.disposeModuleModifiableModel(model)
-                        }
+                        }, ModalityState.defaultModalityState())
                     })
                 }
     }
 
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
-        XmlExtension.EP_NAME.point.unregisterExtensions({it !is DefaultXmlExtension })
         XmlTagNameProvider.EP_NAME.point.unregisterExtensions({ it !is ReactXmlExtension && it !is EmberTagNameProvider })
         newFiles.removeIf { createSuitableFilePattern().accepts(it) }
         val rootDir = newFiles.firstOrNull()?.parent

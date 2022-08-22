@@ -20,9 +20,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path
                 .replace(Regex("/template$"), "")
                 .replace(Regex("/component$"), "")
-                .removePrefix("/index")
+                .removeSuffix("/index")
         } else {
-            path.removePrefix("/index")
+            path.removeSuffix("/index")
         }
 
     }
@@ -156,6 +156,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path = path.replace("/dist/", "/")
             if (path.startsWith("app/")) {
                 path = path.replace(Regex("^app/"), "~/")
+            }
+            if (path.startsWith("addon/")) {
+                path = path.replace(Regex("^addon/"), file.parentEmberModule!!.name)
             }
             var name = file.nameWithoutExtension.removePrefix("/")
 

@@ -113,6 +113,10 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             path = path.replace(Regex("^$name/"), "~/")
         }
 
+        if (path.startsWith(element.originalVirtualFile!!.parentEmberModule!!.name)) {
+            path = path.replace(Regex("^${element.originalVirtualFile!!.parentEmberModule!!.name}/"), "~/")
+        }
+
         if (path.startsWith("~")) {
             resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
         }
@@ -150,6 +154,12 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             }
             resolvedFile
         }.toMutableList()
+
+        if (resolvedFile is PsiDirectory) {
+            resolvedFile = (resolvedFile as PsiDirectory).findFile("index.ts")
+                            ?: (resolvedFile as PsiDirectory).findFile("index.hbs")
+                            ?: resolvedFile
+        }
 
         val file: PsiFile?
         if (resolvedFile is PsiDirectory) {
