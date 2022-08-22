@@ -145,7 +145,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             if (EmberApplicationOptions.excludeBowerComponents)
                 entry.addExcludeFolder("$rootUrl/bower_components")
 
-            baseDir.findChild("node_modules")!!.children.forEach {
+            baseDir.findChild("node_modules")?.children?.forEach {
                 if (it.name.contains("ember")) {
                     (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
                 }
