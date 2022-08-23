@@ -102,7 +102,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     override fun getTextOffset(): Int {
-        return descriptor.context.attributes.find { it.descriptor == descriptor }!!.textOffset
+        return descriptor.context.attributes.find { it.descriptor == descriptor }?.textOffset ?: -1
     }
 
     override fun getText(): String {

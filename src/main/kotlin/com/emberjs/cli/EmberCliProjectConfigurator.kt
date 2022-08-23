@@ -66,6 +66,8 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             // Mark source and exclude directories
             setupModule(entry, root)
+
+            GlintRunner.startGlint(project, root)
         }
 
         private fun setES6LanguageLevel(project: Project) {
@@ -145,7 +147,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             if (EmberApplicationOptions.excludeBowerComponents)
                 entry.addExcludeFolder("$rootUrl/bower_components")
 
-            baseDir.findChild("node_modules")!!.children.forEach {
+            baseDir.findChild("node_modules")?.children?.forEach {
                 if (it.name.contains("ember")) {
                     (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
                 }

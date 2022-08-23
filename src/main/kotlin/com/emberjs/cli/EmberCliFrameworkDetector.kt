@@ -92,8 +92,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     }
 
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
-        XmlTagNameProvider.EP_NAME.point.unregisterExtensions({ it !is ReactXmlExtension && it !is EmberTagNameProvider })
-        newFiles.removeIf { createSuitableFilePattern().accepts(it) }
+        newFiles.removeIf { !createSuitableFilePattern().accepts(it) }
         val rootDir = newFiles.firstOrNull()?.parent
 
         if (rootDir != null && !isConfigured(newFiles, context.project)) {
@@ -102,6 +101,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
+            GlintRunner.startGlint(context.project!!, rootDir)
         }
         return mutableListOf()
     }

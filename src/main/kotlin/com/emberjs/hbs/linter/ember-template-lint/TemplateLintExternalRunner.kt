@@ -4,12 +4,14 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
 import com.intellij.execution.process.*
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
+import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.linter.*
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
@@ -26,29 +28,20 @@ import java.nio.charset.StandardCharsets
 var glint: KillableColoredProcessHandler? = null
 val cache = HashMap<String, MutableList<JSLinterError>>()
 
-class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
+
+class GlintRunner {
     companion object {
-        private val LOG = Logger.getInstance(TemplateLintExternalRunner::class.java)
-
-
-        private fun templateLint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
-            val startNanoTime = System.nanoTime()
-            val result = runProcess(input, sessionData)
-            logEnd(startNanoTime, result.errors.size)
-            return result
-        }
-
-        private fun startGlint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData) {
+        fun startGlint(project: Project, workingDir: VirtualFile) {
             if (glint != null) {
                 return
             }
-            val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
+            val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
             val commandLine = GeneralCommandLine()
                     .withCharset(StandardCharsets.UTF_8)
                     .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
                     .withWorkDirectory(workDirectory)
 
-            val glintPkg = NodeModuleManager.getInstance(input.project).collectVisibleNodeModules(input.virtualFile).find { it.name == "@glint/core" }!!.virtualFile
+            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }!!.virtualFile
             if (glintPkg == null) {
                 return
             }
@@ -59,11 +52,9 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             commandLine.addParameter(file.path)
             commandLine.addParameter("--watch")
 
-            val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
-
-             NodeCommandLineConfigurator
-                .find(sessionData.interpreter)
-                .configure(commandLine)
+            NodeCommandLineConfigurator
+                    .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
+                    .configure(commandLine)
 
             val processHandler = KillableColoredProcessHandler(commandLine)
             processHandler.addProcessListener(object : ProcessListener {
@@ -74,7 +65,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
                 override fun processTerminated(event: ProcessEvent) {
                     glint = null
-                    startGlint(input, sessionData)
+                    startGlint(project, workingDir)
                 }
 
                 override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
@@ -120,10 +111,23 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             glint = processHandler
             processHandler.startNotify()
         }
+    }
+}
+
+class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
+    companion object {
+        private val LOG = Logger.getInstance(TemplateLintExternalRunner::class.java)
+
+
+        private fun templateLint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
+            val startNanoTime = System.nanoTime()
+            val result = runProcess(input, sessionData)
+            logEnd(startNanoTime, result.errors.size)
+            return result
+        }
 
         private fun runProcess(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
             try {
-                startGlint(input, sessionData)
                 val commandLine = createCommandLine(sessionData)
                 logStart(sessionData, commandLine)
                 val processHandler = KillableColoredProcessHandler(commandLine, false)
