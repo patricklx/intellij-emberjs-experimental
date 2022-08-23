@@ -25,12 +25,48 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-var glint: KillableColoredProcessHandler? = null
-val cache = HashMap<String, MutableList<JSLinterError>>()
-
 
 class GlintRunner {
     companion object {
+
+        var glint: KillableColoredProcessHandler? = null
+        val cache = HashMap<String, MutableList<JSLinterError>>()
+        fun parseGlintText(glintText: String) {
+            cache.clear()
+            val lines = glintText.split("\n")
+            var started = false
+            var file = ""
+            var text = ""
+            var column = 0
+            var line = 0
+            val highlightSeverity = HighlightSeverity.ERROR
+            val failedLines: MutableList<String> = mutableListOf()
+            lines.forEach {
+                val start = it.contains("- error TS")
+                val end = it.contains("Watching for file changes")
+                if (started && (start || end)) {
+                    //end
+                    started = false
+                    val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
+                    cache[file] = cache.get(file) ?: mutableListOf()
+                    cache[file]!!.add(err)
+                }
+                if (start) {
+                    started = true
+                    val parts = it.split(":")
+                    file = parts[0]
+                    line = parts[1].toInt()
+                    column = parts[2].split(" ")[0].toInt()
+                    text = parts[2].split(" ")[1]
+                    return@forEach
+                }
+                if (!started) {
+                    return@forEach
+                }
+                text += it + "\n"
+            }
+        }
+
         fun startGlint(project: Project, workingDir: VirtualFile) {
             if (glint != null) {
                 return
@@ -60,7 +96,7 @@ class GlintRunner {
             processHandler.addProcessListener(object : ProcessListener {
                 var currentText = ""
                 override fun startNotified(event: ProcessEvent) {
-
+                    currentText += event.text
                 }
 
                 override fun processTerminated(event: ProcessEvent) {
@@ -74,37 +110,7 @@ class GlintRunner {
                     if (!ready) {
                         return
                     }
-                    cache.clear()
-                    val lines = currentText.split("\n")
-                    var started = false
-                    var file = ""
-                    var text = ""
-                    var column = 0
-                    var line = 0
-                    val highlightSeverity = HighlightSeverity.ERROR
-                    lines.forEach {
-                        val start = it.contains("- error TS")
-                        if (start) {
-                            started = true
-                            val parts = it.split(":")
-                            file = parts[0]
-                            line = parts[1].toInt()
-                            column = parts[2].split(" ")[0].toInt()
-                            text = parts[2].split(" ")[1]
-                            return
-                        }
-                        if (!started) {
-                            return
-                        }
-                        if (it == "\n" && text.contains("\n\n")) {
-                            //end
-                            started = false
-                            val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
-                            cache[file] = cache.get(file) ?: mutableListOf()
-                            cache[file]!!.add(err)
-                        }
-                        text += it + "\n"
-                    }
+                    parseGlintText(currentText)
                     currentText = ""
                 }
             })
@@ -150,7 +156,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
                     val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
                     val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
                     val relativePath = FileUtil.getRelativePath(workDirectory.absolutePath, pathToLint, File.separatorChar)
-                    val errors: List<JSLinterError> = cache.getOrDefault(relativePath, mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
+                    val errors: List<JSLinterError> = GlintRunner.cache.getOrDefault(relativePath?.replace("\\", "/"), mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
 
                     if (errors.isEmpty()) {
                         if (StringUtil.isEmptyOrSpaces(stdout)) {
@@ -206,11 +212,11 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
             sessionData.templateLintPackage
                     .addMainEntryJsFile(commandLine, sessionData.interpreter)
-            
+
             if (sessionData.templateLintPackage.versionStr.split(".").first().toInt() >= 4) {
-              commandLine.addParameter("--format=json")
+                commandLine.addParameter("--format=json")
             } else {
-              commandLine.addParameter("--json")
+                commandLine.addParameter("--json")
             }
 
             val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)

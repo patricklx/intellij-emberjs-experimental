@@ -352,9 +352,16 @@ class EmberUtils {
                 return param
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
-                return element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+                val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
+                return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+            }
+            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)if\\b"))) {
+                val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
+                return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children[0].children.getOrNull(0) is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text

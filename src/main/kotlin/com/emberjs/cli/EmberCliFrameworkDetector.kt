@@ -92,7 +92,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     }
 
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
-        newFiles.removeIf { !createSuitableFilePattern().accepts(it) }
+        newFiles.removeIf { !it.path.endsWith("package.json") || it.parent != it.emberRoot || !it.parent.isEmber }
         val rootDir = newFiles.firstOrNull()?.parent
 
         if (rootDir != null && !isConfigured(newFiles, context.project)) {
