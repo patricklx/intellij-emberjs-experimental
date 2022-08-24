@@ -5,10 +5,7 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.*
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.HbsModuleReference
-import com.emberjs.hbs.ImportNameReferences
-import com.emberjs.hbs.TagReferencesProvider
+import com.emberjs.hbs.*
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
@@ -355,13 +352,13 @@ class EmberUtils {
                 val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
                 return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                params.find { it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+                params.find { it.text.contains(Regex("^(\\(|\\{\\{)component\\b")) && !it.children.contains(handleEmberHelpers(it)) }?.let { handleEmberHelpers(it) }
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)if\\b"))) {
                 val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
                 return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                params.find { it.children[0].children.getOrNull(0) is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+                params.find { it.text.contains(Regex("^(\\(|\\{\\{)component\\b")) && !it.children.contains(handleEmberHelpers(it)) }?.let { handleEmberHelpers(it) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text

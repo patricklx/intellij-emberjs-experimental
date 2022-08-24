@@ -21,7 +21,7 @@ import com.intellij.xml.XmlNSDescriptor
 
 
 
-class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement) : XmlElementDescriptor {
+class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement?) : XmlElementDescriptor {
     val project = tag.project
     val version = "v2022.1.11"
 
@@ -37,9 +37,6 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
             val res: EmberNamedElement? = tag.references.last().resolve() as EmberNamedElement?
-            if (res == null) {
-                return null
-            }
             return EmberXmlElementDescriptor(tag, res)
         }
     }
@@ -79,11 +76,14 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     fun getReferenceData(): ComponentReferenceData {
         var f: PsiFile? = null
         // if it references a block param
-        val target: PsiElement
+        val target: PsiElement?
         if (this.declaration is EmberNamedElement) {
             target = this.declaration.target
         } else {
             target = this.declaration
+        }
+        if (target == null) {
+            return ComponentReferenceData()
         }
         val followed = EmberUtils.followReferences(target)
         if (followed is JSNamedElement || followed is JSFile) {
@@ -107,7 +107,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         val data = getReferenceData()
         val attributes = data.args.map { EmberAttributeDescriptor(context, it.value, false, it.description, it.reference, null)  }
         result.addAll(attributes)
-        if (data.hasSplattributes) {
+        if (data.hasSplattributes || this.declaration == null) {
             result.addAll(commonHtmlAttributes)
         }
         return result.toTypedArray()
