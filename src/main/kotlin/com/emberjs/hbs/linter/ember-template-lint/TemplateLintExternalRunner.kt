@@ -133,6 +133,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
         }
 
         private fun runProcess(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
+            GlintRunner.startGlint(input.project, sessionData.workingDir)
             try {
                 val commandLine = createCommandLine(sessionData)
                 logStart(sessionData, commandLine)

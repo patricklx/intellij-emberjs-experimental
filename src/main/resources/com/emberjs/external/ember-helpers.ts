@@ -190,7 +190,7 @@ function _let(params: [value: any]) {}
  @public
  @since 3.11.0
  */
-function fn(params: [action: Function, ...args: any[]]) {}
+function fn<F extends (...args: any)=>any>(params: [action: F, ...args: any[]]): ReturnType<F> {}
 
 /**
  Use the `{{array}}` helper to create an array to pass as an option to your
@@ -223,7 +223,7 @@ function fn(params: [action: Function, ...args: any[]]) {}
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/array?anchor=array
  @public
  */
-function array(options: any[]): any[] {
+function array<T>(options: T[]): T[] {
   return []
 }
 
@@ -491,7 +491,7 @@ function eachIn(params: [object: Object]) {}
  @for Ember.Templates.helpers
  @since 2.1.0
  */
-function get(params: [object: Object, path: string]): any {}
+function get<T, K extends keyof T>(params: [object: T, path: K]): T[K] {};
 
 /**
  The `if` helper allows you to conditionally render one of two branches,

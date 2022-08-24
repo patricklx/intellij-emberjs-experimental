@@ -124,6 +124,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(dereferencedHelper, result)
         }
 
+        if (refElement is JSFunction) {
+            resolveJsType(refElement.returnType, result)
+        }
+
         if (refElement is JSTypeOwner) {
             resolveJsType(refElement.jsType, result)
         }

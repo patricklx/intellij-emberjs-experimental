@@ -65,28 +65,30 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                 .forEach { module ->
                     val p = modifiableModelsProvider.getModuleModifiableModel(module).project
                     p.messageBus.connect().subscribe(PackageJsonFileManager.TOPIC, PackageJsonFileManager.PackageJsonChangeListener {
-                        ApplicationManager.getApplication().invokeLater(
-                         {
-                            val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                            val entry = MarkRootActionBase.findContentEntry(model, rootDir)
-                            if (entry != null) {
-                                val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                                rootDir.findChild("node_modules")!!.children.forEach {
-                                    if (it.name.contains("ember")) {
-                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                        ApplicationManager.getApplication().invokeLater {
+                            ApplicationManager.getApplication().runWriteAction()
+                            {
+                                val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                                val entry = MarkRootActionBase.findContentEntry(model, rootDir)
+                                if (entry != null) {
+                                    val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
+                                    rootDir.findChild("node_modules")!!.children.forEach {
+                                        if (it.name.contains("ember")) {
+                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                        }
+                                        if (it.name.contains("@types")) {
+                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                        }
+                                        if (it.name.contains("glimmer")) {
+                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                        }
                                     }
-                                    if (it.name.contains("@types")) {
-                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                    }
-                                    if (it.name.contains("glimmer")) {
-                                        (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                    }
+                                    modifiableModelsProvider.commitModuleModifiableModel(model)
+                                } else {
+                                    modifiableModelsProvider.disposeModuleModifiableModel(model)
                                 }
-                                modifiableModelsProvider.commitModuleModifiableModel(model)
-                            } else {
-                                modifiableModelsProvider.disposeModuleModifiableModel(model)
                             }
-                        }, ModalityState.defaultModalityState())
+                        }
                     })
                 }
     }
