@@ -55,7 +55,7 @@ class GlintRunner {
                     started = true
                     val parts = it.split(":")
                     file = parts[0]
-                    line = parts[1].toInt()
+                    line = parts[1].split(" ")[0].toInt()
                     column = parts[2].split(" ")[0].toInt()
                     text = parts[2].split(" ")[1]
                     return@forEach
