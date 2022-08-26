@@ -1,3 +1,18 @@
+{{import GlintX from "example/components/glint-component"}}
+
 <h2 id="title">Welcome to Ember</h2>
 
 {{outlet}}
+
+{{#let (component "glint-component") as |Glint|}}
+  <Glint ></Glint>
+{{/let}}
+<GlintComponent @inputs={{array "a" "b" "c"}} as |item|>
+  {{item.}}
+</GlintComponent>
+
+<GlintX @inputs={{array "a" "b" "c"}} as |item|>
+  {{item.}}
+</GlintX>
+
+<example::components::glint-component></example::components::glint-component>

@@ -194,7 +194,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return local
             }
 
-            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name)
+            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name) ?: tag.descriptor?.declaration
         }
 
         fun forTagName(project: Project, tagName: String): PsiElement? {

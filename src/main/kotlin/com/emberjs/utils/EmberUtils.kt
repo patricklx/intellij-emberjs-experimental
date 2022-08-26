@@ -4,8 +4,10 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.dmarcotte.handlebars.psi.impl.HbStringLiteralImpl
 import com.emberjs.*
 import com.emberjs.hbs.*
+import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
@@ -18,17 +20,19 @@ import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptField
-import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
+import com.intellij.openapi.project.Project
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
@@ -261,14 +265,14 @@ class EmberUtils {
                 return followReferences(resHelper, path)
             }
 
-            if (element is HbParam) {
+            if (element is HbParam && element.references.isEmpty()) {
                 if (element.children.isNotEmpty() && element.children[0].references.isNotEmpty()) {
                     return element.children.getOrNull(0)?.let { followReferences(it) }
                 }
                 return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
             }
 
-            val resYield: XmlAttribute? = findTagYield(element)
+            val resYield: XmlAttribute? = findTagYieldAttribute(element)
             if (resYield != null && resYield.reference != null && element != null && resYield.reference!!.resolve() != null) {
                 val name = element.text.replace("|", "")
                 val yieldParams = resYield.reference!!.resolve()!!.children.filter { it is HbParam }
@@ -278,6 +282,9 @@ class EmberUtils {
                 val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
                 val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
                 val blockParamIdx = params.indexOf(refPsi)
+
+                val cls = resolveGlintSignature(element.parent, true)
+
                 return followReferences(yieldParams.getOrNull(blockParamIdx), path)
             }
 
@@ -334,9 +341,9 @@ class EmberUtils {
             if (ref == null) {
                 return null
             }
-            val index = Regex("$name").find(ref.children[2].text)!!.range.first
-            val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
-            return file?.resolve() ?: ref
+            //val index = Regex("$name").find(ref.children[2].text)!!.range.first
+            //val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
+            return ref.children[2]
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
@@ -390,7 +397,7 @@ class EmberUtils {
             return null
         }
 
-        fun findTagYield(element: PsiElement?): XmlAttribute? {
+        fun findTagYieldAttribute(element: PsiElement?): XmlAttribute? {
             if (element is EmberAttrDec && element.name != "as") {
                 val tag = element.parent
                 return tag.attributes.find { it.name == "as" }
@@ -398,6 +405,64 @@ class EmberUtils {
             if (element is XmlAttribute && element.name != "as") {
                 val tag = element.parent
                 return tag.attributes.find { it.name == "as" }
+            }
+            return null
+        }
+
+        fun resolveToSignature(project: Project, name: String, positionalArgs: Array<String>, namedArgs: Array<Pair<String, String?>>): JSClass? {
+            var posArgs = ""
+            if (positionalArgs.size > 0) {
+                posArgs = "," + positionalArgs.joinToString(",")
+            }
+            val args = namedArgs.map { "${it.first}: ${it.second ?: "unknown"}" }
+                    .joinToString(",")
+            val fromGlintRegistry = """
+                    import X from "@glint/environment-ember-loose/-private/dsl";
+                    import Y from χ.Globals["$name"];
+                    export default X.resolve(Y, {${args}} ${posArgs})
+                """.trimIndent()
+            val tsFile = PsiFileFactory.getInstance(project).createFileFromText(name + "-internal.ts", Language.findLanguageByID("TypeScript")!!, fromGlintRegistry)
+            return EmberUtils.findDefaultExportClass(tsFile)
+        }
+
+
+        fun resolveToComponentSignature(project: Project, name: String, positionalArgs: List<String>, namedArgs: List<Pair<String, String>>): JSElement? {
+            var posArgs = ""
+            if (positionalArgs.size > 0) {
+                posArgs = "," + positionalArgs.joinToString(",")
+            }
+            val args = namedArgs.map { "${it.first}: ${it.second ?: "unknown"}" }
+                    .joinToString(",")
+            val fromGlintRegistry = """
+                    import X from "@glint/environment-ember-loose/-private/dsl";
+                    const Y = X.Globals["$name"];
+                    export default X.emitComponent(Y, {${args}}$posArgs)
+                """.trimIndent()
+            val tsFile = PsiFileFactory.getInstance(project).createFileFromText(name + "-internal.ts", Language.findLanguageByID("TypeScript")!!, fromGlintRegistry)
+            return ES6PsiUtil.findDefaultExport(tsFile)
+        }
+
+        fun resolveGlintSignature(element: PsiElement, withArgs:Boolean): JSElement? {
+            if (element is XmlTag) {
+                val tag = element
+                var args: List<Pair<String, String>> = listOf()
+                if (withArgs) {
+                    var params = tag.attributes.toList()
+                    if (tag.attributes.find { it.name == "as" } != null) {
+                        params = params.dropLastWhile { it.name != "as" }
+                        params = params.dropLast(1)
+                    }
+
+                    args = params.map {
+                        Pair(it, (
+                                (if (it.value != "") it.value else null))?.let { "string" }
+                                        ?: (it.valueElement?.startOffset?.let { followReferences(tag.containingFile.findElementAt(it)) } as? JSTypedEntity)?.jsType?.asRecordType()?.typeText ?: it.value)
+                        }
+                            .map { Pair(it.first.name, it.second ?: "unknown") }
+                }
+                val importRef = tag.reference?.resolve()?.parent?.let{ if (it.text.startsWith("{{import ")) it else null }?.children?.filter { it is HbParam && it.children.firstOrNull()?.children?.firstOrNull() is HbStringLiteral }?.lastOrNull()?.text?.replace("'", "")?.replace("\"", "")
+
+                return resolveToComponentSignature(tag.project, importRef ?: tag.name, listOf(), args)
             }
             return null
         }
@@ -490,6 +555,9 @@ class EmberUtils {
             }
             var jsTemplate: Any? = null;
             if (cls is JSElement) {
+
+                val scope = ProjectScope.getAllScope(cls.project)
+                val emberName = EmberNameIndex.getFilteredPairs(scope) { it.type == "component" }.find { it.second == cls.containingFile }?.first
 
                 jsTemplate = cls as? JSStringTemplateExpression ?: PsiTreeUtil.findChildOfType(cls, JSStringTemplateExpression::class.java)
 

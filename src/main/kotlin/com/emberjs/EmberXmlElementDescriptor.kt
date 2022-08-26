@@ -8,9 +8,11 @@ import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
@@ -37,6 +39,9 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
             val res: EmberNamedElement? = tag.references.last().resolve() as EmberNamedElement?
+            if (res == null) {
+                return null
+            }
             return EmberXmlElementDescriptor(tag, res)
         }
     }
@@ -90,6 +95,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             return EmberUtils.getComponentReferenceData(followed)
         }
         val file = f ?: target.containingFile.originalFile
+
 
         if (file.name == "intellij-emberjs/internal/components-stub") {
             return EmberUtils.getComponentReferenceData(target)

@@ -28,28 +28,29 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     private val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
     open fun matches(module: EmberName) =
-            module.type == moduleType && module.name == value
+            module.type == moduleType && module.name == value.replace("'", "").replace("\"", "")
 
     override fun multiResolve(incompleteCode: Boolean): Array<out ResolveResult> {
         // Collect all components from the index
+        val text = element.text.replace("'", "").replace("\"", "")
 
         if (moduleType == "helper") {
-            if (internalHelpers.properties.map { it.name }.contains(element.text)) {
-                val prop = internalHelpers.properties.find { it.name == element.text }
+            if (internalHelpers.properties.map { it.name }.contains(text)) {
+                val prop = internalHelpers.properties.find { it.name == text }
                 return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
             }
         }
 
         if (moduleType == "component") {
-            if (internalHelpers.properties.map { it.name }.contains(element.text)) {
-                val prop = internalHelpers.properties.find { it.name == element.text }
+            if (internalHelpers.properties.map { it.name }.contains(text)) {
+                val prop = internalHelpers.properties.find { it.name == text }
                 return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
             }
         }
 
         if (moduleType == "modifier") {
-            if (internalModifiers.properties.map { it.name }.contains(element.text)) {
-                val prop = internalModifiers.properties.find { it.name == element.text }
+            if (internalModifiers.properties.map { it.name }.contains(text)) {
+                val prop = internalModifiers.properties.find { it.name == text }
                 return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
             }
         }

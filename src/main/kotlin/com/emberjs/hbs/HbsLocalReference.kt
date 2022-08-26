@@ -19,7 +19,6 @@ import com.intellij.lang.javascript.psi.JSFunction
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
@@ -195,7 +194,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     return resolveToJs(resolvedHelper, path)
                 }
 
-                val refYield = EmberUtils.findTagYield(any)
+                val refYield = EmberUtils.findTagYieldAttribute(any)
                 if (refYield != null && refYield.descriptor?.declaration != null) {
                     return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete)
                 }

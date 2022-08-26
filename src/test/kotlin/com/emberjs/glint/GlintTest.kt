@@ -84,8 +84,25 @@ class GlintTest {
 
     """.trimIndent()
     @Test fun testGlintText() {
-        GlintRunner.parseGlintText(glintText)
-        assertEquals(1, GlintRunner.cache.count(), "should have 1 file")
-        assertEquals(5, GlintRunner.cache.first().value.size, "should have 5 errors")
+        val g = GlintRunner()
+        g.parseGlintText(glintText)
+        assertEquals(1, g.cache.count(), "should have 1 file")
+        assertEquals(5, g.cache.first().value.size, "should have 5 errors")
+        assertEquals("""
+ The given value does not appear to be usable as a component, modifier or helper.  No overload matches this call.
+    The last overload gave the following error.
+      Argument of type 'void | DebuggerKeyword | HasBlockKeyword | HasBlockParamsKeyword | InElementKeyword | LetKeyword | ... 19 more ... | typeof CarbonIcon' is not assignable to parameter of type '(...positional: unknown[]) => unknown'.
+        Type 'void' is not assignable to type '(...positional: unknown[]) => unknown'.
+
+1 {{import Loading from '../loading'}}
+  ~~~~~~~~~~~~~~~
+
+  node_modules/@glint/environment-ember-loose/-private/dsl/index.d.ts:33:25
+    33 export declare function resolve<P extends unknown[], T>(
+                               ~~~~~~~
+    The last overload is declared here.
+
+
+        """.trimIndent(), g.cache.first().value.first().description, "")
     }
 }

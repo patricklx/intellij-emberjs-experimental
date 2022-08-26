@@ -12,8 +12,9 @@ class HbsComponentReference(element: PsiElement) : HbsModuleReference(element, "
     }
 
     override fun multiResolve(incompleteCode: Boolean): Array<out ResolveResult> {
-        if (internalComponents.properties.map { it.name }.contains(element.text)) {
-            val prop = internalComponents.properties.find { it.name == element.text }
+        val text = element.text.replace("'", "").replace("\"", "")
+        if (internalComponents.properties.map { it.name }.contains(text)) {
+            val prop = internalComponents.properties.find { it.name == text }
             return createResults((prop?.jsType?.sourceElement as JSReferenceExpression).resolve())
         }
         return super.multiResolve(incompleteCode)

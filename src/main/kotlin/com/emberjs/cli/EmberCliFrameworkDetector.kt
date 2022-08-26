@@ -1,5 +1,6 @@
 package com.emberjs.cli
 
+import GlintRunner
 import com.emberjs.EmberTagNameProvider
 import com.emberjs.utils.*
 import com.intellij.framework.FrameworkType
@@ -103,7 +104,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
-            GlintRunner.startGlint(context.project!!, rootDir)
+            GlintRunner.getInstance(context.project!!).startGlint(context.project!!, rootDir)
         }
         return mutableListOf()
     }

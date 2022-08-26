@@ -158,7 +158,7 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
                 path = path.replace(Regex("^app/"), "~/")
             }
             if (path.startsWith("addon/")) {
-                path = path.replace(Regex("^addon/"), file.parentEmberModule!!.name)
+                path = path.replace(Regex("^addon/"), file.parentEmberModule!!.name + "/")
             }
             var name = file.nameWithoutExtension.removePrefix("/")
 

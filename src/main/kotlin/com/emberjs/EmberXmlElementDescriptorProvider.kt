@@ -19,9 +19,9 @@ class EmberXmlElementDescriptorProvider : XmlElementDescriptorProvider {
         }
 
 
-        val containingFile = tag.containingFile as? HtmlFileImpl ?: return null
-        val language = containingFile.contentElementType?.language ?: return null
-        if (language.id !== "Handlebars") return null
+        val containingFile = tag.containingFile as? HtmlFileImpl ?: return tag.descriptor
+        val language = containingFile.contentElementType?.language ?: return tag.descriptor
+        if (language.id !== "Handlebars") return tag.descriptor
 
         return forTag(tag)
     }
