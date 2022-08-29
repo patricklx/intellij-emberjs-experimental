@@ -27,48 +27,47 @@ import java.nio.charset.StandardCharsets
 
 
 class GlintRunner {
-    companion object {
 
-        var glint: KillableColoredProcessHandler? = null
-        val cache = HashMap<String, MutableList<JSLinterError>>()
-        fun parseGlintText(glintText: String) {
-            cache.clear()
-            val lines = glintText.split("\n")
-            var started = false
-            var file = ""
-            var text = ""
-            var column = 0
-            var line = 0
-            val highlightSeverity = HighlightSeverity.ERROR
-            val failedLines: MutableList<String> = mutableListOf()
-            lines.forEach {
-                val start = it.contains("- error TS")
-                val end = it.contains("Watching for file changes")
-                if (started && (start || end)) {
-                    //end
-                    started = false
-                    val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
-                    cache[file] = cache.get(file) ?: mutableListOf()
-                    cache[file]!!.add(err)
-                }
-                if (start) {
-                    started = true
-                    val parts = it.split(":")
-                    file = parts[0]
-                    line = parts[1].split(" ")[0].toInt()
-                    column = parts[2].split(" ")[0].toInt()
-                    text = parts[2].split(" ")[1]
-                    return@forEach
-                }
-                if (!started) {
-                    return@forEach
+    var processHandler: KillableColoredProcessHandler? = null
+    val cache = HashMap<String, MutableList<JSLinterError>>()
+
+    fun parseGlintText(glintText: String) {
+        cache.clear()
+        val lines = glintText.split("\n")
+        var started = false
+        var file = ""
+        var text = ""
+        var column = 0
+        var line = 0
+        val highlightSeverity = HighlightSeverity.ERROR
+        lines.forEach {
+            val start = it.contains("- error TS")
+            val end = it.contains("Watching for file changes")
+            if (started && (start || end)) {
+                //end
+                started = false
+                val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
+                cache[file] = cache.get(file) ?: mutableListOf()
+                cache[file]!!.add(err)
+            }
+            if (start) {
+                started = true
+                val parts = it.split(":")
+                file = parts[0]
+                line = parts[1].toInt()
+                column = parts[2].split(" ")[0].toInt()
+                text = parts[3]
+                return@forEach
+            }
+            if (!started) {
+                return@forEach
                 }
                 text += it + "\n"
             }
         }
 
         fun startGlint(project: Project, workingDir: VirtualFile) {
-            if (glint != null) {
+        if (projectGlint[project.hashCode()]?.processHandler != null) {
                 return
             }
             val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
@@ -100,7 +99,7 @@ class GlintRunner {
                 }
 
                 override fun processTerminated(event: ProcessEvent) {
-                    glint = null
+                    projectGlint.remove(project.hashCode())
                     startGlint(project, workingDir)
                 }
 
@@ -110,12 +109,28 @@ class GlintRunner {
                     if (!ready) {
                         return
                     }
-                    parseGlintText(currentText)
+                projectGlint[project.hashCode()]!!.parseGlintText(currentText)
                     currentText = ""
                 }
             })
-            glint = processHandler
+        projectGlint[project.hashCode()]!!.processHandler = processHandler
             processHandler.startNotify()
+        }
+
+    companion object {
+
+        val projectGlint = HashMap<Int, GlintRunner>()
+        fun getInstance(project: Project): GlintRunner {
+            val runner = projectGlint.getOrDefault(project.hashCode(), null)
+            if (runner == null) {
+                val r = GlintRunner()
+                project.whenDisposed {
+                    r.processHandler?.killProcess()
+                    projectGlint.remove(project.hashCode())
+                }
+                projectGlint[project.hashCode()] = r
+            }
+            return projectGlint[project.hashCode()]!!
         }
     }
 }
@@ -133,7 +148,6 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
         }
 
         private fun runProcess(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
-            GlintRunner.startGlint(input.project, sessionData.workingDir)
             try {
                 val commandLine = createCommandLine(sessionData)
                 logStart(sessionData, commandLine)
@@ -157,7 +171,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
                     val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
                     val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
                     val relativePath = FileUtil.getRelativePath(workDirectory.absolutePath, pathToLint, File.separatorChar)
-                    val errors: List<JSLinterError> = GlintRunner.cache.getOrDefault(relativePath?.replace("\\", "/"), mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
+                    val errors: List<JSLinterError> = GlintRunner.getInstance(input.project).cache.getOrDefault(relativePath?.replace("\\", "/"), mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
 
                     if (errors.isEmpty()) {
                         if (StringUtil.isEmptyOrSpaces(stdout)) {
