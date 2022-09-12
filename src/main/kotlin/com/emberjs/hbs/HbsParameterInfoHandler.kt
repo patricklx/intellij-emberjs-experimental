@@ -1,18 +1,13 @@
 package com.emberjs.hbs
 
-import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.utils.*
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.lang.javascript.psi.*
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.lang.parameterInfo.*
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parents
 
 
 class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {

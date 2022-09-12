@@ -1,18 +1,18 @@
+import com.emberjs.glint.GlintAnnotationError
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.GeneralCommandLine.ParentEnvironmentType
-import com.intellij.execution.process.*
+import com.intellij.execution.process.BaseOSProcessHandler
+import com.intellij.execution.process.KillableColoredProcessHandler
+import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessOutput
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
-import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
-import com.intellij.javascript.nodejs.reference.NodeModuleManager
-import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.linter.*
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -25,115 +25,6 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-
-class GlintRunner {
-
-    var processHandler: KillableColoredProcessHandler? = null
-    val cache = HashMap<String, MutableList<JSLinterError>>()
-
-    fun parseGlintText(glintText: String) {
-        cache.clear()
-        val lines = glintText.split("\n")
-        var started = false
-        var file = ""
-        var text = ""
-        var column = 0
-        var line = 0
-        val highlightSeverity = HighlightSeverity.ERROR
-        lines.forEach {
-            val start = it.contains("- error TS")
-            val end = it.contains("Watching for file changes")
-            if (started && (start || end)) {
-                //end
-                started = false
-                val err = JSLinterError(line, column + 1, text, "glint", highlightSeverity)
-                cache[file] = cache.get(file) ?: mutableListOf()
-                cache[file]!!.add(err)
-            }
-            if (start) {
-                started = true
-                val parts = it.split(":")
-                file = parts[0]
-                line = parts[1].toInt()
-                column = parts[2].split(" ")[0].toInt()
-                text = parts[3]
-                return@forEach
-            }
-            if (!started) {
-                return@forEach
-                }
-                text += it + "\n"
-            }
-        }
-
-        fun startGlint(project: Project, workingDir: VirtualFile) {
-        if (projectGlint[project.hashCode()]?.processHandler != null) {
-                return
-            }
-            val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
-            val commandLine = GeneralCommandLine()
-                    .withCharset(StandardCharsets.UTF_8)
-                    .withParentEnvironmentType(ParentEnvironmentType.CONSOLE)
-                    .withWorkDirectory(workDirectory)
-
-            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }!!.virtualFile
-            if (glintPkg == null) {
-                return
-            }
-            val file = glintPkg.findFileByRelativePath("bin/glint.js")
-            if (file == null) {
-                return
-            }
-            commandLine.addParameter(file.path)
-            commandLine.addParameter("--watch")
-
-            NodeCommandLineConfigurator
-                    .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
-                    .configure(commandLine)
-
-            val processHandler = KillableColoredProcessHandler(commandLine)
-            processHandler.addProcessListener(object : ProcessListener {
-                var currentText = ""
-                override fun startNotified(event: ProcessEvent) {
-                    currentText += event.text
-                }
-
-                override fun processTerminated(event: ProcessEvent) {
-                    projectGlint.remove(project.hashCode())
-                    startGlint(project, workingDir)
-                }
-
-                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                    currentText += event.text
-                    val ready = currentText.contains("Watching for file changes")
-                    if (!ready) {
-                        return
-                    }
-                projectGlint[project.hashCode()]!!.parseGlintText(currentText)
-                    currentText = ""
-                }
-            })
-        projectGlint[project.hashCode()]!!.processHandler = processHandler
-            processHandler.startNotify()
-        }
-
-    companion object {
-
-        val projectGlint = HashMap<Int, GlintRunner>()
-        fun getInstance(project: Project): GlintRunner {
-            val runner = projectGlint.getOrDefault(project.hashCode(), null)
-            if (runner == null) {
-                val r = GlintRunner()
-                project.whenDisposed {
-                    r.processHandler?.killProcess()
-                    projectGlint.remove(project.hashCode())
-                }
-                projectGlint[project.hashCode()] = r
-            }
-            return projectGlint[project.hashCode()]!!
-        }
-    }
-}
 
 class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
     companion object {
@@ -168,10 +59,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
                 val templateLintResultParser = TemplateLintResultParser()
                 val stdout = output.stdout
                 try {
-                    val workDirectory = VfsUtilCore.virtualToIoFile(sessionData.workingDir)
-                    val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)
-                    val relativePath = FileUtil.getRelativePath(workDirectory.absolutePath, pathToLint, File.separatorChar)
-                    val errors: List<JSLinterError> = GlintRunner.getInstance(input.project).cache.getOrDefault(relativePath?.replace("\\", "/"), mutableListOf()) + (templateLintResultParser.parse(stdout) ?: listOf())
+                    val errors = templateLintResultParser.parse(stdout) ?: listOf()
 
                     if (errors.isEmpty()) {
                         if (StringUtil.isEmptyOrSpaces(stdout)) {

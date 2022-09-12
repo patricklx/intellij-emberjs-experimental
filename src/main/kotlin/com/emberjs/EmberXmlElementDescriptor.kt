@@ -95,7 +95,9 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             return EmberUtils.getComponentReferenceData(followed)
         }
         val file = f ?: target.containingFile.originalFile
-
+        if (this.tag.containingFile.virtualFile.path == file.virtualFile.path) {
+            return ComponentReferenceData()
+        }
 
         if (file.name == "intellij-emberjs/internal/components-stub") {
             return EmberUtils.getComponentReferenceData(target)

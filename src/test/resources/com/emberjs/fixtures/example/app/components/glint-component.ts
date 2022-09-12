@@ -12,9 +12,7 @@ export interface GlintComponentSignature<T> {
   }
 }
 
-export default class GlintComponent<T> extends Component<GlintComponentSignature<T>> {
-  args: Args<any>
-}
+export default class GlintComponent<T> extends Component<GlintComponentSignature<T>> {}
 
 
 declare module '@glint/environment-ember-loose/registry' {

@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
@@ -22,6 +23,7 @@ import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.css.CssRulesetList
@@ -372,8 +374,16 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, element)
             }
 
-            return referenceBlocks(element, name) ?:
-            resolveToLocalJs(element)
+            return referenceBlocks(element, name)
+                    ?: resolveToLocalJs(element)
+                    ?: let {
+                        val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
+                        val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
+                        HbsLocalReference(element,
+                                GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
+                                ?.getNavigationFor(document, element)?.firstOrNull()
+                        )
+                    }
         }
     }
 }

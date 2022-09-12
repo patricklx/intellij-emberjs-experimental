@@ -190,7 +190,7 @@ function _let(params: [value: any]) {}
  @public
  @since 3.11.0
  */
-declare function fn<X extends Function>(params: [action: X, ...args: any[]]): ReturnType<X>
+declare function fn<R,X extends (...args: any) => R >(params: [action: X, ...args: any[]]): R
 
 /**
  Use the `{{array}}` helper to create an array to pass as an option to your
@@ -223,9 +223,7 @@ declare function fn<X extends Function>(params: [action: X, ...args: any[]]): Re
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/array?anchor=array
  @public
  */
-function array<T>(options: T[]): T[] {
-  return []
-}
+declare function array<T>(options: T[]): T[];
 
 /**
  The `{{component}}` helper lets you add instances of `Component` to a

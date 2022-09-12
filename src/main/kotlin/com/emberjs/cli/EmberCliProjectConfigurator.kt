@@ -66,8 +66,6 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             // Mark source and exclude directories
             setupModule(entry, root)
-
-            GlintRunner.getInstance(project).startGlint(project, root)
         }
 
         private fun setES6LanguageLevel(project: Project) {

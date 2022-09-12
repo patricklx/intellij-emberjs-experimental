@@ -1,27 +1,19 @@
 package com.emberjs.cli
 
-import GlintRunner
-import com.emberjs.EmberTagNameProvider
-import com.emberjs.utils.*
+
+import com.emberjs.glint.getGlintDescriptor
+import com.emberjs.utils.emberRoot
+import com.emberjs.utils.isEmber
 import com.intellij.framework.FrameworkType
 import com.intellij.framework.detection.DetectedFrameworkDescription
 import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
-import com.intellij.javascript.nodejs.PackageJsonData
-import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
-import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
 import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
-import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.json.JsonFileType
-import com.intellij.lang.javascript.JavaScriptFileType
-import com.intellij.lang.javascript.frameworks.react.ReactXmlExtension
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.fileTypes.FileType
-import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableModelsProvider
@@ -34,9 +26,6 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PatternCondition
 import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
-import com.intellij.xml.DefaultXmlExtension
-import com.intellij.xml.XmlExtension
-import com.intellij.xml.XmlTagNameProvider
 
 class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     /** Use package json keys to detect ember */
@@ -104,7 +93,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
-            GlintRunner.getInstance(context.project!!).startGlint(context.project!!, rootDir)
+            getGlintDescriptor(context.project!!).server.start()
         }
         return mutableListOf()
     }
@@ -136,6 +125,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                     val entry = MarkRootActionBase.findContentEntry(model, root)
                     if (entry != null) {
                         EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
+                        getGlintDescriptor(model.project).server.start()
                         modifiableModelsProvider.commitModuleModifiableModel(model)
                     } else {
                         modifiableModelsProvider.disposeModuleModifiableModel(model)

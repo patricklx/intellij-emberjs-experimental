@@ -1,11 +1,14 @@
 
 import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.emberjs.glint.GlintAnnotationError
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.javascript.linter.*
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 
@@ -14,8 +17,13 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
         val INSTANCE_FOR_BATCH_INSPECTION = TemplateLintExternalAnnotator(false)
     }
 
-    override fun getConfigurationClass(): Class<out JSLinterConfiguration<TemplateLintState>> {
-        return TemplateLintConfiguration::class.java
+    override fun getConfigurationClass(): Class<TemplateLintConfiguration>? {
+        return try {
+            TemplateLintConfiguration::class.java
+        } catch (ex: Exception) {
+            null
+        }
+
     }
 
     override fun createSettingsConfigurable(project: Project): UntypedJSLinterConfigurable {
@@ -27,7 +35,16 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
-        return TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
+        var res: JSLinterAnnotationResult?
+        try {
+            res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
+        } catch (ex: Exception) {
+            res = null
+        }
+        val list = GlintLanguageServiceProvider(input.project).getService(input.virtualFile)?.highlight(input.psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
+        val errors: MutableList<JSLinterError> = list.map { JSLinterError(it.line, it.column, it.description, it.code ?: "glint", it.severity) }.toMutableList()
+        errors.addAll(res?.errors ?: listOf())
+        return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
     }
 
     override fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult?, holder: AnnotationHolder) {
@@ -57,8 +74,8 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
 
         if (psiFile.context == null && acceptPsiFile(psiFile)) {
             val virtualFile = psiFile.virtualFile
-            if (virtualFile != null && virtualFile.isInLocalFileSystem) {
-                val configuration: JSLinterConfiguration<TemplateLintState> = JSLinterConfiguration.getInstance(project, this.configurationClass)
+            if (virtualFile != null && virtualFile.isInLocalFileSystem && this.configurationClass != null) {
+                val configuration: JSLinterConfiguration<TemplateLintState> = JSLinterConfiguration.getInstance(project, this.configurationClass!!)
                 val state: TemplateLintState = configuration.extendedState.state
                 if (acceptState(state)) {
                     val document = PsiDocumentManager.getInstance(project).getDocument(psiFile)

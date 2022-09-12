@@ -17,8 +17,6 @@ import com.intellij.patterns.XmlTagPattern
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.PsiUtilBase
-import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
@@ -157,15 +155,23 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
         if (resolvedFile is PsiDirectory) {
             resolvedFile = (resolvedFile as PsiDirectory).findFile("index.ts")
+                            ?: (resolvedFile as PsiDirectory).findFile("index.d.ts")
                             ?: (resolvedFile as PsiDirectory).findFile("index.hbs")
+                            ?: (resolvedFile as PsiDirectory).findFile("component.ts")
+                            ?: (resolvedFile as PsiDirectory).findFile("component.d.ts")
+                            ?: (resolvedFile as PsiDirectory).findFile("template.hbs")
                             ?: resolvedFile
         }
 
-        val file: PsiFile?
+        var file: PsiFile?
         if (resolvedFile is PsiDirectory) {
             val resolvedPath = resolvedFile!!.virtualFile.path.replace("addon/", "").replace("app/", "")
             val scope = GlobalSearchScope.allScope(element.project)
-            file = EmberNameIndex.getFilteredFiles(scope) { it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
+            file = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
+                    // Filter out files that are not related to this pr
+                    .map { psiManager.findFile(it) }
+                    .firstOrNull()
+            file = file ?: EmberNameIndex.getFilteredFiles(scope) { it.type == "template" && it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
                     // Filter out files that are not related to this pr
                     .map { psiManager.findFile(it) }
                     .firstOrNull()
@@ -259,7 +265,7 @@ class HbsReferenceContributor : PsiReferenceContributor() {
             register(HbsPatterns.SUB_EXPR_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.COMPONENT_KEY) { HbsComponentReference(it) }
             register(HbsPatterns.COMPONENT_KEY_IN_SEXPR) { HbsComponentReference(it) }
-            registerReferenceProvider(HbsPatterns.CONTENT, ContentReferencesProvider())
+//            registerReferenceProvider(HbsPatterns.CONTENT, ContentReferencesProvider())
             registerReferenceProvider(HbsPatterns.IMPORT_NAMES, ImportNameReferencesProvider())
             registerReferenceProvider(HbsPatterns.IMPORT_PATH_REF, ImportPathReferencesProvider())
             registerReferenceProvider(HbsPatterns.LINK_TO_BLOCK_TARGET, HbsLinkToReferenceProvider())

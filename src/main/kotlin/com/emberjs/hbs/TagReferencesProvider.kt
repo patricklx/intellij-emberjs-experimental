@@ -11,6 +11,7 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
@@ -18,6 +19,7 @@ import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.ProjectScope
@@ -194,7 +196,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return local
             }
 
-            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name) ?: tag.descriptor?.declaration
+            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name)
         }
 
         fun forTagName(project: Project, tagName: String): PsiElement? {

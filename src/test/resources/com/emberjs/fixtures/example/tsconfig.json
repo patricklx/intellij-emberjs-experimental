@@ -22,7 +22,7 @@
       "types"
     ],
     "paths": {
-
+      "example/*": ["./*", "app/*"]
     }
   },
   "exclude": ["node_modules"],

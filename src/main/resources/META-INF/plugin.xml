@@ -30,7 +30,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="*"/>
+    <idea-version since-build="193.5233.102"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -44,6 +44,7 @@
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
+        <lsp.serverSupportProvider implementationClass="com.emberjs.glint.GlintLspSupportProvider" language="Handlebars"/>
 
         <applicationConfigurable
                 id="configurable.emberjs"
@@ -106,8 +107,10 @@
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
+        <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
+        <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
     </extensions>
 
     <extensions defaultExtensionNs="JavaScript">
@@ -118,5 +121,4 @@
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
         </action>
     </actions>
-
 </idea-plugin>
