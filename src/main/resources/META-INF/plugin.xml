@@ -113,6 +113,11 @@
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
     </extensions>
 
+    <projectListeners>
+        <listener class="com.emberjs.glint.GlintLanguageServiceFileEditorListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+
     <extensions defaultExtensionNs="JavaScript">
         <moduleReferenceContributor implementation="com.emberjs.resolver.EmberModuleReferenceContributor"/>
     </extensions>

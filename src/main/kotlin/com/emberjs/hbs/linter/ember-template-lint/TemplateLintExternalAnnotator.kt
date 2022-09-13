@@ -42,7 +42,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
             res = null
         }
         val list = GlintLanguageServiceProvider(input.project).getService(input.virtualFile)?.highlight(input.psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
-        val errors: MutableList<JSLinterError> = list.map { JSLinterError(it.line, it.column, it.description, it.code ?: "glint", it.severity) }.toMutableList()
+        val errors: MutableList<JSLinterError> = list.map { JSLinterError(it.line + 1, it.column + 1, it.description, it.code ?: "glint", it.severity) }.toMutableList()
         errors.addAll(res?.errors ?: listOf())
         return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
     }

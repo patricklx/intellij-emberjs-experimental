@@ -9,7 +9,7 @@ import com.intellij.openapi.project.ProjectManager
 class GlintDocumentListener: DocumentListener {
     override fun documentChanged(event: DocumentEvent) {
         val projects = ProjectManager.getInstance().getOpenProjects();
-        val file = FileDocumentManager.getInstance().getFile(event.document)!!
+        val file = FileDocumentManager.getInstance().getFile(event.document) ?: return
         projects.forEach {project ->
             GlintLanguageServiceProvider(project).allServices.forEach {
                 val lspServer = it.getDescriptor()?.server

@@ -67,7 +67,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         if (file == null) {
             throw RuntimeException("glint lsp was not found")
         }
-        commandLine.addParameter("--inspect-brk")
+        //commandLine.addParameter("--inspect-brk")
         commandLine.addParameter(file.path)
         commandLine.addParameter("--stdio")
         commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
