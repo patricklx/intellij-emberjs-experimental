@@ -20,9 +20,8 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path
                 .replace(Regex("/template$"), "")
                 .replace(Regex("/component$"), "")
-                .removeSuffix("/index")
         } else {
-            path.removeSuffix("/index")
+            path
         }
 
     }
@@ -70,13 +69,13 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             }
 
             if (it.value == "-") "" else it.value.lowercase()
-        }
+        }.removeSuffix("/index")
     }
 
     val tagName by lazy {
         assert(type == "component" || isComponentTemplate)
 
-        val baseName = name.split('/').last()
+        val baseName = name.removeSuffix("/index").split('/').last()
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
             assert(it.range.first - it.range.last == 0)
 

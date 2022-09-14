@@ -3,6 +3,7 @@ package com.emberjs.navigation
 import com.emberjs.EmberTestFixtures.FIXTURES_PATH
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
+import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.use
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -52,14 +53,14 @@ class EmberTestFinderTest : BasePlatformTestCase() {
                 val file = root.findFileByRelativePath(path)!!
                 val relatedFiles = relatedTests.map { root.findFileByRelativePath(it)!! }
 
-                assertThat(finder.findTestsForClass(psiManager.findFile(file)!!))
+                assertThat(finder.findTestsForClass(psiManager.findFile(file)!!).map { it.originalVirtualFile!!.path })
                         .describedAs(path)
-                        .containsOnly(*relatedFiles.map { psiManager.findFile(it)!! }.toTypedArray())
+                        .containsOnly(*relatedFiles.map { it.path }.toTypedArray())
 
                 relatedFiles.forEach {
-                    assertThat(finder.findClassesForTest(psiManager.findFile(it)!!))
+                    assertThat(finder.findClassesForTest(psiManager.findFile(it)!!).map { it.originalVirtualFile!!.path })
                             .describedAs(path)
-                            .containsOnly(psiManager.findFile(file)!!)
+                            .containsOnly(file.path)
                 }
             }
         }
