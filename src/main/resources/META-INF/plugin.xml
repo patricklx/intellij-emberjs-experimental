@@ -30,7 +30,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="193.5233.102"/>
+    <idea-version since-build="201.6668.113"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -111,6 +111,9 @@
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
+        <statusBarWidgetFactory id="glintStatusWidget"
+                                implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
+                                order="before gitWidget"/>
     </extensions>
 
     <projectListeners>
@@ -125,5 +128,7 @@
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
         </action>
+        <action id="Glint.Restart.Service"
+                class="com.emberjs.glint.GlintRestartServiceAction" />
     </actions>
 </idea-plugin>

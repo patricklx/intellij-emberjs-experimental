@@ -290,6 +290,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
+            val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
+            result.addAllElements(items.map { it.intoLookupElement() })
         }
 
         if (element.parent is HbData) {

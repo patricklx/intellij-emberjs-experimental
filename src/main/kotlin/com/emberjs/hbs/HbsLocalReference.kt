@@ -328,6 +328,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         }
 
         fun createReference(element: PsiElement): PsiReference? {
+            val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
+            val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
+            val service = GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
 
             val name = element.text.replace("IntellijIdeaRulezzz", "")
 
@@ -344,13 +347,15 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val ref = sibling.references.find { it is HbsLocalReference } as? HbsLocalReference
                 val yieldRef = ref?.resolveYield()
                 if (yieldRef != null) {
-                    return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
+                    val res = resolveToJs(yieldRef, listOf(element.text))
+                    return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
                 if (ref != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbsLocalRenameReference } as HbsLocalRenameReference
-                return HbsLocalReference(element, resolveToJs(ref2.resolve(), listOf(element.text)))
+                val res = resolveToJs(ref2.resolve(), listOf(element.text))
+                return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
             }
 
             if (element.parent is HbData) {
@@ -381,7 +386,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                         val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
                         HbsLocalReference(element,
                                 GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
-                                ?.getNavigationFor(document, element)?.firstOrNull()
+                                ?.getNavigationFor(document, element)?.firstOrNull()?.parent
                         )
                     }
         }

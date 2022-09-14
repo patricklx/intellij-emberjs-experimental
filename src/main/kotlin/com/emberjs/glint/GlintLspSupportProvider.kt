@@ -59,15 +59,11 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
                 .withWorkDirectory(workDirectory)
 
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }!!.virtualFile
-        if (glintPkg == null) {
-            throw RuntimeException("glint is not installed")
-        }
+        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
+                ?: throw RuntimeException("glint is not installed")
         val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-        if (file == null) {
-            throw RuntimeException("glint lsp was not found")
-        }
-        //commandLine.addParameter("--inspect-brk")
+                ?: throw RuntimeException("glint lsp was not found")
+        //commandLine.addParameter("--inspect")
         commandLine.addParameter(file.path)
         commandLine.addParameter("--stdio")
         commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())

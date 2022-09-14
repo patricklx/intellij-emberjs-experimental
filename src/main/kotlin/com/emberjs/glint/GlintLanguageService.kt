@@ -4,20 +4,16 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.utils.emberRoot
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
-import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.lang.ecmascript6.resolve.JSFileReferencesUtil
-import com.intellij.lang.javascript.JSStringUtil
-import com.intellij.lang.javascript.JSTokenTypes
-import com.intellij.lang.javascript.completion.JSInsertHandler
-import com.intellij.lang.javascript.frameworks.modules.JSUrlImportsUtil
+import com.intellij.lang.javascript.JavaScriptFileType
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
 import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
+import com.intellij.lang.javascript.service.ui.JSLanguageServiceToolWindowManager
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
 import com.intellij.lsp.LspServer
 import com.intellij.lsp.LspServerDescriptor
@@ -27,15 +23,21 @@ import com.intellij.lsp.data.LspDiagnostic
 import com.intellij.lsp.data.LspSeverity
 import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.NotNullLazyValue
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import icons.JavaScriptLanguageIcons.Typescript
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
@@ -130,7 +132,6 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         val descriptor = getDescriptor()
         if (!project.isDisposed && descriptor != null) {
             descriptor.restart()
-            TypeScriptMessageBus.get(project).changed()
         }
     }
 
@@ -161,7 +162,9 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
 
     override fun canHighlight(file: PsiFile) = file.fileType is HbFileType
 
-    override fun isAcceptable(file: VirtualFile) = file.fileType is HbFileType
+    override fun isAcceptable(file: VirtualFile) = file.fileType is HbFileType ||
+                                                   file.fileType is TypeScriptFileType ||
+                                                   file.fileType is JavaScriptFileType
 
     override fun dispose() {}
 }
@@ -174,9 +177,10 @@ class GlintCompletionEntry(internal val item: LspCompletionItem) : TypeScriptSer
 
 class GlintAnnotationError(val diagnostic: LspDiagnostic, private val path: String?) : JSAnnotationError {
     override fun getLine() = diagnostic.range.start.line
-
+    val endLine = diagnostic.range.asEclipseLspRange().end.line
+    val endColumn = diagnostic.range.asEclipseLspRange().end.character
     override fun getColumn() = diagnostic.range.start.character
-    val code by lazy { diagnostic.asEclipseLspDiagnostic().code?.toString() }
+    val code by lazy { diagnostic.asEclipseLspDiagnostic().source?.toString() }
 
     override fun getAbsoluteFilePath(): String? = path
 
