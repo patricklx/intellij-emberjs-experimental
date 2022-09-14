@@ -15,7 +15,6 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
-import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -23,16 +22,11 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
-import com.intellij.lang.javascript.completion.JSCompletionContributor
-import com.intellij.lang.javascript.completion.JSCompletionUtil
-import com.intellij.lang.javascript.psi.util.JSUtils
 import com.intellij.openapi.util.Key
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiNameIdentifierOwner
-import com.intellij.psi.impl.source.html.HtmlFileImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -107,7 +101,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             return
         }
 
-        val dereferenceYield = EmberUtils.findTagYield(anything)
+        val dereferenceYield = EmberUtils.findTagYieldAttribute(anything)
         if (dereferenceYield != null) {
             val name = (anything as EmberAttrDec).name.replace("|", "")
             val angleBracketBlock = anything.context

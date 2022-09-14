@@ -1,3 +1,5 @@
+import com.emberjs.glint.GlintAnnotationError
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -23,9 +25,11 @@ import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+
 class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
     companion object {
         private val LOG = Logger.getInstance(TemplateLintExternalRunner::class.java)
+
 
         private fun templateLint(input: JSLinterInput<TemplateLintState>, sessionData: TemplateLintSessionData): JSLinterAnnotationResult {
             val startNanoTime = System.nanoTime()
@@ -55,14 +59,15 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
                 val templateLintResultParser = TemplateLintResultParser()
                 val stdout = output.stdout
                 try {
-                    val errors = templateLintResultParser.parse(stdout)
-                    if (errors == null) {
+                    val errors = templateLintResultParser.parse(stdout) ?: listOf()
+
+                    if (errors.isEmpty()) {
                         if (StringUtil.isEmptyOrSpaces(stdout)) {
                             return JSLinterAnnotationResult.createLinterResult(input, emptyList(), null as VirtualFile?)
                         }
                         return createFileLevelWarning(stdout, input, commandLine, processHandler, output)
                     }
-                    return JSLinterAnnotationResult.createLinterResult(input, errors, null as VirtualFile?)
+                    return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
                 } catch (exception: Exception) {
                     return createFileLevelWarning(exception.message!!, input, commandLine, processHandler, output)
                 }
@@ -74,7 +79,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
         @Throws(IOException::class)
         private fun writeFileContentToStdin(processHandler: KillableColoredProcessHandler, sessionData: TemplateLintSessionData, charset: Charset) {
             //for projects using hbs-imports, filter out the imports, but keep empty lines
-            val content = sessionData.fileToLintContent.replace(Regex("\\{\\{\\s*import\\s+([A-Z-a-z\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"), "")
+            val content = sessionData.fileToLintContent
             try {
                 val stdin = ObjectUtils.assertNotNull(processHandler.processInput)
                 var throwable: Throwable? = null
@@ -110,11 +115,11 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
             sessionData.templateLintPackage
                     .addMainEntryJsFile(commandLine, sessionData.interpreter)
-            
+
             if (sessionData.templateLintPackage.versionStr.split(".").first().toInt() >= 4) {
-              commandLine.addParameter("--format=json")
+                commandLine.addParameter("--format=json")
             } else {
-              commandLine.addParameter("--json")
+                commandLine.addParameter("--json")
             }
 
             val pathToLint = FileUtil.toSystemDependentName(sessionData.fileToLint.path)

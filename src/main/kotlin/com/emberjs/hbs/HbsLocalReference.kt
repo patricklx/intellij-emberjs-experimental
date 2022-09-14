@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
@@ -19,10 +20,10 @@ import com.intellij.lang.javascript.psi.JSFunction
 import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
-import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.css.CssRulesetList
@@ -195,7 +196,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     return resolveToJs(resolvedHelper, path)
                 }
 
-                val refYield = EmberUtils.findTagYield(any)
+                val refYield = EmberUtils.findTagYieldAttribute(any)
                 if (refYield != null && refYield.descriptor?.declaration != null) {
                     return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete)
                 }
@@ -327,6 +328,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         }
 
         fun createReference(element: PsiElement): PsiReference? {
+            val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
+            val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
+            val service = GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
 
             val name = element.text.replace("IntellijIdeaRulezzz", "")
 
@@ -343,13 +347,15 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val ref = sibling.references.find { it is HbsLocalReference } as? HbsLocalReference
                 val yieldRef = ref?.resolveYield()
                 if (yieldRef != null) {
-                    return HbsLocalReference(element, resolveToJs(yieldRef, listOf(element.text)))
+                    val res = resolveToJs(yieldRef, listOf(element.text))
+                    return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
                 if (ref != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbsLocalRenameReference } as HbsLocalRenameReference
-                return HbsLocalReference(element, resolveToJs(ref2.resolve(), listOf(element.text)))
+                val res = resolveToJs(ref2.resolve(), listOf(element.text))
+                return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
             }
 
             if (element.parent is HbData) {
@@ -373,8 +379,16 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, element)
             }
 
-            return referenceBlocks(element, name) ?:
-            resolveToLocalJs(element)
+            return referenceBlocks(element, name)
+                    ?: resolveToLocalJs(element)
+                    ?: let {
+                        val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
+                        val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
+                        HbsLocalReference(element,
+                                GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
+                                ?.getNavigationFor(document, element)?.firstOrNull()?.parent
+                        )
+                    }
         }
     }
 }

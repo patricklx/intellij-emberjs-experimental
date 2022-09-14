@@ -5,15 +5,15 @@ plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.6.20"
+    id("org.jetbrains.kotlin.jvm") version "1.6.21"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.7.0"
+    id("org.jetbrains.intellij") version "1.9.0"
 }
 
 
 
 group = "com.emberjs"
-version = "2022.2.10"
+version = "2022.2.11"
 
 // Configure project's dependencies
 repositories {

@@ -20,9 +20,8 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path
                 .replace(Regex("/template$"), "")
                 .replace(Regex("/component$"), "")
-                .removePrefix("/index")
         } else {
-            path.removePrefix("/index")
+            path
         }
 
     }
@@ -70,13 +69,13 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             }
 
             if (it.value == "-") "" else it.value.lowercase()
-        }
+        }.removeSuffix("/index")
     }
 
     val tagName by lazy {
         assert(type == "component" || isComponentTemplate)
 
-        val baseName = name.split('/').last()
+        val baseName = name.removeSuffix("/index").split('/').last()
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
             assert(it.range.first - it.range.last == 0)
 
@@ -156,6 +155,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             path = path.replace("/dist/", "/")
             if (path.startsWith("app/")) {
                 path = path.replace(Regex("^app/"), "~/")
+            }
+            if (path.startsWith("addon/")) {
+                path = path.replace(Regex("^addon/"), file.parentEmberModule!!.name + "/")
             }
             var name = file.nameWithoutExtension.removePrefix("/")
 

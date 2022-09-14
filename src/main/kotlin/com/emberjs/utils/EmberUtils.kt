@@ -4,40 +4,50 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.emberjs.*
+import com.emberjs.AttrPsiReference
+import com.emberjs.EmberAttrDec
+import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
-import com.emberjs.hbs.TagReferencesProvider
+import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
+import com.intellij.lang.ecmascript6.psi.impl.ES6ExportDefaultAssignmentImpl
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
 import com.intellij.lang.javascript.psi.*
-import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
-import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
-import com.intellij.lang.javascript.psi.ecma6.TypeScriptField
-import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeArgumentList
+import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileSystem
+import com.intellij.openapi.vfs.ex.temp.TempFileSystem
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
+import com.intellij.testFramework.rules.TempDirectory
+import com.intellij.testFramework.rules.TempDirectoryExtension
+import java.nio.file.Paths
+import kotlin.io.path.pathString
 
 class ArgData(
         var value: String = "",
@@ -264,14 +274,14 @@ class EmberUtils {
                 return followReferences(resHelper, path)
             }
 
-            if (element is HbParam) {
+            if (element is HbParam && element.references.isEmpty()) {
                 if (element.children.isNotEmpty() && element.children[0].references.isNotEmpty()) {
                     return element.children.getOrNull(0)?.let { followReferences(it) }
                 }
                 return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
             }
 
-            val resYield: XmlAttribute? = findTagYield(element)
+            val resYield: XmlAttribute? = findTagYieldAttribute(element)
             if (resYield != null && resYield.reference != null && element != null && resYield.reference!!.resolve() != null) {
                 val name = element.text.replace("|", "")
                 val yieldParams = resYield.reference!!.resolve()!!.children.filter { it is HbParam }
@@ -337,9 +347,9 @@ class EmberUtils {
             if (ref == null) {
                 return null
             }
-            val index = Regex("$name").find(ref.children[2].text)!!.range.first
-            val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
-            return file?.resolve() ?: ref
+            //val index = Regex("$name").find(ref.children[2].text)!!.range.first
+            //val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
+            return ref.children[2]
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
@@ -347,14 +357,21 @@ class EmberUtils {
                 val idx = element.children.indexOfFirst { it.text == "component" }
                 val param = element.children.get(idx + 1)
                 if (param.children.firstOrNull()?.children?.firstOrNull() is HbStringLiteral) {
-                    return TagReferencesProvider.forTagName(param.project, param.text.dropLast(1).drop(1).camelize())
+                    return param.children.firstOrNull()?.children?.firstOrNull()?.reference?.resolve()
                 }
                 return param
             }
             if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
-                return element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                element.children.find { it is HbParam && it.text != "or" && !it.text.startsWith("@") && it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
-                element.children.find { it is HbParam && it.children[0].children[0] is HbStringLiteral && it.parent.parent.text.contains(Regex("^(\\(|\\{\\{)component\\b")) }?.let { TagReferencesProvider.forTagName(it.project, it.text.dropLast(1).drop(1).camelize()) }
+                val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
+                return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.text.contains(Regex("^(\\(|\\{\\{)component\\b")) && !it.children.contains(handleEmberHelpers(it)) }?.let { handleEmberHelpers(it) }
+            }
+            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)if\\b"))) {
+                val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
+                return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
+                params.find { it.text.contains(Regex("^(\\(|\\{\\{)component\\b")) && !it.children.contains(handleEmberHelpers(it)) }?.let { handleEmberHelpers(it) }
             }
             if (element is PsiElement && element.parent is HbOpenBlockMustache) {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
@@ -386,7 +403,7 @@ class EmberUtils {
             return null
         }
 
-        fun findTagYield(element: PsiElement?): XmlAttribute? {
+        fun findTagYieldAttribute(element: PsiElement?): XmlAttribute? {
             if (element is EmberAttrDec && element.name != "as") {
                 val tag = element.parent
                 return tag.attributes.find { it.name == "as" }
@@ -486,6 +503,9 @@ class EmberUtils {
             }
             var jsTemplate: Any? = null;
             if (cls is JSElement) {
+
+                val scope = ProjectScope.getAllScope(cls.project)
+                val emberName = EmberNameIndex.getFilteredPairs(scope) { it.type == "component" }.find { it.second == cls.containingFile }?.first
 
                 jsTemplate = cls as? JSStringTemplateExpression ?: PsiTreeUtil.findChildOfType(cls, JSStringTemplateExpression::class.java)
 

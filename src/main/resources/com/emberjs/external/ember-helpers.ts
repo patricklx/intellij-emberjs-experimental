@@ -190,7 +190,7 @@ function _let(params: [value: any]) {}
  @public
  @since 3.11.0
  */
-function fn(params: [action: Function, ...args: any[]]) {}
+declare function fn<R,X extends (...args: any) => R >(params: [action: X, ...args: any[]]): R
 
 /**
  Use the `{{array}}` helper to create an array to pass as an option to your
@@ -223,9 +223,7 @@ function fn(params: [action: Function, ...args: any[]]) {}
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/array?anchor=array
  @public
  */
-function array(options: any[]): any[] {
-  return []
-}
+declare function array<T>(options: T[]): T[];
 
 /**
  The `{{component}}` helper lets you add instances of `Component` to a
@@ -563,6 +561,33 @@ function get(params: [object: Object, path: string]): any {}
  */
 function _if(params: [condition: boolean]): any {}
 
+
+/**
+ The `in-element` helper renders its block content outside of the regular flow,
+ into a DOM element given by its `destinationElement` positional argument.
+ Common use cases - often referred to as "portals" or "wormholes" - are rendering
+ dropdowns, modals or tooltips close to the root of the page to bypass CSS overflow
+ rules, or to render content to parts of the page that are outside of the control
+ of the Ember app itself (e.g. embedded into a static or server rendered HTML page).
+ ```handlebars
+ {{#in-element this.destinationElement}}
+ <div>Some content</div>
+ {{/in-element}}
+ ```
+ ### Arguments
+ `{{in-element}}` requires a single positional argument:
+ - `destinationElement` -- the DOM element to render into. It must exist at the time
+ of rendering.
+ It also supports an optional named argument:
+ - `insertBefore` -- by default the DOM element's content is replaced when used as
+ `destinationElement`. Passing `null` changes the behaviour to appended at the end
+ of any existing content. Any other value than `null` is currently not supported.
+ @method in-element
+ @for Ember.Templates.helpers
+ @public
+ */
+function in_element(params: [destinationElement: Element], hash?: {insertBefore: null}): void {}
+
 const helpers = {
   each,
   'let': _let,
@@ -573,7 +598,8 @@ const helpers = {
   'debugger': _debugger,
   'each-in': eachIn,
   get,
-  'if': _if
+  'if': _if,
+  'in-element': in_element
 }
 
 export default helpers;

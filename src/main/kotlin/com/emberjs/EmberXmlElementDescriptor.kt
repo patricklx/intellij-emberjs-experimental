@@ -8,9 +8,11 @@ import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
@@ -21,7 +23,7 @@ import com.intellij.xml.XmlNSDescriptor
 
 
 
-class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement) : XmlElementDescriptor {
+class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement?) : XmlElementDescriptor {
     val project = tag.project
     val version = "v2022.1.11"
 
@@ -79,17 +81,23 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     fun getReferenceData(): ComponentReferenceData {
         var f: PsiFile? = null
         // if it references a block param
-        val target: PsiElement
+        val target: PsiElement?
         if (this.declaration is EmberNamedElement) {
             target = this.declaration.target
         } else {
             target = this.declaration
+        }
+        if (target == null) {
+            return ComponentReferenceData()
         }
         val followed = EmberUtils.followReferences(target)
         if (followed is JSNamedElement || followed is JSFile) {
             return EmberUtils.getComponentReferenceData(followed)
         }
         val file = f ?: target.containingFile.originalFile
+        if (this.tag.containingFile.virtualFile.path == file.virtualFile.path) {
+            return ComponentReferenceData()
+        }
 
         if (file.name == "intellij-emberjs/internal/components-stub") {
             return EmberUtils.getComponentReferenceData(target)
@@ -107,7 +115,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         val data = getReferenceData()
         val attributes = data.args.map { EmberAttributeDescriptor(context, it.value, false, it.description, it.reference, null)  }
         result.addAll(attributes)
-        if (data.hasSplattributes) {
+        if (data.hasSplattributes || this.declaration == null) {
             result.addAll(commonHtmlAttributes)
         }
         return result.toTypedArray()

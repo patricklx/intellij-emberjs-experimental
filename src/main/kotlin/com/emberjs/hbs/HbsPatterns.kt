@@ -54,6 +54,14 @@ object HbsPatterns {
             .withChild(psiElement(HbMustacheName::class.java)
                     .withChild(psiElement(HbStringLiteral::class.java)))
 
+    val COMPONENT_KEY: Capture<HbParam> = STRING_PARAM
+            .withParent(psiElement(HbSimpleMustache::class.java))
+            .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbMustacheName::class.java).withText("component"))
+
+    val COMPONENT_KEY_IN_SEXPR: Capture<HbParam> = STRING_PARAM
+            .withParent(psiElement(HbParam::class.java))
+            .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbParam::class.java).withText("component"))
+
     val LINK_TO_BLOCK_TARGET: Capture<HbParam> = STRING_PARAM
             .withParent(psiElement(HbOpenBlockMustache::class.java))
             .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbMustacheName::class.java)

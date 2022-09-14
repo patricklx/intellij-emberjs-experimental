@@ -30,7 +30,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="*"/>
+    <idea-version since-build="201.6668.113"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -44,6 +44,7 @@
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
+        <lsp.serverSupportProvider implementationClass="com.emberjs.glint.GlintLspSupportProvider" language="Handlebars"/>
 
         <applicationConfigurable
                 id="configurable.emberjs"
@@ -106,9 +107,19 @@
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
+        <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
+        <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
+        <statusBarWidgetFactory id="glintStatusWidget"
+                                implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
+                                order="before gitWidget"/>
     </extensions>
+
+    <projectListeners>
+        <listener class="com.emberjs.glint.GlintLanguageServiceFileEditorListener"
+                  topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
 
     <extensions defaultExtensionNs="JavaScript">
         <moduleReferenceContributor implementation="com.emberjs.resolver.EmberModuleReferenceContributor"/>
@@ -117,6 +128,7 @@
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
         </action>
+        <action id="Glint.Restart.Service"
+                class="com.emberjs.glint.GlintRestartServiceAction" />
     </actions>
-
 </idea-plugin>

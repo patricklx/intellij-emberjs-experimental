@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
@@ -122,6 +123,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val dereferencedHelper = EmberUtils.handleEmberHelpers(anything)
         if (dereferencedHelper != null) {
             resolve(dereferencedHelper, result)
+        }
+
+        if (refElement is JSFunction) {
+            resolveJsType(refElement.returnType, result)
         }
 
         if (refElement is JSTypeOwner) {
@@ -271,6 +276,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (element is LeafPsiElement) {
             element = element.parent
         }
+        val languageService = GlintLanguageServiceProvider(element.project)
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
@@ -284,7 +290,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
-            return
+            val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
+            result.addAllElements(items.map { it.intoLookupElement() })
         }
 
         if (element.parent is HbData) {
