@@ -15,13 +15,14 @@ import com.emberjs.utils.parents
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
-import com.intellij.lang.javascript.psi.JSElement
-import com.intellij.lang.javascript.psi.JSFunction
-import com.intellij.lang.javascript.psi.JSType
-import com.intellij.lang.javascript.psi.JSTypeOwner
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
+import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.lang.javascript.psi.resolve.JSReferenceResolver
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
@@ -36,6 +37,7 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.suggested.startOffset
 import kotlin.math.max
 
 class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
@@ -156,13 +158,23 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return null
             }
             val psiManager = PsiManager.getInstance(element.project)
-            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
-            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.text, listOf(f as PsiElement))
-
-            if (collection.isEmpty()) {
-                return null
+            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+            val manager = InjectedLanguageManager.getInstance(element.project)
+            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+            val tpl = templates.find {
+                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
+                val virtualFile = injected.virtualFile
+                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
             }
-            return HbsLocalReference(element, collection.first())
+
+            val parts = element.text.split(".")
+            var current: PsiElement? = null
+            if (parts.first() == "this") {
+                current = JSContextResolver.resolveThisReference(tpl as PsiElement)
+            } else {
+                current = JSReferenceResolver(tpl as PsiElement).doResolveQualifiedName(JSQualifiedNameImpl.create(parts.first(), null), false).firstOrNull()?.element
+            }
+            return HbsLocalReference(element, current)
         }
 
         fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false): PsiElement? {

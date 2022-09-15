@@ -2,6 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2022.2.12
+- improvement: resolve this context in tests
+
+## 2022.2.11
+- feature: add glint support
+
 ## 2022.2.10
 - improvement: better support for ember template imports
 - improvement: better support for v2 addon

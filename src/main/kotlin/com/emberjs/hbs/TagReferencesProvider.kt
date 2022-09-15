@@ -16,8 +16,19 @@ import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.flex.JSResolveHelper
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
+import com.intellij.lang.javascript.psi.JSQualifiedNameImpl
 import com.intellij.lang.javascript.psi.JSReferenceExpression
+import com.intellij.lang.javascript.psi.JSTypeOwner
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
+import com.intellij.lang.javascript.psi.resolve.ES6QualifiedNameResolver
+import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSThisContext
+import com.intellij.lang.javascript.psi.resolve.JSQualifiedNameResolver
+import com.intellij.lang.javascript.psi.resolve.JSReferenceResolver
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
@@ -30,6 +41,7 @@ import com.intellij.psi.util.parentsWithSelf
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 
 
@@ -110,13 +122,33 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return null
             }
             val psiManager = PsiManager.getInstance(element.project)
-            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
-            val collection = ES6PsiUtil.createResolver(f as PsiElement).getLocalElements(element.name, listOf(f as PsiElement))
-
-            if (collection.isEmpty()) {
-                return null
+            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+            val manager = InjectedLanguageManager.getInstance(element.project)
+            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+            val tpl = templates.find {
+                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
+                val virtualFile = injected.virtualFile
+                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
             }
-            return collection.first()
+
+            val parts = element.name.split(".").toMutableList()
+            var current: PsiElement? = null
+            if (parts.first() == "this") {
+                current = JSContextResolver.resolveThisReference(tpl as PsiElement)
+                parts.removeAt(0)
+            } else {
+                current = JSReferenceResolver(tpl as PsiElement).doResolveQualifiedName(JSQualifiedNameImpl.create(parts.first(), null), false).firstOrNull()?.element
+            }
+
+            parts.forEach {part ->
+                current = (current as? JSTypeOwner)?.jsType?.asRecordType()?.properties?.find { it.memberName == part }?.jsType?.sourceElement
+            }
+
+            if (current is TypeScriptTypeofType) {
+                current = (current as TypeScriptTypeofType).expression
+            }
+
+            return current
         }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
