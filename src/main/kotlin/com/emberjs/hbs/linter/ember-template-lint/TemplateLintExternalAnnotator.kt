@@ -6,6 +6,8 @@ import com.emberjs.icons.EmberIcons
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.lang.javascript.JavaScriptFileType
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.linter.*
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -36,7 +38,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
     }
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is HbPsiFile
+        return file is HbPsiFile || file.fileType is TypeScriptFileType || file.fileType is JavaScriptFileType
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {

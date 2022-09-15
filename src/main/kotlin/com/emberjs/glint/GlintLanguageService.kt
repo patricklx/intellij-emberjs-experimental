@@ -45,7 +45,7 @@ import java.util.stream.Stream
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
 
-    override fun isHighlightingCandidate(file: VirtualFile) = file.fileType is HbFileType
+    override fun isHighlightingCandidate(file: VirtualFile) = file.fileType is HbFileType || file.fileType is JavaScriptFileType || file.fileType is TypeScriptFileType
 
     override fun getService(file: VirtualFile) = allServices.firstOrNull()
 
@@ -160,7 +160,9 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                 .filter { vFile -> !openFiles.contains(vFile) && isAcceptable(vFile) }
     }
 
-    override fun canHighlight(file: PsiFile) = file.fileType is HbFileType
+    override fun canHighlight(file: PsiFile) = file.fileType is HbFileType ||
+            file.fileType is TypeScriptFileType ||
+            file.fileType is JavaScriptFileType
 
     override fun isAcceptable(file: VirtualFile) = file.fileType is HbFileType ||
                                                    file.fileType is TypeScriptFileType ||

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.16
+- fix: need to notify glint about ts/js files
+
 ## 2022.2.15
 - improvement: add @model lookup for controllers
 
