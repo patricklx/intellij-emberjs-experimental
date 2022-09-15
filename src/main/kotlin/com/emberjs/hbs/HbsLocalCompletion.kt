@@ -300,6 +300,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
             val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
             result.addAllElements(items.map { it.intoLookupElement() })
+            return
         }
 
         if (element.parent is HbData) {

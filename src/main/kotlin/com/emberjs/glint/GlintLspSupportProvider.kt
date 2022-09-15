@@ -8,6 +8,8 @@ import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lsp.*
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -59,14 +61,17 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
                 .withWorkDirectory(workDirectory)
 
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-                ?: throw RuntimeException("glint is not installed")
-        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-                ?: throw RuntimeException("glint lsp was not found")
-        //commandLine.addParameter("--inspect")
-        commandLine.addParameter(file.path)
-        commandLine.addParameter("--stdio")
-        commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+        ApplicationManager.getApplication().runReadAction {
+            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
+                    ?: throw RuntimeException("glint is not installed")
+            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
+                    ?: throw RuntimeException("glint lsp was not found")
+            //commandLine.addParameter("--inspect")
+            commandLine.addParameter(file.path)
+            commandLine.addParameter("--stdio")
+            commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+        }
+
 
         NodeCommandLineConfigurator
                 .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)

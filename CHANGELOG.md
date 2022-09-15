@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.15
+- improvement: add @model lookup for controllers
+
 ## 2022.2.14
 - improvement: better lookup for related files of templates and controller
 
