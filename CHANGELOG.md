@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.13
+- feaure: allow plugin reload without restart
+
 ## 2022.2.12
 - improvement: resolve this context in tests
 

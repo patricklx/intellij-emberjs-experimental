@@ -30,7 +30,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="201.6668.113"/>
+    <idea-version since-build="202.6397.94"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -73,7 +73,10 @@
         <psi.referenceContributor language="JavaScript" implementation="com.emberjs.psi.EmberReferenceContributor"/>
 
         <iconProvider implementation="com.emberjs.icons.EmberIconProvider" order="first"/>
-        <defaultLiveTemplatesProvider implementation="com.emberjs.template.EmberLiveTemplatesProvider"/>
+        <defaultLiveTemplates file="com/emberjs/template/Ember.js"/>
+        <defaultLiveTemplates file="com/emberjs/template/HTMLBars"/>
+        <liveTemplateContext
+                implementation="com.emberjs.template.EmberContext"/>
 
         <!-- deprecated and only included for legacy reasons -->
         <moduleType id="EMBER_MODULE" implementationClass="com.emberjs.project.EmberModuleType"/>
