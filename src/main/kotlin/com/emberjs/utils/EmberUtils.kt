@@ -11,6 +11,7 @@ import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
 import com.emberjs.index.EmberNameIndex
+import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
@@ -28,6 +29,8 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
+import com.intellij.navigation.GotoRelatedItem
+import com.intellij.navigation.GotoRelatedProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.vfs.VirtualFile
@@ -217,7 +220,12 @@ class EmberUtils {
                     ?: dir?.findFile("$fileName.js")
                     ?: dir?.findFile("controller.ts")
                     ?: dir?.findFile("controller.js")
-            return cls ?: file?.let { findDefaultExportClass(it) }
+            val relatedItems = EmberGotoRelatedProvider().getItems(element.originalVirtualFile!!, element.project)
+            val related = (relatedItems.find { it.first.type == "component" } ?:
+                          relatedItems.find { it.first.type == "controller" }  ?:
+                          relatedItems.find { it.first.type == "router" })?.second
+            val relatedFile = related?.let { PsiManager.getInstance(element.project).findFile(it) }
+            return cls ?: file?.let { findDefaultExportClass(it) } ?: relatedFile?.let { findDefaultExportClass(it) }
         }
 
         fun findComponentArgsType(element: JSElement): JSRecordType? {

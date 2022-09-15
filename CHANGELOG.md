@@ -2,8 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.2.14
+- improvement: better lookup for related files of templates and controller
+
 ## 2022.2.13
-- feaure: allow plugin reload without restart
+- feature: allow plugin reload without restart
 
 ## 2022.2.12
 - improvement: resolve this context in tests

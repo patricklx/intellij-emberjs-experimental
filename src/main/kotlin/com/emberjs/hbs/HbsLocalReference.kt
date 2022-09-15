@@ -19,6 +19,7 @@ import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
@@ -377,6 +378,10 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val prop = args?.properties?.find { it.memberName == name }
                     if (prop != null) {
                         return HbsLocalReference(element, prop.memberSource.singleElement)
+                    }
+                    if (element.text == "model") {
+                        val modelProp = (cls as? JSClass)?.let { it.jsType.asRecordType().properties.find { it.memberName == "model" } }
+                        return modelProp?.let { HbsLocalReference(element, it.memberSource.singleElement) }
                     }
                     return null
                 }

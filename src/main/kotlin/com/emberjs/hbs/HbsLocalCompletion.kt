@@ -267,6 +267,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                     result.addAllElements(args.properties.map { LookupElementBuilder.create("@${it.memberName}") })
                 }
             }
+            val modelProp = (cls as? JSClass)?.let { it.jsType.asRecordType().properties.find { it.memberName == "model" } }
+            modelProp?.let {
+                if (element.parent is HbData && !result.prefixMatcher.prefix.startsWith("@")) {
+                    result.addElement(LookupElementBuilder.create(it.memberName))
+                } else {
+                    result.addElement(LookupElementBuilder.create("@${it.memberName}"))
+                }
+            }
         }
     }
 
