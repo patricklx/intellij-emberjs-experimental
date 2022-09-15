@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.17
+- fix: some lookups/completions did not work anymore
+
 ## 2022.2.16
 - fix: need to notify glint about ts/js files
 

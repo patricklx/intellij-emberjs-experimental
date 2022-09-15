@@ -399,12 +399,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             return referenceBlocks(element, name)
                     ?: resolveToLocalJs(element)
                     ?: let {
-                        val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
-                        val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
-                        HbsLocalReference(element,
-                                GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
-                                ?.getNavigationFor(document, element)?.firstOrNull()?.parent
-                        )
+                        val resolved = service?.getNavigationFor(document, element)?.firstOrNull()?.parent
+                        resolved?.let { HbsLocalReference(element, it) }
                     }
         }
     }
