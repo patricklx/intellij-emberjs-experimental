@@ -154,7 +154,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     }
 
     fun addHelperCompletions(element: PsiElement, result: CompletionResultSet) {
-        val file = EmberUtils.followReferences(element.children[0])
+        val file = EmberUtils.followReferences(element.children.firstOrNull())
         var func: JSFunction? = null
         if (file is JSFunction) {
             func = file
