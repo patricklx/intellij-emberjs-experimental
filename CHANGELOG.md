@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.18
+- fix: some html elements had bad references
+
 ## 2022.2.17
 - fix: some lookups/completions did not work anymore
 
