@@ -110,9 +110,10 @@ class TagReferencesProvider : PsiReferenceProvider() {
             }
 
             val range = TextRange(offset, offset + s.length)
-            TagReference(tag, fullName, range)
+            val ref = TagReference(tag, fullName, range)
+            ref.resolve()?.let { ref }
         }
-        return references.toTypedArray()
+        return references.filterNotNull().toTypedArray()
     }
 
     companion object {
