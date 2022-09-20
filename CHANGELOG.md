@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.2.19
+- fix: rename did not work correctly
+- fix: null pointer exception
+- fix: bad references
+
 ## 2022.2.18
 - fix: some html elements had bad references
 
