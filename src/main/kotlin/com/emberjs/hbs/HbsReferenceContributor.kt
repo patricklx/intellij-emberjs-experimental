@@ -26,7 +26,8 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
     if (element.text.contains(".")) {
         return null
     }
-    if (HbsLocalReference.createReference(element) != null) {
+    val res = HbsLocalReference.createReference(element)
+    if (res != null && (res.resolve() as? EmberNamedElement)?.target != element) {
         return null
     }
     return fn(element)
@@ -258,7 +259,6 @@ class HbsReferenceContributor : PsiReferenceContributor() {
             register(PlatformPatterns.psiElement(XmlAttribute::class.java)) { toAttributeReference(it as XmlAttribute) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
             register(HbsPatterns.BLOCK_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
-            register(HbsPatterns.BLOCK_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "component") } }
             register(HbsPatterns.MUSTACHE_ID) { HbsLocalReference.createReference(it) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "modifier") } }

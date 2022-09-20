@@ -260,29 +260,24 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
         files.forEach { file ->
             val hbsView = file.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val htmlView = file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
-            if (target.language == Language.findLanguageByID("Handlebars")) {
+            val htmlTarget = htmlView.findElementAt(target.startOffset+1)
+            val hbsTarget = hbsView.findElementAt(target.startOffset+1)
+            if (hbsTarget?.parents?.find { it is HbBlockWrapper } != null) {
                 val hbs = target.parents.find { it is HbBlockWrapper }
                 if (hbs != null) {
-                    val htmlElements = PsiTreeUtil.collectElements(htmlView) { hbs.textRange.contains(it.textRange) && it.references.any { it.isReferenceTo(target) } }
+                    val htmlElements = PsiTreeUtil.collectElements(htmlView) { hbs.textRange.contains(it.textRange) }
                     elements.add(hbs)
                     elements.addAll(htmlElements)
                 }
-                return@forEach
             }
-            if (target.language == Language.findLanguageByID("HTML") && target.parents.find { it is XmlTag } != null) {
+            if (htmlTarget?.parents?.find { it is XmlTag } != null) {
                 val html = target.parents.find { it is XmlTag }
                 if (html != null) {
-                    val hbsElements = PsiTreeUtil.collectElements(hbsView) { html.textRange.contains(it.textRange) && !it.references.any { it.isReferenceTo(target) } }
+                    val hbsElements = PsiTreeUtil.collectElements(hbsView) { html.textRange.contains(it.textRange) }
                     elements.add(html)
                     elements.addAll(hbsElements)
                 }
-                return@forEach
             }
-            val htmlElements = PsiTreeUtil.collectElements(htmlView) { it.references.any { it.isReferenceTo(target) } }
-            elements.addAll(htmlElements)
-
-            val hbsElements = PsiTreeUtil.collectElements(hbsView) { it.references.any { it.isReferenceTo(target) } }
-            elements.addAll(hbsElements)
         }
 
         if (elements.size == 0) {

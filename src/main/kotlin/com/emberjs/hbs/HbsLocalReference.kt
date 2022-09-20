@@ -123,7 +123,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
     }
 
     override fun isReferenceTo(element: PsiElement): Boolean {
-        return getElement().getManager().areElementsEquivalent(target, element);
+        return getElement().getManager().areElementsEquivalent(target, element) || super.isReferenceTo(element)
     }
 
     override fun resolve(): PsiElement? {
@@ -392,9 +392,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, importRef)
             }
 
-            if (element.parent is HbOpenBlockMustache && element.parent.children[0] != element) {
-                return HbsLocalRenameReference(element, element)
-            }
+//            if (element.parent is HbOpenBlockMustache && element.parent.children[0] != element) {
+//                return HbsLocalRenameReference(element, element)
+//            }
 
             return referenceBlocks(element, name)
                     ?: resolveToLocalJs(element)
