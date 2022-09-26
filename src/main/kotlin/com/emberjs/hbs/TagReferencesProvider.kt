@@ -151,7 +151,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
                 parts.removeAt(0)
-            } else {
+            } else if (tpl != null) {
                 current = JSReferenceResolver(tpl as PsiElement).doResolveQualifiedName(JSQualifiedNameImpl.create(parts.first(), null), false).firstOrNull()?.element
             }
 

@@ -559,7 +559,7 @@ function get(params: [object: Object, path: string]): any {}
   @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/if?anchor=if
   @public
  */
-function _if(params: [condition: boolean]): any {}
+function _if(params: [condition: boolean, then: any, otherwise: any]): any {}
 
 
 /**

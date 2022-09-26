@@ -337,11 +337,12 @@ class EmberUtils {
 
                 }
                 val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
-                signatures?.mapNotNull { it as? TypeScriptCallSignature }?.forEach {
+                signatures?.map { it as? TypeScriptCallSignature }?.forEachIndexed { index, it ->
+                    if (it ==null) return@forEachIndexed
                     val namedParams = it.parameters[0].jsType?.asRecordType()?.propertyNames
                     val positional = it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name }
-                    if (positionalen != null && positional.size != positionalen) {
-                        return@forEach
+                    if (positionalen != null && positional.size != positionalen && index != signatures.lastIndex) {
+                        return@forEachIndexed
                     }
                     return mapOf("positional" to positional, "named" to namedParams?.toList())
                 }
@@ -382,7 +383,7 @@ class EmberUtils {
                     if (type.sourceElement is JSDestructuringArray) {
                         names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
                     }
-                    return mapOf("position" to names, "named" to named?.toList(), "restparamnames" to listOf(name ?: arrayName))
+                    return mapOf("positional" to names, "named" to named?.toList(), "restparamnames" to listOf(name ?: arrayName))
                 }
             }
             return mapOf()

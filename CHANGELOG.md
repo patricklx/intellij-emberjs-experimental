@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.21
+- fix: null pointer exception
+- fix: name hints where not always correct
+
 ## 2022.2.20
 - fix: null pointer exception
 - improvement with glint references
