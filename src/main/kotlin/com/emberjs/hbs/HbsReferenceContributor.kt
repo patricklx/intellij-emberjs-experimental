@@ -207,7 +207,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                 offset = p.length + 2
             }
             val range = TextRange(offset, offset + parts[index].length)
-            if (index == files.lastIndex || it == null) {
+            if (index == files.lastIndex && it == null) {
                 return@mapIndexed RangedReference(element, glintRes, range)
             }
             RangedReference(element, it, range)
