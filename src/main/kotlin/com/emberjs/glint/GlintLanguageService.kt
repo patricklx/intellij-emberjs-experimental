@@ -113,8 +113,11 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         return completedFuture(items.map { GlintCompletionEntry(descriptor.getResolvedCompletionItem((it as GlintCompletionEntry).item)) })
     }
 
-    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement> =
-            getDescriptor()?.getElementDefinitions(sourceElement)?.toTypedArray() ?: emptyArray()
+    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement> {
+        val element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset)
+        return getDescriptor()?.getElementDefinitions(element)?.toTypedArray() ?: emptyArray()
+    }
+
 
     override fun getSignatureHelp(file: PsiFile, context: CreateParameterInfoContext): Future<Stream<JSFunctionType>?>? = null
 
@@ -173,6 +176,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
 
 class GlintCompletionEntry(internal val item: LspCompletionItem) : TypeScriptService.CompletionEntry {
     override val name: String get() = item.label
+    val detail: String? get() = item.detail
 
     override fun intoLookupElement() = item.intoLookupElement()
 }

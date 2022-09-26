@@ -43,7 +43,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
         val ref = reference
         this.hasNonLiteralTypes = true
         if (ref != null) {
-            val type = PsiTreeUtil.collectElementsOfType(ref.element, TypeScriptPropertySignatureImpl::class.java).firstOrNull()
+            val type = PsiTreeUtil.collectElementsOfType(ref.resolve(), TypeScriptPropertySignatureImpl::class.java).firstOrNull()
             val types = (type?.jsType?.asRecordType()?.sourceElement as? TypeScriptUnionOrIntersectionTypeImpl?)?.types
             val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
             val isOptional = (type?.isOptional ?: true) || typesStr.isEmpty() || (typesStr.contains("undefined") || typesStr.contains("null") || typesStr.contains("*"))

@@ -260,8 +260,8 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
         files.forEach { file ->
             val hbsView = file.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val htmlView = file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
-            val htmlTarget = htmlView.findElementAt(target.startOffset+1)
-            val hbsTarget = hbsView.findElementAt(target.startOffset+1)
+            val htmlTarget = htmlView?.findElementAt(target.startOffset+1)
+            val hbsTarget = hbsView?.findElementAt(target.startOffset+1)
             if (hbsTarget?.parents?.find { it is HbBlockWrapper } != null) {
                 val hbs = target.parents.find { it is HbBlockWrapper }
                 if (hbs != null) {

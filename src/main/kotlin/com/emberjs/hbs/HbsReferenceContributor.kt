@@ -4,12 +4,17 @@ import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.psi.ES6ExportDeclaration
+import com.intellij.lang.javascript.psi.JSElementBase
+import com.intellij.lang.javascript.psi.JSLiteralExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptModule
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PlatformPatterns
@@ -143,9 +148,9 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                     val subdir = dir?.findSubdirectory(s)
                     val file = dir?.children?.find { it is PsiFile && it.name.split(".").first() == s } as PsiFileSystemItem?
                     resolvedFile = if (i == parts.count() - 1) {
-                        file ?: subdir ?: resolvedFile
+                        file ?: subdir
                     } else {
-                        subdir ?: file ?: resolvedFile
+                        subdir ?: file
                     }
                 } else {
                     resolvedFile = null
@@ -180,6 +185,19 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             file = resolvedFile as PsiFile?
         }
         files[files.lastIndex] = file ?: files.last()
+        val glintRes = let {
+            val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
+            val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
+            val languageService = GlintLanguageServiceProvider(element.project)
+            val service = languageService.getService(element.originalVirtualFile!!)
+            val res = service?.getNavigationFor(document, element)?.firstOrNull()
+            res?.let {
+                if (it.parent is JSLiteralExpression) {
+                    return@let it.parent.parent as? TypeScriptModule
+                }
+                it.containingFile
+            }
+        }
         return files.mapIndexed() { index, it ->
             val p = parts.subList(0, index).joinToString("/")
             val offset: Int
@@ -189,6 +207,9 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                 offset = p.length + 2
             }
             val range = TextRange(offset, offset + parts[index].length)
+            if (index == files.lastIndex || it == null) {
+                return@mapIndexed RangedReference(element, glintRes, range)
+            }
             RangedReference(element, it, range)
         }.toTypedArray()
     }
@@ -207,7 +228,13 @@ class ContentReferencesProvider : PsiReferenceProvider() {
 
 class ImportNameReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
-        val names = element.text.replace("'", "").replace("\"", "").split(",")
+        val lookInFile = element.text.contains("{") || element.text.contains("}")
+        val names = element.text
+                .replace("'", "")
+                .replace("\"", "")
+                .replace("{", "")
+                .replace("}", "")
+                .split(",")
         val named = names.map {
             if (it.contains(" as ")) {
                 it.split(" as ").first()
@@ -244,10 +271,25 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                     .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
+
+        if ((fileRef is PsiFile || fileRef is TypeScriptModule) && lookInFile) {
+            return named
+                    .mapNotNull { name ->
+                        PsiTreeUtil.collectElements(fileRef) { (it as? JSElementBase)?.isExported == true }
+                        .map { it as JSElementBase }
+                        .find { it.name == name }
+                    }
+                    .mapIndexed { index, it ->
+                        it
+                    }
+                    .map { EmberUtils.resolveToEmber(it as? PsiElement) }
+                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
+                    .toTypedArray()
+        }
         if (fileRef == null) {
             return emptyArray()
         }
-        val ref = EmberUtils.resolveToEmber(fileRef as PsiFile)
+        val ref = EmberUtils.resolveToEmber(fileRef)
         return arrayOf(RangedReference(element, ref, TextRange(0, element.textLength)))
     }
 }

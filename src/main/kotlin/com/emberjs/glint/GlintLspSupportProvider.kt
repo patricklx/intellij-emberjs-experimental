@@ -15,6 +15,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.FileContentUtil
 import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
@@ -41,12 +42,22 @@ class GlintLanguageServerConnectorStdio(serverDescriptor: LspServerDescriptor, p
         }
         return path
     }
+
+    override fun initializeServer() {
+        super.initializeServer()
+        ApplicationManager.getApplication().invokeLater {
+            ApplicationManager.getApplication().runWriteAction {
+                FileContentUtil.reparseOpenedFiles()
+            }
+        }
+    }
 }
 
 
 fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
     return project.getService(GlintLspServerDescriptor::class.java)
 }
+
 
 @Service
 class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(), Disposable {

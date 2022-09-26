@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.glint.GlintCompletionEntry
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
@@ -14,6 +15,7 @@ import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
@@ -33,6 +35,7 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.util.FileContentUtil
 import com.intellij.util.ProcessingContext
 import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
 
@@ -155,22 +158,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
     fun addHelperCompletions(element: PsiElement, result: CompletionResultSet) {
         val file = EmberUtils.followReferences(element.children.firstOrNull())
-        var func: JSFunction? = null
-        if (file is JSFunction) {
-            func = file
-        }
+
         if (file is JSClass) {
             val ref = EmberUtils.getComponentReferenceData(file.containingFile)
             result.addAllElements(ref.args.map { LookupElementBuilder.create(it.value + "=") })
         }
-        if (file is PsiFile) {
-            func = EmberUtils.resolveHelper(file)
-        }
-
-        if (func != null) {
-            val hash = func.parameterList?.parameters?.last()
-            resolveJsType(hash?.jsType ?: hash?.inferredType, result, "=")
-        }
+        val map = EmberUtils.getArgsAndPositionals(element)
+        val named = map.getOrDefault("named", listOf())?.map { LookupElementBuilder.create(it + "=") }
+        named?.let { result.addAllElements(it) }
     }
 
     fun addImportPathCompletions(element: PsiElement, result: CompletionResultSet) {
@@ -229,6 +224,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val importNames = it.children[2].text
                     .replace("\"", "")
                     .replace("'", "")
+                    .replace("}", "")
+                    .replace("{", "")
             if (importNames.contains("*")) {
                 val name = importNames.split(" as ").last()
                 result.addElement(LookupElementBuilder.create(name))
@@ -285,7 +282,21 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             element = element.parent
         }
         val languageService = GlintLanguageServiceProvider(element.project)
+        val service = languageService.getService(element.originalVirtualFile!!)
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
+
+        if (element.containingFile.fileType is HtmlFileType) {
+            val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map { it as GlintCompletionEntry }?.map {
+                if (result.prefixMatcher.prefix == "@") {
+                    LookupElementBuilder.create("@" + it.name)
+                } else {
+                    LookupElementBuilder.create(it.name)
+                }
+
+            }
+            results?.let { result.addAllElements(it) }
+            return
+        }
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {

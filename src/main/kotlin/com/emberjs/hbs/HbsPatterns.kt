@@ -2,10 +2,13 @@ package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
+import com.intellij.codeInsight.template.HtmlContextType
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.PsiElementPattern.Capture
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
+import com.intellij.psi.html.HtmlTag
+import com.intellij.psi.impl.source.html.HtmlTagImpl
 
 object HbsPatterns {
 
@@ -82,4 +85,5 @@ object HbsPatterns {
             .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbParam::class.java).withText("t"))
 
     val CONTENT: Capture<PsiElement> = psiElement(HbTokenTypes.STATEMENTS).withParent(HbPsiFile::class.java)
+    val inXmlTag: Capture<PsiElement> = psiElement().withAncestor(10, psiElement(HtmlTagImpl::class.java))
 }

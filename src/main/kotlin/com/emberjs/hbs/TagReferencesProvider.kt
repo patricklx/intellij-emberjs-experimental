@@ -6,7 +6,9 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.emberjs.EmberAttrDec
+import com.emberjs.EmberAttributeDescriptor
 import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
@@ -29,6 +31,7 @@ import com.intellij.lang.javascript.psi.resolve.JSContextResolver
 import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSThisContext
 import com.intellij.lang.javascript.psi.resolve.JSQualifiedNameResolver
 import com.intellij.lang.javascript.psi.resolve.JSReferenceResolver
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse.Kind.let
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
@@ -44,6 +47,11 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 
+class ResolvedReference(element: PsiElement, private val resolved: PsiElement): PsiReferenceBase<PsiElement>(element) {
+    override fun resolve(): PsiElement? {
+        return resolved
+    }
+}
 
 /**
  * this is just to remove leading and trailing `|` from attribute references
@@ -60,7 +68,13 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
         }
         return RangedReference(target, target, range)
     }
-    return null
+    val psiFile = PsiManager.getInstance(target.project).findFile(target.originalVirtualFile!!)
+    val document = PsiDocumentManager.getInstance(target.project).getDocument(psiFile!!)!!
+    val service = GlintLanguageServiceProvider(target.project).getService(target.originalVirtualFile!!)
+    val resolved = service?.getNavigationFor(document, target)?.firstOrNull()
+    return resolved?.let {
+        ResolvedReference(target, resolved)
+    }
 }
 
 
@@ -149,7 +163,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 current = (current as TypeScriptTypeofType).expression
             }
 
-            return current
+            return current?.let { EmberUtils.resolveToEmber(it) }
         }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
@@ -229,7 +243,14 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return local
             }
 
-            return resolveToLocalJs(tag) ?: forTagName(tag.project, tag.name)
+            return resolveToLocalJs(tag)
+                    ?: forTagName(tag.project, tag.name)
+                    ?: let {
+                        val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
+                        val document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
+                        val service = GlintLanguageServiceProvider(tag.project).getService(tag.originalVirtualFile!!)
+                        service?.getNavigationFor(document, tag)?.firstOrNull()
+                    }
         }
 
         fun forTagName(project: Project, tagName: String): PsiElement? {
@@ -266,3 +287,4 @@ class TagReferencesProvider : PsiReferenceProvider() {
         }
     }
 }
+

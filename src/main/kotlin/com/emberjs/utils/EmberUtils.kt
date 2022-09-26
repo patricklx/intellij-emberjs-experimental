@@ -18,24 +18,17 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
-import com.intellij.lang.ecmascript6.psi.impl.ES6ExportDefaultAssignmentImpl
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
-import com.intellij.lang.javascript.psi.types.JSArrayType
+import com.intellij.lang.javascript.psi.types.*
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
-import com.intellij.navigation.GotoRelatedItem
-import com.intellij.navigation.GotoRelatedProvider
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.WriteAction
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileSystem
-import com.intellij.openapi.vfs.ex.temp.TempFileSystem
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
@@ -47,10 +40,6 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
-import com.intellij.testFramework.rules.TempDirectory
-import com.intellij.testFramework.rules.TempDirectoryExtension
-import java.nio.file.Paths
-import kotlin.io.path.pathString
 
 class ArgData(
         var value: String = "",
@@ -71,15 +60,15 @@ class ComponentReferenceData(
 class EmberUtils {
     companion object {
 
-        fun resolveModifier(file: PsiFile): Array<JSFunction?> {
-            val func = resolveDefaultExport(file)
+        fun resolveModifier(file: PsiElement?): Array<JSFunction?> {
+            val func = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
             val installer: JSFunction? = PsiTreeUtil.collectElements(func) { it is JSFunction && it.name == "installModifier" }.firstOrNull() as JSFunction?
             val updater: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "updateModifier" }).firstOrNull() as JSFunction?
             val destroyer: JSFunction? = PsiTreeUtil.collectElements(func, { it is JSFunction && it.name == "destroyModifier" }).firstOrNull() as JSFunction?
             return arrayOf(installer, updater, destroyer)
         }
 
-        fun resolveDefaultModifier(file: PsiFile): JSFunction? {
+        fun resolveDefaultModifier(file: PsiElement?): JSFunction? {
             val modifier = resolveModifier(file)
             val args = modifier.first()?.parameters?.getOrNull(2)
                     ?: modifier[1]?.parameters?.getOrNull(1)
@@ -87,7 +76,8 @@ class EmberUtils {
             return modifier.find { it != null && it.parameters.contains(args) }
         }
 
-        fun resolveDefaultExport(file: PsiFile): PsiElement? {
+        fun resolveDefaultExport(file: PsiElement?): PsiElement? {
+            if (file == null) return null
             var exp: PsiElement? = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {
@@ -135,8 +125,8 @@ class EmberUtils {
             return ref
         }
 
-        fun resolveHelper(file: PsiFile): JSFunction? {
-            val cls = resolveDefaultExport(file)
+        fun resolveHelper(file: PsiElement?): JSFunction? {
+            val cls = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
             if (cls is JSCallExpression && cls.argumentList != null) {
                 var func: PsiElement? = cls.argumentList!!.arguments.last()
                 while (func is JSReferenceExpression) {
@@ -163,24 +153,20 @@ class EmberUtils {
             return PsiTreeUtil.findChildOfType(cls, ES6TaggedTemplateExpression::class.java)
         }
 
-        fun resolveComponent(file: PsiFile): PsiElement? {
-            val cls = resolveDefaultExport(file)
+        fun resolveComponent(file: PsiElement?): PsiElement? {
+            val cls = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
             if (cls is JSClass) {
                 return cls
             }
             return null
         }
 
-        fun resolveToEmber(file: PsiFile): PsiElement {
+        fun resolveToEmber(file: PsiElement?): PsiElement? {
             return resolveComponent(file)
                     ?: resolveHelper(file)
                     ?: resolveDefaultModifier(file)
                     ?: resolveDefaultExport(file)
                     ?: file
-        }
-
-        fun findHelperParams(file: PsiFile): Array<JSParameterListElement>? {
-            return resolveHelper(file)?.parameters
         }
 
 
@@ -332,6 +318,75 @@ class EmberUtils {
             return parent.children.getOrNull(1)
         }
 
+        fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): Map<String, List<String?>?> {
+            var func = followReferences(helperhelperOrModifier)
+            if ((func == null || func == helperhelperOrModifier) && helperhelperOrModifier.children.isNotEmpty()) {
+                func = followReferences(helperhelperOrModifier.children[0])
+                if (func == helperhelperOrModifier.children[0]) {
+                    val id = PsiTreeUtil.collectElements(helperhelperOrModifier) { it !is LeafPsiElement && it.elementType == HbTokenTypes.ID }.lastOrNull()
+                    func = followReferences(id, helperhelperOrModifier.text)
+                }
+            }
+
+            if (func is TypeScriptVariable) {
+                if (func.jsType is JSGenericTypeImpl) {
+                    val args = ((func.jsType as JSGenericTypeImpl).arguments[0] as JSSimpleRecordTypeImpl).properties.find { it.memberName == "Args" }
+                    val positional = (args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Positional" }?.jsType?.sourceElement as? TypeScriptTupleType)?.members?.map { it.tupleMemberName }
+                    val named = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()?.propertyNames
+                    return mapOf("positional" to positional, "named" to named?.toList())
+
+                }
+                val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
+                signatures?.mapNotNull { it as? TypeScriptCallSignature }?.forEach {
+                    val namedParams = it.parameters[0].jsType?.asRecordType()?.propertyNames
+                    val positional = it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name }
+                    if (positionalen != null && positional.size != positionalen) {
+                        return@forEach
+                    }
+                    return mapOf("positional" to positional, "named" to namedParams?.toList())
+                }
+            }
+
+            if (func is JSFunction) {
+                var arrayName: String? = null
+                var array: JSType?
+                var named: MutableSet<String>? = null
+
+                var args = func.parameters.lastOrNull()?.jsType
+                array = null
+
+                if (args is JSTypeImpl) {
+                    args = args.asRecordType()
+                }
+
+                if (args is JSRecordType) {
+                    array = args.findPropertySignature("positional")?.jsType
+                    named = args.findPropertySignature("named")?.jsType?.asRecordType()?.propertyNames
+                    arrayName = "positional"
+                }
+
+                if (array == null) {
+                    arrayName = func.parameters.first().name ?: arrayName
+                    array = func.parameters.first().jsType
+                    if (func.parameters.size > 1) {
+                        named = func.parameters.last().jsType?.asRecordType()?.propertyNames
+                    }
+                }
+                val type = array
+                if (type is JSTupleType) {
+                    var name: String? = null
+                    var names: List<String?>? = null
+                    if (type.sourceElement is TypeScriptTupleTypeImpl) {
+                        names = (type.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
+                    }
+                    if (type.sourceElement is JSDestructuringArray) {
+                        names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
+                    }
+                    return mapOf("position" to names, "named" to named?.toList(), "restparamnames" to listOf(name ?: arrayName))
+                }
+            }
+            return mapOf()
+        }
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
@@ -342,7 +397,12 @@ class EmberUtils {
             val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val imports = PsiTreeUtil.collectElements(hbsView, { it is HbMustache && it.children[1].text == "import" })
             val ref = imports.find {
-                val names = it.children[2].text.replace("'", "").replace("\"", "").split(",")
+                val names = it.children[2].text
+                        .replace("'", "")
+                        .replace("\"", "")
+                        .replace("{", "")
+                        .replace("}", "")
+                        .split(",")
                 val named = names.map {
                     if (it.contains(" as ")) {
                         it.split(" as ").last()

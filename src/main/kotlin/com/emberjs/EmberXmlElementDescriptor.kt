@@ -1,19 +1,17 @@
 package com.emberjs
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
+import com.intellij.codeInsight.completion.CompletionParameters
+import com.intellij.codeInsight.completion.CompletionProcess
+import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
-import com.intellij.lang.Language
-import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
-import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
-import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
-import com.intellij.psi.search.ProjectScope
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlAttributeDescriptor
@@ -22,6 +20,15 @@ import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
 
 
+class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem) {
+    override fun resolve(): PsiElement? {
+        val psiFile = PsiManager.getInstance(elem.project).findFile(elem.originalVirtualFile!!)
+        val document = PsiDocumentManager.getInstance(elem.project).getDocument(psiFile!!)!!
+        val service = GlintLanguageServiceProvider(elem.project).getService(elem.originalVirtualFile!!)
+        return service?.getNavigationFor(document, elem)?.firstOrNull()
+    }
+
+}
 
 class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration: PsiElement?) : XmlElementDescriptor {
     val project = tag.project
@@ -142,7 +149,10 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             }
             return EmberAttributeDescriptor(context, attributeName, true, "yield", null, emptyArray())
         }
-        return this.getAttributesDescriptors(context).find { it.name == attributeName }
+        val attr = context.attributes.find { it.name == attributeName }
+        return this.getAttributesDescriptors(context).find { it.name == attributeName } ?:
+        attr?.let { EmberAttributeDescriptor(context, attributeName, true, "yield", GlintReference(it), emptyArray()) }
+
     }
     override fun getAttributeDescriptor(attribute: XmlAttribute?): XmlAttributeDescriptor?
             = getAttributeDescriptor(attribute?.name, attribute?.parent)

@@ -64,8 +64,8 @@ class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<Ps
         if (fileRef == null) {
             return emptyArray()
         }
-        val ref = EmberUtils.resolveToEmber(fileRef as PsiFile)
-        return arrayOf(PsiElementResolveResult(ref))
+        val ref = EmberUtils.resolveToEmber(fileRef)
+        return ref?.let { arrayOf(PsiElementResolveResult(it)) } ?: arrayOf()
     }
 }
 
