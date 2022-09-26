@@ -185,18 +185,18 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             file = resolvedFile as PsiFile?
         }
         files[files.lastIndex] = file ?: files.last()
-        val glintRes = let {
+        fun glintRes(it: PsiElement?): PsiElement? {
             val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
             val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
             val languageService = GlintLanguageServiceProvider(element.project)
             val service = languageService.getService(element.originalVirtualFile!!)
             val res = service?.getNavigationFor(document, element)?.firstOrNull()
-            res?.let {
+            return res?.let {
                 if (it.parent is JSLiteralExpression) {
-                    return@let it.parent.parent as? TypeScriptModule
+                    return@let it.parent.parent as? TypeScriptModule ?: it
                 }
-                it.containingFile
-            }
+                it.containingFile ?: it
+            } ?: it
         }
         return files.mapIndexed() { index, it ->
             val p = parts.subList(0, index).joinToString("/")
@@ -207,8 +207,8 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                 offset = p.length + 2
             }
             val range = TextRange(offset, offset + parts[index].length)
-            if (index == files.lastIndex && it == null) {
-                return@mapIndexed RangedReference(element, glintRes, range)
+            if (index == files.lastIndex || it == null) {
+                return@mapIndexed RangedReference(element, glintRes(it), range)
             }
             RangedReference(element, it, range)
         }.toTypedArray()
