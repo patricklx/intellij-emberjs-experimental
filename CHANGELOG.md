@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.20
+- fix: null pointer exception
+- improvement with glint references
+
 ## 2022.2.19
 - fix: rename did not work correctly
 - fix: null pointer exception
