@@ -10,6 +10,7 @@ import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.TagReference
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.index.EmberNameIndex
+import com.emberjs.lookup.EmberLookupInternalElementBuilder
 import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
@@ -236,10 +237,6 @@ class EmberTagNameProvider : XmlTagNameProvider {
             return
         }
 
-        elements.add(LookupElementBuilder.create("Textarea"))
-        elements.add(LookupElementBuilder.create("Input"))
-        elements.add(LookupElementBuilder.create("LinkTo"))
-
         val project = tag.project
         val scope = ProjectScope.getAllScope(project)
 //        val useImports = false;
@@ -251,6 +248,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
         val hasHbsImports = NodeModuleManager.getInstance(tag.project).collectVisibleNodeModules(virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
         val useImports = hasHbsImports != null
 
+        elements.add(EmberLookupInternalElementBuilder.create("Textarea", useImports))
+        elements.add(EmberLookupInternalElementBuilder.create("Input", useImports))
+        elements.add(EmberLookupInternalElementBuilder.create("LinkTo", useImports))
 
         val componentMap = hashMapOf<String, LookupElement>()
 
@@ -278,8 +278,10 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
 class PathKeyClass : Key<String>("PATH")
 class FullPathKeyClass : Key<String>("FULLPATH")
+class InsideKeyClass : Key<String>("INSIDE")
 val PathKey = PathKeyClass()
 val FullPathKey = FullPathKeyClass()
+val InsideKey = InsideKeyClass()
 
 
 

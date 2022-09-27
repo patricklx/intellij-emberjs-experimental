@@ -1,22 +1,28 @@
 package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.lookup.EmberLookupInternalElementBuilder
+import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parents
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.psi.util.parentsWithSelf
 import com.intellij.util.ProcessingContext
 
 
 
 class HbsBuiltinHelperCompletionProvider(val helpers: List<String>) : CompletionProvider<CompletionParameters>() {
-    val lookupElements = helpers.map { LookupElementBuilder.create(it) }
+    val lookupElements = helpers
 
     override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
+        val virtualFile = parameters.position.originalVirtualFile
+        val hasHbsImports = NodeModuleManager.getInstance(parameters.position.project).collectVisibleNodeModules(virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+        val useImports = hasHbsImports != null
         val path = parameters.position.parentsWithSelf.toList().find { it is HbPathImpl }
         if (path != null && path.text.contains(".")) return
-        result.addAllElements(lookupElements)
+        result.addAllElements(lookupElements.map { EmberLookupInternalElementBuilder.create(it, useImports) })
     }
 }

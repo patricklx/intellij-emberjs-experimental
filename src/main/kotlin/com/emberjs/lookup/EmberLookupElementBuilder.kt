@@ -1,6 +1,7 @@
 package com.emberjs.lookup
 
 import com.emberjs.FullPathKey
+import com.emberjs.InsideKey
 import com.emberjs.PathKey
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.icons.EmberIcons
@@ -20,6 +21,37 @@ object EmberLookupElementBuilder {
                 .withInsertHandler(HbsInsertHandler())
         element.putUserData(PathKey, it.importPath)
         element.putUserData(FullPathKey, it.fullImportPath)
+        return element
+    }
+}
+
+object EmberLookupInternalElementBuilder {
+    val mapping = mapOf(
+            "fn" to listOf("@ember/helper", "helper"),
+            "array" to listOf("@ember/helper", "helper"),
+            "concat" to listOf("@ember/helper", "helper"),
+            "get" to listOf("@ember/helper", "helper"),
+            "hash" to listOf("@ember/helper", "helper"),
+            "on" to listOf("@ember/helper", "modifier"),
+            "Input" to listOf("@ember/component", "component"),
+            "TextArea" to listOf("@ember/component", "component"),
+            "LinkTo" to listOf("@ember/routing", "component"),
+    )
+    fun create(name: String, useImports: Boolean): LookupElement {
+        if (!useImports) {
+            return LookupElementBuilder.create(name)
+        }
+        val match = mapping.getOrDefault(name, null) ?: return LookupElementBuilder.create(name)
+        val element = LookupElementBuilder
+                .create(name)
+                .withTypeText(match[1])
+                .withTailText(" from ${match[0]}")
+                .withIcon(EmberIconProvider.getIcon(match[1]) ?: EmberIcons.EMPTY_16)
+                .withCaseSensitivity(true)
+                .withInsertHandler(HbsInsertHandler())
+        element.putUserData(PathKey, match[0])
+        element.putUserData(FullPathKey, match[0])
+        element.putUserData(InsideKey, "true")
         return element
     }
 }

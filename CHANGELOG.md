@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.25
+- improvement: auto import internal helpers with hbs-imports
+
 ## 2022.2.24
 - improvement: make names for helpers&modifiers camel case for hbs-imports
 

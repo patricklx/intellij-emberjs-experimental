@@ -1,9 +1,10 @@
 package com.emberjs.lookup
 
 import com.emberjs.FullPathKey
+import com.emberjs.InsideKey
 import com.emberjs.PathKey
 import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.utils.parentModule
+import com.emberjs.utils.ifElse
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
@@ -21,6 +22,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         }
         var path = item.getUserData(PathKey)
         val fullPath = item.getUserData(FullPathKey)
+        val inside = (item.getUserData(InsideKey) ?: "false").toBoolean()
         if (path == null || fullPath == null) {
             return
         }
@@ -46,7 +48,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
                     .flatten()
                     .filterNotNull()
             if (names.contains(item.lookupString)) return
-            val importStr = "import ${item.lookupString} from '$fullPath';\n"
+            val importStr = if (inside) "import '{ ${item.lookupString} }' from '$fullPath';\n" else "import ${item.lookupString} from '$fullPath';\n"
             f.viewProvider.document!!.setText(importStr + f.viewProvider.document!!.text)
             return
         }
@@ -58,7 +60,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
 
         val fullName = item.lookupString.replace("::", "/")
         val name = fullName.split("/").last()
-        val pattern = "\\{\\{\\s*import\\s+([\\w*\"']+[-,\\w*\\n'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"
+        val pattern = "\\{\\{\\s*import\\s+([\\w*\"'{]+[-,\\w*\\n}'\" ]+)\\s+from\\s+['\"]([^'\"]+)['\"]\\s*\\}\\}"
         val matches = Regex(pattern).findAll(context.document.text)
         val importsSq = matches.map {
             it.groups.filterNotNull().map { it.value }.toMutableList().takeLast(2).toMutableList()
@@ -69,17 +71,27 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         if (m != -1) {
             val groups = imports.elementAt(m)
             if (groups.first().contains(name)) return
-            val g = groups.elementAt(0).replace("'", "").replace("\"", "")
+            val isInside = groups.elementAt(0).contains("{")
+            val g = groups.elementAt(0)
+                    .replace("'", "")
+                    .replace("\"", "")
+                    .replace("{", "")
+                    .replace("}", "")
             groups.removeAt(0)
-            groups[0] = "'$g,$name'"
+            groups[0] = isInside.ifElse({ "'{ " }, {""}) +  "'$g,$name'" + isInside.ifElse({ " }'" }, { "" })
         } else {
-            val l = arrayOf(name, path)
+            var importnameDeclaration = name
+            if (inside) {
+                importnameDeclaration = "'{ $name }'"
+            }
+            val l = arrayOf(importnameDeclaration, path)
             imports.add(l.toMutableList())
         }
+
         var text = context.document.text
         text = text.replace(Regex("$pattern.*\n"), "")
-        for (imp in imports.reversed()) {
-            val l = arrayOf("{{import", imp.elementAt(0), "from '${imp.elementAt(1)}'}}")
+        imports.reversed().forEach { imp ->
+            val l = arrayOf("{{import", imp.elementAt(0), "from '${imp.elementAt(1)}'}}").filterNotNull()
             text = l.joinToString(" ") + "\n" + text
         }
         context.document.setText(text)
