@@ -5,6 +5,8 @@ import com.emberjs.lookup.EmberLookupElementBuilder
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.emberRoot
+import com.emberjs.utils.originalVirtualFile
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.impl.ES6ExportDefaultAssignmentImpl
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
@@ -41,6 +43,10 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     protected val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 
     private val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
+
+    private val hasHbsImports = NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(element.originalVirtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+    private val useImports = hasHbsImports != null
+
 
     open fun matches(module: EmberName) =
             module.type == moduleType && module.name == value.replace("'", "").replace("\"", "")
@@ -83,7 +89,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
         // Collect all components from the index
         return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == moduleType }
                 // Convert search results for LookupElements
-                .map { EmberLookupElementBuilder.create(it, dots = false) }
+                .map { EmberLookupElementBuilder.create(it, dots = false, useImports) }
                 .toTypedArray()
     }
 }

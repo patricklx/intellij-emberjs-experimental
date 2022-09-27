@@ -3,10 +3,14 @@ package com.emberjs.resolver
 import com.emberjs.EmberFileType
 import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parents
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.openapi.vfs.VfsUtilCore.isAncestor
 import com.intellij.openapi.vfs.VirtualFile
 
-data class EmberName(val type: String, val path: String, val fullImportPath: String = "") {
+data class EmberName(val type: String, val path: String, val filePath: String = "") {
+
+    val indexSuffix = Regex("/index[^/]*$")
+    val fullImportPath = filePath.replace(indexSuffix, "")
 
     override fun hashCode(): Int = storageKey.hashCode()
 
@@ -29,10 +33,12 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
     val importPath by lazy {
         if (type == "component" || isComponentTemplate) {
             val parts = fullImportPath.split("/").toMutableList()
-            parts.removeLast()
+            if (parts.last().startsWith("component.") || parts.last().startsWith("template.")  || parts.last().startsWith("index.")) {
+                parts.removeLast()
+            }
             return@lazy parts.joinToString("/")
         }
-        fullImportPath
+        fullImportPath.replace(indexSuffix, "")
     }
 
     val storageKey by lazy { "$type:$name:$fullImportPath" }
@@ -69,22 +75,32 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             }
 
             if (it.value == "-") "" else it.value.lowercase()
-        }.removeSuffix("/index")
+        }.replace(indexSuffix, "")
     }
 
-    val tagName by lazy {
-        assert(type == "component" || isComponentTemplate)
-
-        val baseName = name.removeSuffix("/index").split('/').last()
+    val camelCaseName by lazy {
+        val isComponent = type == "component" || isComponentTemplate
+        val baseName = name.replace(indexSuffix, "").split('/').last()
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
-            assert(it.range.first - it.range.last == 0)
+            if(it.range.first - it.range.last != 0) {
+                return@replace it.value
+            }
 
-            if (it.range.first == 0 || !ALPHA.matches(baseName.subSequence(it.range.start - 1, it.range.start))) {
+            if (it.range.first == 0 && !isComponent) {
+                return@replace it.value
+            }
+
+            if (it.range.first == 0 || !ALPHA.matches(baseName.subSequence(it.range.first - 1, it.range.first))) {
                 return@replace it.value.uppercase()
             }
 
             if (it.value == "-") "" else it.value.lowercase()
         }
+    }
+
+    val tagName by lazy {
+        assert(type == "component" || isComponentTemplate)
+        camelCaseName
     }
 
     val isTest: Boolean = type.endsWith("-test")
@@ -171,6 +187,9 @@ data class EmberName(val type: String, val path: String, val fullImportPath: Str
             }
             if (file.nameWithoutExtension == "template") {
                 name = "template"
+            }
+            if (file.nameWithoutExtension == "index.d") {
+                name = "index"
             }
             return "$path/$name".removeSuffix("/")
         }
