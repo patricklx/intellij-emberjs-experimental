@@ -310,12 +310,11 @@ class EmberUtils {
             if (parent == null) {
                 return null
             }
-            // mustache name
+
             val name = parent.children.getOrNull(1)
-            if (name?.references != null && name.references.isNotEmpty()) {
-                return name
+            if (name.text == "component") {
+              return parent.children.getOrNull(2)
             }
-            return parent.children.getOrNull(1)
         }
 
         fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): Map<String, List<String?>?> {
