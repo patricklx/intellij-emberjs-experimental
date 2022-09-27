@@ -129,7 +129,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
         if (parts[0] == name) {
             var parent = element.originalVirtualFile!!.emberRoot
-            resolvedFile = parent
+            resolvedFile = parent?.let { psiManager.findDirectory(it) }
         }
 
         val files = parts.mapIndexed { i, s ->
