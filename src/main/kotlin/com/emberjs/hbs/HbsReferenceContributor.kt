@@ -113,10 +113,6 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             resolvedFile = psiManager.findDirectory(folder!!)
         }
 
-        if (parts[0] == name) {
-            path = path.replace(Regex("^$name/"), "~/")
-        }
-
         if (path.startsWith(element.originalVirtualFile!!.parentEmberModule!!.name)) {
             path = path.replace(Regex("^${element.originalVirtualFile!!.parentEmberModule!!.name}/"), "~/")
         }
@@ -133,6 +129,15 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
         }
+
+        if (parts[0] == name) {
+            var parent = element.originalVirtualFile!!.parentEmberModule
+            while (parent?.parentEmberModule != null) {
+                parent = parent.parentEmberModule
+            }
+            resolvedFile = parent
+        }
+
         val files = parts.mapIndexed { i, s ->
             if (s == "." || s == "~") {
                 // do nothing
