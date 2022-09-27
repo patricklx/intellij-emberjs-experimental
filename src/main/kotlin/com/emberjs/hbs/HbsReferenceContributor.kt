@@ -122,19 +122,13 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         }
 
         if (!path.startsWith("~") && !path.startsWith(".")) {
-            var parent = element.originalVirtualFile!!.parentEmberModule
-            while (parent?.parentEmberModule != null) {
-                parent = parent.parentEmberModule
-            }
+            var parent = element.originalVirtualFile!!.emberRoot
             resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
         }
 
         if (parts[0] == name) {
-            var parent = element.originalVirtualFile!!.parentEmberModule
-            while (parent?.parentEmberModule != null) {
-                parent = parent.parentEmberModule
-            }
+            var parent = element.originalVirtualFile!!.emberRoot
             resolvedFile = parent
         }
 
