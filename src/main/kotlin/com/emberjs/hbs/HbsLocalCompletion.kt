@@ -101,7 +101,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (anything.references.find { it is HbsLocalReference } != null) {
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
-            resolve(anything.references.find { it is HbsLocalReference }!!.resolve(), result)
+            resolve(anything.references.find { it is HbReference }!!.resolve(), result)
         }
 
         if (anything.reference is HbsLocalReference) {

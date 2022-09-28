@@ -78,7 +78,7 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
 }
 
 
-class TagReference(val element: XmlTag, val fullName: String, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
+class TagReference(val element: XmlTag, val fullName: String, val range: TextRange) : HbReference(element) {
 
     override fun resolve(): PsiElement? {
         val t = TagReferencesProvider.forTag(element, fullName)

@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
+import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.TagReference
 import com.emberjs.icons.EmberIconProvider
@@ -59,22 +60,17 @@ class EmberTagNameProvider : XmlTagNameProvider {
             return
         }
 
-        if (anything.references.find { it is HbsLocalReference } != null) {
-            resolve(anything.references.find { it is HbsLocalReference }!!.resolve(), path, result)
+        if (anything.references.find { it is HbReference } != null) {
+            resolve(anything.references.find { it is HbReference }!!.resolve(), path, result)
             return
         }
 
-        if (anything.reference is HbsLocalReference) {
+        if (anything.reference is HbReference) {
             resolve(anything.reference?.resolve(), path, result)
             return
         }
 
-        if (anything.references.find { it is TagReference } != null) {
-            resolve(anything.references.find { it is TagReference }!!.resolve(), path, result)
-            return
-        }
-
-        if (anything.reference is TagReference) {
+        if (anything.reference is HbReference) {
             resolve(anything.reference?.resolve(), path, result)
             return
         }

@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.AttrPsiReference
 import com.emberjs.EmberAttrDec
 import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
@@ -529,7 +530,7 @@ class EmberUtils {
                 val asAttr = tag.attributes.find { it.name == "as" }!!
                 val yields = tag.attributes.map { it.text }.joinToString(" ").split("|")[1]
                 val idx = yields.split(" ").indexOf(name)
-                val ref = asAttr.references.find { it is HbsLocalReference }
+                val ref = asAttr.references.find { it is HbReference }
                 if (ref is HbPathImpl) {
                     val params = ref.children.filter { it is HbParam }
                     return params.getOrNull(idx)
