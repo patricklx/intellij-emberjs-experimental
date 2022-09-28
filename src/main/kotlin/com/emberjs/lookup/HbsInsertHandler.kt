@@ -77,8 +77,8 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
                     .replace("\"", "")
                     .replace("{", "")
                     .replace("}", "")
-            groups.removeAt(0)
-            groups[0] = isInside.ifElse({ "'{ " }, {""}) +  "'$g,$name'" + isInside.ifElse({ " }'" }, { "" })
+                    .replace(" ", "")
+            groups[0] = isInside.ifElse({ "'{ " }, {"'"}) +  "$g,$name" + isInside.ifElse({ " }'" }, { "'" })
         } else {
             var importnameDeclaration = name
             if (inside) {
