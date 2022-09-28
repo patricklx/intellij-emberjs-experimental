@@ -312,12 +312,20 @@ class EmberUtils {
             }
 
             val name = parent.children.getOrNull(1)
-            if (name.text == "component") {
-              return parent.children.getOrNull(2)
+            if (name?.text == "component") {
+              return parent.children.getOrNull(2).let { PsiTreeUtil.collectElements(it) { it.elementType == HbTokenTypes.ID }.firstOrNull() }
             }
+            return name
         }
 
-        fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): Map<String, List<String?>?> {
+        class ArgsAndPositionals {
+            val positional: MutableList<String?> = mutableListOf()
+            val named: MutableList<String?> = mutableListOf()
+            val namedRefs: MutableList<PsiElement?> = mutableListOf()
+            var restparamnames: String? = null
+        }
+
+        fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
             var func = followReferences(helperhelperOrModifier)
             if ((func == null || func == helperhelperOrModifier) && helperhelperOrModifier.children.isNotEmpty()) {
                 func = followReferences(helperhelperOrModifier.children[0])
@@ -327,30 +335,48 @@ class EmberUtils {
                 }
             }
 
+            val data = ArgsAndPositionals()
+
             if (func is TypeScriptVariable) {
                 if (func.jsType is JSGenericTypeImpl) {
                     val args = ((func.jsType as JSGenericTypeImpl).arguments[0] as JSSimpleRecordTypeImpl).properties.find { it.memberName == "Args" }
                     val positional = (args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Positional" }?.jsType?.sourceElement as? TypeScriptTupleType)?.members?.map { it.tupleMemberName }
-                    val named = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()?.propertyNames
-                    return mapOf("positional" to positional, "named" to named?.toList())
+                    val namedRecord = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()
+                    val named = namedRecord?.propertyNames
+                    positional?.forEach { data.positional.add(it) }
+                    named?.forEach { data.named.add(it) }
+                    namedRecord?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
 
                 }
                 val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
                 signatures?.map { it as? TypeScriptCallSignature }?.forEachIndexed { index, it ->
                     if (it ==null) return@forEachIndexed
-                    val namedParams = it.parameters[0].jsType?.asRecordType()?.propertyNames
+                    val namedRecord = it.parameters[0].jsType?.asRecordType()
+                    val namedParams = namedRecord?.propertyNames
                     val positional = it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name }
                     if (positionalen != null && positional.size != positionalen && index != signatures.lastIndex) {
                         return@forEachIndexed
                     }
-                    return mapOf("positional" to positional, "named" to namedParams?.toList())
+                    positional.forEach { data.positional.add(it) }
+                    namedParams?.forEach { data.named.add(it) }
+                    namedRecord?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
                 }
+            }
+
+            if (func is JSClass) {
+                val args = findComponentArgsType(func)
+                args?.propertyNames?.forEach { data.named.add(it) }
+                args?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                return data
             }
 
             if (func is JSFunction) {
                 var arrayName: String? = null
                 var array: JSType?
                 var named: MutableSet<String>? = null
+                var refs: List<JSRecordType.PropertySignature>? = listOf()
 
                 var args = func.parameters.lastOrNull()?.jsType
                 array = null
@@ -362,6 +388,7 @@ class EmberUtils {
                 if (args is JSRecordType) {
                     array = args.findPropertySignature("positional")?.jsType
                     named = args.findPropertySignature("named")?.jsType?.asRecordType()?.propertyNames
+                    refs = args.findPropertySignature("named")?.jsType?.asRecordType()?.properties?.toList()
                     arrayName = "positional"
                 }
 
@@ -370,11 +397,11 @@ class EmberUtils {
                     array = func.parameters.first().jsType
                     if (func.parameters.size > 1) {
                         named = func.parameters.last().jsType?.asRecordType()?.propertyNames
+                        refs = func.parameters.last().jsType?.asRecordType()?.properties?.toList()
                     }
                 }
                 val type = array
                 if (type is JSTupleType) {
-                    var name: String? = null
                     var names: List<String?>? = null
                     if (type.sourceElement is TypeScriptTupleTypeImpl) {
                         names = (type.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
@@ -382,10 +409,14 @@ class EmberUtils {
                     if (type.sourceElement is JSDestructuringArray) {
                         names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
                     }
-                    return mapOf("positional" to names, "named" to named?.toList(), "restparamnames" to listOf(name ?: arrayName))
+                    data.restparamnames = arrayName
+                    names?.forEach { data.positional.add(it) }
+                    named?.forEach { data.named.add(it) }
+                    refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
                 }
             }
-            return mapOf()
+            return data
         }
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {

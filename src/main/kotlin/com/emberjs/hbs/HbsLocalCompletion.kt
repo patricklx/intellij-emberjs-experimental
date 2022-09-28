@@ -15,6 +15,7 @@ import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
@@ -164,8 +165,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             result.addAllElements(ref.args.map { LookupElementBuilder.create(it.value + "=") })
         }
         val map = EmberUtils.getArgsAndPositionals(element)
-        val named = map.getOrDefault("named", listOf())?.map { LookupElementBuilder.create(it + "=") }
-        named?.let { result.addAllElements(it) }
+        val named = map.named.map { LookupElementBuilder.create(it + "=") }
+        result.addAllElements(named.map { PrioritizedLookupElement.withPriority(it, 10.0) })
     }
 
     fun addImportPathCompletions(element: PsiElement, result: CompletionResultSet) {

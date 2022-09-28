@@ -387,6 +387,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
             }
 
+            val helperElement = EmberUtils.findFirstHbsParamFromParam(element.parent)
+            if (element.parent is HbHash && helperElement != null) {
+                val map = EmberUtils.getArgsAndPositionals(helperElement)
+                val i = map.named.indexOf((element.parent as HbHash).hashName)
+                val v = map.namedRefs.getOrNull(i)
+                return HbsLocalReference(element, v)
+            }
+
             val importRef = EmberUtils.referenceImports(element, name)
             if (importRef != null) {
                 return HbsLocalRenameReference(element, importRef)

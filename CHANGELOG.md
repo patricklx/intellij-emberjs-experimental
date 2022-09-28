@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.26
+- fix: hbs-imports references in test folder
+- improvement: add completions and references for mustache helpers & components
+
 ## 2022.2.25
 - improvement: auto import internal helpers with hbs-imports
 

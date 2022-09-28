@@ -122,19 +122,18 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         }
 
         if (!path.startsWith("~") && !path.startsWith(".")) {
-            var parent = element.originalVirtualFile!!.emberRoot
+            val parent = element.originalVirtualFile!!.emberRoot
             resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
-        }
-
-        if (parts[0] == name) {
-            var parent = element.originalVirtualFile!!.emberRoot
-            resolvedFile = parent?.let { psiManager.findDirectory(it) }
         }
 
         val files = parts.mapIndexed { i, s ->
             if (s == "." || s == "~") {
                 // do nothing
+            }
+            else if (i == 0 && s == name) {
+                val parent = element.originalVirtualFile!!.emberRoot
+                resolvedFile = parent?.let { psiManager.findDirectory(it) }
             }
             else if (s == "..") {
                 resolvedFile = resolvedFile?.parent

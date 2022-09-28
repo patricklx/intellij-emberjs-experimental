@@ -56,7 +56,7 @@ class HbsParameterNameHints : InlayParameterHintsProvider {
             index -= 1
 
             val map = EmberUtils.getArgsAndPositionals(firstParam, positonalLen)
-            val n = map.get("positional")?.getOrNull(index) ?: map.get("restparamnames")?.firstOrNull()
+            val n = map.positional.getOrNull(index) ?: map.restparamnames
             return n?.let { mutableListOf(InlayInfo(it, psiElement.startOffset)) } ?: emptyList<InlayInfo>().toMutableList()
         }
         return emptyList<InlayInfo>().toMutableList()
