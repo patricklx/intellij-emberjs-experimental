@@ -16,6 +16,8 @@ Experimental:
 - resolves {{or x y z}} to the first resolvable option, this makes {{component (or x y)}} work, e.g in power-select
 - Handlebars parameter hints for helpers/modifiers and components
 - Handlebars renaming for mustache ids and html tags
+- Glint Support
+- Find Usage between Js/Ts and Hbs
 
 Basic:
 - Ember.js project discovery when imported from existing sources
