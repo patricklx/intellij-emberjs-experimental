@@ -153,10 +153,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             return HbsLocalReference(element, current)
         }
 
-        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false): PsiElement? {
+        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false, recursionCounter: Int = 0): PsiElement? {
+
+            if (recursionCounter > 10) {
+                throw Error("resolveToJs reached recursion limit")
+            }
 
             if (any is EmberNamedElement) {
-                return resolveToJs(any.target, path, resolveIncomplete)
+                return resolveToJs(any.target, path, resolveIncomplete, recursionCounter + 1)
             }
 
             if (any is PsiFile) {
@@ -181,18 +185,22 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             if (any is PsiElement) {
                 val resolvedHelper = EmberUtils.handleEmberHelpers(any)
                 if (resolvedHelper != null) {
-                    return resolveToJs(resolvedHelper, path)
+                    return resolveToJs(resolvedHelper, path, resolveIncomplete, recursionCounter + 1)
                 }
 
                 val refYield = EmberUtils.findTagYieldAttribute(any)
                 if (refYield != null && refYield.descriptor?.declaration != null) {
-                    return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete)
+                    return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete, recursionCounter + 1)
                 }
             }
 
             if (any is PsiElement && any.references.find { it is HbReference } != null) {
                 val ref = any.references.find { it is HbReference }
-                return resolveToJs(ref?.resolve(), path, resolveIncomplete)
+                val res = ref?.resolve()
+                if (res == any) {
+                    return null
+                }
+                return resolveToJs(res, path, resolveIncomplete, recursionCounter + 1)
             }
 
             if (any is HbSimpleMustache && any.text.startsWith("{{yield ")) {
@@ -207,12 +215,12 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                         if (res != null && res.children[2].children.firstOrNull() is HbMustacheName) {
                             val mustacheImpl = res.children[2].children.first()
                             val lastId = mustacheImpl.children[0].children.findLast { it.elementType == HbTokenTypes.ID }
-                            return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete) ?: res
+                            return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1) ?: res
                         }
                         val ref = PsiTreeUtil.collectElements(res, { it.references.find { it is HbReference } != null }).firstOrNull()
                         if (ref != null) {
                             val hbsRef = ref.references.find { it is HbReference }!!
-                            return resolveToJs(hbsRef.resolve(), path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
+                            return resolveToJs(hbsRef.resolve(), path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
                         }
                         return res
                     }
@@ -220,14 +228,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 if (any.children[0] is HbMustacheName) {
                     val lastId = any.children[0].children[0].children.findLast { it.elementType == HbTokenTypes.ID } // lookup id ref (something.x)
                             ?: any.children[0].children[1].children.findLast { it.elementType == HbTokenTypes.ID } // lookup data if ref (@something.x)
-                    return resolveToJs(lastId, path, resolveIncomplete)
+                    return resolveToJs(lastId, path, resolveIncomplete, recursionCounter + 1)
                 }
             }
 
             if (any is PsiFile) {
                 val helper = EmberUtils.resolveHelper(any)
                 if (helper != null) {
-                    return resolveToJs(helper, path, resolveIncomplete)
+                    return resolveToJs(helper, path, resolveIncomplete, recursionCounter + 1)
                 }
                 val modifier = EmberUtils.resolveDefaultModifier(any)
                 if (modifier != null) {
@@ -256,24 +264,24 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val tag = doc.tags.find { it.text.startsWith("@type") }
                     val res = tag?.value?.reference?.resolve()
                     if (res != null) {
-                        return resolveToJs(res, path, resolveIncomplete)
+                        return resolveToJs(res, path, resolveIncomplete, recursionCounter + 1)
                     }
                 }
                 jsType = jsType.asRecordType()
                 if (jsType is JSRecordTypeImpl) {
                     val elem = jsType.findPropertySignature(path.first())?.memberSource?.singleElement
-                    return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
+                    return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
                 }
                 if (any is JSVariableImpl<*, *> && any.doGetExplicitlyDeclaredType() != null) {
                     val jstype = any.doGetExplicitlyDeclaredType()
                     if (jstype is JSRecordTypeImpl) {
-                        return resolveToJs(jstype.sourceElement, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
+                        return resolveToJs(jstype.sourceElement, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
                     }
                 }
             }
             val followed = EmberUtils.followReferences(any as PsiElement?)
             if (followed !== null && followed != any) {
-                return resolveToJs(followed, path)
+                return resolveToJs(followed, path, resolveIncomplete, recursionCounter + 1)
             }
             return null
         }
@@ -331,7 +339,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             // for this.x.y
-            if (sibling != null && sibling.references.find { it is HbReference } != null) {
+            if (sibling != null && element.parent.prevSibling.elementType == HbTokenTypes.SEP) {
                 val ref = sibling.references.find { it is HbReference } as? HbReference
                 val yieldRef = (ref as? HbsLocalReference)?.resolveYield()
                 if (yieldRef != null) {
@@ -375,9 +383,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 return HbsLocalRenameReference(element, importRef)
             }
 
-//            if (element.parent is HbOpenBlockMustache && element.parent.children[0] != element) {
-//                return HbsLocalRenameReference(element, element)
-//            }
+            if (PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.OPEN_BLOCK_PARAMS, null) != null) {
+                return HbsLocalRenameReference(element, element)
+            }
 
             return referenceBlocks(element, name)
                     ?: resolveToLocalJs(element)

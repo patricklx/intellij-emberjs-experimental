@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.29
+- fix: some improvement to references
+
 ## 2022.2.28
 - improvement: fix some name hints
 - feature: add usage provider between hbs & js/ts/css/sass
