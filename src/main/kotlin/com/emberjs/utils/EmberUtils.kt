@@ -31,6 +31,7 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.impl.PsiElementBase
@@ -62,6 +63,8 @@ class ComponentReferenceData(
 }
 
 open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElementBase() {
+
+    override fun getProject() = element.project
     override fun getLanguage() = element.language
     override fun getChildren(): Array<PsiElement> = element.children
 
@@ -442,7 +445,9 @@ class EmberUtils {
                     if (type.sourceElement is JSDestructuringArray) {
                         names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
                     }
-                    data.restparamnames = arrayName
+                    if (names == null) {
+                        data.restparamnames = arrayName
+                    }
                     names?.forEach { data.positional.add(it) }
                     named?.forEach { data.named.add(it) }
                     refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
