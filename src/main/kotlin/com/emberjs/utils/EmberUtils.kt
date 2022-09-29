@@ -62,30 +62,7 @@ class ComponentReferenceData(
 
 }
 
-open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElementBase() {
-
-    override fun getProject() = element.project
-    override fun getLanguage() = element.language
-    override fun getChildren(): Array<PsiElement> = element.children
-
-    override fun getParent(): PsiElement = element.parent
-
-    override fun getTextRange(): TextRange = element.textRange
-
-    override fun getStartOffsetInParent() = element.startOffsetInParent
-
-    override fun getTextLength(): Int  = element.textLength
-
-    override fun findElementAt(offset: Int): PsiElement? = element.findElementAt(offset)
-
-    override fun getTextOffset(): Int = element.textOffset
-
-    override fun getText(): String = element.text
-
-    override fun textToCharArray(): CharArray = element.textToCharArray()
-
-    override fun getNode(): ASTNode = element.node
-}
+open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElement by element {}
 
 class Helper(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
 class Modifier(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}

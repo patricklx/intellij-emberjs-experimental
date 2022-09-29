@@ -45,6 +45,8 @@
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
         <lsp.serverSupportProvider implementationClass="com.emberjs.glint.GlintLspSupportProvider" language="Handlebars"/>
+        <lang.findUsagesProvider language="Handlebars"
+                                 implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
 
         <applicationConfigurable
                 id="configurable.emberjs"

@@ -101,10 +101,6 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         return null
     }
 
-    override fun isReferenceTo(element: PsiElement): Boolean {
-        return getElement().getManager().areElementsEquivalent(target, element) || super.isReferenceTo(element)
-    }
-
     override fun resolve(): PsiElement? {
         if (target?.originalVirtualFile?.path != leaf.originalVirtualFile?.path) {
             return target

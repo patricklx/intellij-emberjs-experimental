@@ -15,7 +15,15 @@ import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
 
 
-abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element)
+abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
+    override fun isReferenceTo(other: PsiElement): Boolean {
+        var res = resolve()
+        if (res is EmberNamedElement) {
+           res = res.target
+        }
+        return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
+    }
+}
 
 
 class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
