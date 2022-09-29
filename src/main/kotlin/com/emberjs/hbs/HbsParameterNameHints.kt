@@ -3,6 +3,7 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.ifTrue
 import com.intellij.codeInsight.hints.HintInfo
 import com.intellij.codeInsight.hints.InlayInfo
 import com.intellij.codeInsight.hints.InlayParameterHintsProvider
@@ -56,7 +57,7 @@ class HbsParameterNameHints : InlayParameterHintsProvider {
             index -= 1
 
             val map = EmberUtils.getArgsAndPositionals(firstParam, positonalLen)
-            val n = map.get("positional")?.getOrNull(index) ?: map.get("restparamnames")?.firstOrNull()
+            val n = map.positional.getOrNull(index) ?: (index == map.positional.size).ifTrue { map.restparamnames }
             return n?.let { mutableListOf(InlayInfo(it, psiElement.startOffset)) } ?: emptyList<InlayInfo>().toMutableList()
         }
         return emptyList<InlayInfo>().toMutableList()

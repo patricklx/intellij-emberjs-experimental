@@ -27,7 +27,7 @@ class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
         if (file == null) {
             return null
         }
-        return EmberUtils.resolveHelper(file)?.parameters
+        return EmberUtils.resolveHelper(file)?.element?.parameters
     }
 
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiElement? {

@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.AttrPsiReference
 import com.emberjs.EmberAttrDec
 import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.hbs.ImportNameReferences
@@ -15,6 +16,7 @@ import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
@@ -29,8 +31,12 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.impl.PsiElementBase
 import com.intellij.psi.impl.file.PsiDirectoryImpl
+import com.intellij.psi.impl.source.resolve.reference.impl.PsiDelegateReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.search.ProjectScope
@@ -56,6 +62,34 @@ class ComponentReferenceData(
 
 }
 
+open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElementBase() {
+
+    override fun getProject() = element.project
+    override fun getLanguage() = element.language
+    override fun getChildren(): Array<PsiElement> = element.children
+
+    override fun getParent(): PsiElement = element.parent
+
+    override fun getTextRange(): TextRange = element.textRange
+
+    override fun getStartOffsetInParent() = element.startOffsetInParent
+
+    override fun getTextLength(): Int  = element.textLength
+
+    override fun findElementAt(offset: Int): PsiElement? = element.findElementAt(offset)
+
+    override fun getTextOffset(): Int = element.textOffset
+
+    override fun getText(): String = element.text
+
+    override fun textToCharArray(): CharArray = element.textToCharArray()
+
+    override fun getNode(): ASTNode = element.node
+}
+
+class Helper(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
+class Modifier(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
+
 
 class EmberUtils {
     companion object {
@@ -68,12 +102,12 @@ class EmberUtils {
             return arrayOf(installer, updater, destroyer)
         }
 
-        fun resolveDefaultModifier(file: PsiElement?): JSFunction? {
+        fun resolveDefaultModifier(file: PsiElement?): Modifier? {
             val modifier = resolveModifier(file)
             val args = modifier.first()?.parameters?.getOrNull(2)
                     ?: modifier[1]?.parameters?.getOrNull(1)
                     ?: modifier[2]?.parameters?.getOrNull(1)
-            return modifier.find { it != null && it.parameters.contains(args) }
+            return modifier.find { it != null && it.parameters.contains(args) }?.let { Modifier(it) }
         }
 
         fun resolveDefaultExport(file: PsiElement?): PsiElement? {
@@ -125,7 +159,7 @@ class EmberUtils {
             return ref
         }
 
-        fun resolveHelper(file: PsiElement?): JSFunction? {
+        fun resolveHelper(file: PsiElement?): Helper? {
             val cls = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
             if (cls is JSCallExpression && cls.argumentList != null) {
                 var func: PsiElement? = cls.argumentList!!.arguments.last()
@@ -133,7 +167,7 @@ class EmberUtils {
                     func = func.resolve()
                 }
                 if (func is JSFunction) {
-                    return func
+                    return Helper(func)
                 }
             }
             return null
@@ -312,45 +346,73 @@ class EmberUtils {
             }
 
             val name = parent.children.getOrNull(1)
-            if (name.text == "component") {
+            if (name?.text == "component") {
               return parent.children.getOrNull(2)
             }
+            return name
         }
 
-        fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): Map<String, List<String?>?> {
-            var func = followReferences(helperhelperOrModifier)
-            if ((func == null || func == helperhelperOrModifier) && helperhelperOrModifier.children.isNotEmpty()) {
-                func = followReferences(helperhelperOrModifier.children[0])
-                if (func == helperhelperOrModifier.children[0]) {
-                    val id = PsiTreeUtil.collectElements(helperhelperOrModifier) { it !is LeafPsiElement && it.elementType == HbTokenTypes.ID }.lastOrNull()
-                    func = followReferences(id, helperhelperOrModifier.text)
+        class ArgsAndPositionals {
+            val positional: MutableList<String?> = mutableListOf()
+            val named: MutableList<String?> = mutableListOf()
+            val namedRefs: MutableList<PsiElement?> = mutableListOf()
+            var restparamnames: String? = null
+        }
+
+        fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
+            val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
+            var func = followReferences(psi)
+            if ((func == null || func == psi) && psi.children.isNotEmpty()) {
+                func = followReferences(psi.children[0])
+                if (func == psi.children[0]) {
+                    val id = PsiTreeUtil.collectElements(psi) { it !is LeafPsiElement && it.elementType == HbTokenTypes.ID }.lastOrNull()
+                    func = followReferences(id, psi.text)
                 }
             }
+
+            val data = ArgsAndPositionals()
 
             if (func is TypeScriptVariable) {
                 if (func.jsType is JSGenericTypeImpl) {
                     val args = ((func.jsType as JSGenericTypeImpl).arguments[0] as JSSimpleRecordTypeImpl).properties.find { it.memberName == "Args" }
                     val positional = (args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Positional" }?.jsType?.sourceElement as? TypeScriptTupleType)?.members?.map { it.tupleMemberName }
-                    val named = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()?.propertyNames
-                    return mapOf("positional" to positional, "named" to named?.toList())
+                    val namedRecord = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()
+                    val named = namedRecord?.propertyNames
+                    positional?.forEach { data.positional.add(it) }
+                    named?.forEach { data.named.add(it) }
+                    namedRecord?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
 
                 }
                 val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
                 signatures?.map { it as? TypeScriptCallSignature }?.forEachIndexed { index, it ->
                     if (it ==null) return@forEachIndexed
-                    val namedParams = it.parameters[0].jsType?.asRecordType()?.propertyNames
+                    val namedRecord = it.parameters[0].jsType?.asRecordType()
+                    val namedParams = namedRecord?.propertyNames
                     val positional = it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name }
                     if (positionalen != null && positional.size != positionalen && index != signatures.lastIndex) {
                         return@forEachIndexed
                     }
-                    return mapOf("positional" to positional, "named" to namedParams?.toList())
+                    positional.forEach { data.positional.add(it) }
+                    namedParams?.forEach { data.named.add(it) }
+                    namedRecord?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
                 }
             }
 
-            if (func is JSFunction) {
+            if (func is JSClass) {
+                val args = findComponentArgsType(func)
+                args?.propertyNames?.forEach { data.named.add(it) }
+                args?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                return data
+            }
+
+            if ((func is Helper || func is Modifier) && (func as PsiElementDelegate<*>).element as? JSFunction != null) {
+                func = func.element as JSFunction
                 var arrayName: String? = null
                 var array: JSType?
                 var named: MutableSet<String>? = null
+                var refs: List<JSRecordType.PropertySignature>? = listOf()
 
                 var args = func.parameters.lastOrNull()?.jsType
                 array = null
@@ -362,6 +424,7 @@ class EmberUtils {
                 if (args is JSRecordType) {
                     array = args.findPropertySignature("positional")?.jsType
                     named = args.findPropertySignature("named")?.jsType?.asRecordType()?.propertyNames
+                    refs = args.findPropertySignature("named")?.jsType?.asRecordType()?.properties?.toList()
                     arrayName = "positional"
                 }
 
@@ -370,11 +433,11 @@ class EmberUtils {
                     array = func.parameters.first().jsType
                     if (func.parameters.size > 1) {
                         named = func.parameters.last().jsType?.asRecordType()?.propertyNames
+                        refs = func.parameters.last().jsType?.asRecordType()?.properties?.toList()
                     }
                 }
                 val type = array
                 if (type is JSTupleType) {
-                    var name: String? = null
                     var names: List<String?>? = null
                     if (type.sourceElement is TypeScriptTupleTypeImpl) {
                         names = (type.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
@@ -382,10 +445,29 @@ class EmberUtils {
                     if (type.sourceElement is JSDestructuringArray) {
                         names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
                     }
-                    return mapOf("positional" to names, "named" to named?.toList(), "restparamnames" to listOf(name ?: arrayName))
+                    if (names == null) {
+                        data.restparamnames = arrayName
+                    }
+                    names?.forEach { data.positional.add(it) }
+                    named?.forEach { data.named.add(it) }
+                    refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                    return data
+                }
+
+                if (type is JSArrayType) {
+                    data.restparamnames = arrayName
+                    return data
                 }
             }
-            return mapOf()
+
+            if (func is JSFunction) {
+                val positionals = func.parameters
+                positionals.forEach { data.positional.add(it.name) }
+                positionals.forEach { data.namedRefs.add(it) }
+                return data
+            }
+
+            return data
         }
 
         fun referenceImports(element: PsiElement, name: String): PsiElement? {
@@ -498,7 +580,7 @@ class EmberUtils {
                 val asAttr = tag.attributes.find { it.name == "as" }!!
                 val yields = tag.attributes.map { it.text }.joinToString(" ").split("|")[1]
                 val idx = yields.split(" ").indexOf(name)
-                val ref = asAttr.references.find { it is HbsLocalReference }
+                val ref = asAttr.references.find { it is HbReference }
                 if (ref is HbPathImpl) {
                     val params = ref.children.filter { it is HbParam }
                     return params.getOrNull(idx)

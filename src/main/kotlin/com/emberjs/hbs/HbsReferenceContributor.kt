@@ -11,7 +11,6 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.ES6ExportDeclaration
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSLiteralExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptModule
@@ -38,62 +37,6 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
     return fn(element)
 }
 
-class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : PsiReferenceBase<PsiElement>(element) {
-    private var targetRef: PsiReference? = null
-    constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
-        this.targetRef = targetRef
-    }
-
-    val target by lazy {
-        if (targetPsi != null) {
-            return@lazy targetPsi
-        }
-        return@lazy targetRef?.resolve()
-    }
-
-
-    private val named: EmberNamedElement? by lazy {
-        target?.let { EmberNamedElement(it) }
-    }
-    private val namedXml: EmberNamedAttribute? by lazy {
-        if (target is XmlAttribute && (target as XmlAttribute).descriptor?.declaration is EmberAttrDec) {
-            return@lazy (target as XmlAttribute).let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
-        }
-        return@lazy null
-    }
-
-    override fun resolve(): PsiElement? {
-        if (target is XmlAttribute) {
-            return namedXml
-        }
-        return named
-    }
-
-    override fun getRangeInElement(): TextRange {
-        return range
-    }
-
-    override fun handleElementRename(newElementName: String): PsiElement {
-        if (element is XmlAttribute) {
-            val attr = element as XmlAttribute
-            var newName = ""
-            if (attr.name.startsWith("|")) {
-                newName = "|"
-            }
-            newName += newElementName
-            if (attr.name.endsWith("|")) {
-                newName += "|"
-            }
-            attr.name = newName
-            return element
-        }
-        if (element is HbStatementsImpl) {
-            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
-            tag.name = newElementName
-        }
-        return super.handleElementRename(newElementName)
-    }
-}
 
 class ImportPathReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<RangedReference> {
@@ -122,19 +65,18 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         }
 
         if (!path.startsWith("~") && !path.startsWith(".")) {
-            var parent = element.originalVirtualFile!!.emberRoot
+            val parent = element.originalVirtualFile!!.emberRoot
             resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
-        }
-
-        if (parts[0] == name) {
-            var parent = element.originalVirtualFile!!.emberRoot
-            resolvedFile = parent?.let { psiManager.findDirectory(it) }
         }
 
         val files = parts.mapIndexed { i, s ->
             if (s == "." || s == "~") {
                 // do nothing
+            }
+            else if (i == 0 && s == name) {
+                val parent = element.originalVirtualFile!!.emberRoot
+                resolvedFile = parent?.let { psiManager.findDirectory(it) }
             }
             else if (s == "..") {
                 resolvedFile = resolvedFile?.parent
@@ -145,7 +87,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                         dir = dir?.findSubdirectory("addon") ?: dir?.findSubdirectory("app")
                     }
                     val subdir = dir?.findSubdirectory(s)
-                    val file = dir?.children?.find { it is PsiFile && it.name.split(".").first() == s } as PsiFileSystemItem?
+                    val file = dir?.children?.find { it is PsiFile && (it.name == s || it.name.split(".").first() == s) } as PsiFileSystemItem?
                     resolvedFile = if (i == parts.count() - 1) {
                         file ?: subdir
                     } else {
@@ -219,8 +161,8 @@ class ContentReferencesProvider : PsiReferenceProvider() {
         val range = element.textRange
         val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         val tags = PsiTreeUtil.collectElements(htmlView) { it is XmlTag && range.contains(it.textRange) }
-        return tags.map { it as XmlTag }.filter { it.references.find { it is TagReference } != null }.map {
-            RangedReference(element, it.references.find { it is TagReference }!!, TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
+        return tags.map { it as XmlTag }.filter { it.references.find { it is HbReference } != null }.map {
+            RangedReference(element, it.references.find { it is HbReference }!!, TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
         }.toTypedArray()
     }
 }

@@ -142,10 +142,7 @@ val VirtualFile.emberRoot: VirtualFile?
         return this.parents.reversed().find { it.isEmber } ?: (if (this.isEmber) this else null)
     }
 
-fun findMainPackageJsonFile(file: VirtualFile) = (file.parents.asSequence() + sequenceOf(file))
-        .filter { it.isEmberFolder }
-        .map { it.findChild("package.json") }
-        .firstOrNull { it != null }
+fun findMainPackageJsonFile(file: VirtualFile) = file.emberRoot?.let { it.findChild("package.json") }
 
 fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.parse(it, null) }
 

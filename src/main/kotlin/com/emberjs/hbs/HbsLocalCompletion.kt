@@ -15,6 +15,8 @@ import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
+import com.intellij.codeInsight.completion.PrioritizedLookupElement
+import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
@@ -35,7 +37,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
-import com.intellij.util.FileContentUtil
 import com.intellij.util.ProcessingContext
 import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
 
@@ -52,11 +53,11 @@ class LookupElementBuilder {
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
-    fun resolveJsType(jsType: JSType?, result: CompletionResultSet, suffix: String = "") {
+    fun resolveJsType(jsType: JSType?, result: MutableList<LookupElement>, suffix: String = "") {
         val jsRecordType = jsType?.asRecordType()
         if (jsRecordType is JSRecordTypeImpl) {
             val names = jsRecordType.propertyNames
-            result.addAllElements(names.map { LookupElementBuilder.create(it + suffix) })
+            result.addAll(names.map { LookupElementBuilder.create(it + suffix) })
         }
         if (jsType?.sourceElement is JSDocCommentImpl) {
             val doc = jsType.sourceElement as JSDocCommentImpl
@@ -66,7 +67,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    fun resolve(anything: PsiElement?, result: CompletionResultSet) {
+    fun resolve(anything: PsiElement?, result: MutableList<LookupElement>) {
         var refElement: Any? = anything
         if (anything == null) {
             return
@@ -76,7 +77,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val styleSheetLanguages = arrayOf("sass", "scss", "less")
             if (styleSheetLanguages.contains(anything.language.id.lowercase())) {
                 PsiTreeUtil.collectElements(anything) { it is CssRulesetList }.first().children.forEach { (it as CssRulesetImpl).selectors.forEach {
-                    result.addElement(LookupElementBuilder.create(it.text.substring(1)))
+                    result.add(LookupElementBuilder.create(it.text.substring(1)))
                 }}
             }
             return
@@ -84,7 +85,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (anything is CssSelector && anything.ruleset?.block != null) {
             anything.ruleset!!.block!!.children.map { it as? CssRulesetImpl }.filterNotNull().forEach{ it.selectors.forEach {
-                result.addElement(LookupElementBuilder.create(it.text.substring(1)))
+                result.add(LookupElementBuilder.create(it.text.substring(1)))
             }}
         }
 
@@ -100,7 +101,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (anything.references.find { it is HbsLocalReference } != null) {
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
-            resolve(anything.references.find { it is HbsLocalReference }!!.resolve(), result)
+            resolve(anything.references.find { it is HbReference }!!.resolve(), result)
         }
 
         if (anything.reference is HbsLocalReference) {
@@ -111,7 +112,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (refElement is HbParam) {
             if (refElement.children.find { it is HbParam }?.text == "hash") {
                 val names = refElement.children.filter { it.elementType == HbTokenTypes.HASH }.map { it.children[0].text }
-                result.addAllElements(names.map { LookupElementBuilder.create(it) })
+                result.addAll(names.map { LookupElementBuilder.create(it) })
             }
             val ids = PsiTreeUtil.collectElements(refElement, { it.elementType == HbTokenTypes.ID && it !is LeafPsiElement })
             if (ids.isNotEmpty()) {
@@ -156,16 +157,16 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         resolve(followed, result)
     }
 
-    fun addHelperCompletions(element: PsiElement, result: CompletionResultSet) {
+    fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>) {
         val file = EmberUtils.followReferences(element.children.firstOrNull())
 
         if (file is JSClass) {
             val ref = EmberUtils.getComponentReferenceData(file.containingFile)
-            result.addAllElements(ref.args.map { LookupElementBuilder.create(it.value + "=") })
+            result.addAll(ref.args.map { LookupElementBuilder.create(it.value + "=") })
         }
         val map = EmberUtils.getArgsAndPositionals(element)
-        val named = map.getOrDefault("named", listOf())?.map { LookupElementBuilder.create(it + "=") }
-        named?.let { result.addAllElements(it) }
+        val named = map.named.map { LookupElementBuilder.create(it + "=") }
+        result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 10.0) })
     }
 
     fun addImportPathCompletions(element: PsiElement, result: CompletionResultSet) {
@@ -275,7 +276,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
+    override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, completionResultSet: CompletionResultSet) {
         val regex = Regex("\\|.*\\|")
         var element = parameters.position
         if (element is LeafPsiElement) {
@@ -287,16 +288,20 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         if (element.containingFile.fileType is HtmlFileType) {
             val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map { it as GlintCompletionEntry }?.map {
-                if (result.prefixMatcher.prefix == "@") {
+                if (completionResultSet.prefixMatcher.prefix == "@") {
                     LookupElementBuilder.create("@" + it.name)
                 } else {
                     LookupElementBuilder.create(it.name)
                 }
 
             }
-            results?.let { result.addAllElements(it) }
+            if (results != null && results.size < 500) {
+                completionResultSet.addAllElements(results)
+            }
             return
         }
+
+        val result: MutableList<LookupElement> = mutableListOf()
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null) {
@@ -308,20 +313,28 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
+            val before = result.size
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
-            val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
-            result.addAllElements(items.map { it.intoLookupElement() })
+            val didAdd = before != result.size
+            if (!didAdd) {
+                val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
+                if (items.size < 500) {
+                    result.addAll(items.map { it.intoLookupElement() })
+                }
+            }
+            completionResultSet.addAllElements(result)
             return
         }
 
         if (element.parent is HbData) {
-            addArgsCompletion(element, result)
+            addArgsCompletion(element, completionResultSet)
+            completionResultSet.addAllElements(result)
             return
         }
 
-        addArgsCompletion(element, result)
-        addImportPathCompletions(element, result)
-        addImportCompletions(element, result)
+        addArgsCompletion(element, completionResultSet)
+        addImportPathCompletions(element, completionResultSet)
+        addImportCompletions(element, completionResultSet)
 
         // find all |blocks| from mustache
         val blocks = PsiTreeUtil.collectElements(element.containingFile) { it is HbBlockWrapperImpl }
@@ -339,14 +352,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         for (block in validBlocks) {
             val attrString = block.children.filter { it is XmlAttribute }.map { it.text }.joinToString(" ")
             val names = Regex("\\|.*\\|").find(attrString)!!.groups[0]!!.value.replace("|", "").split(" ")
-            result.addAllElements(names.map { LookupElementBuilder.create(it) })
+            completionResultSet.addAllElements(names.map { LookupElementBuilder.create(it) })
         }
         for (block in blocks) {
             val refs = block.children[0].children.filter { it.elementType == HbTokenTypes.ID }
-            result.addAllElements(refs.map { LookupElementBuilder.create(it.text) })
+            completionResultSet.addAllElements(refs.map { LookupElementBuilder.create(it.text) })
         }
         if ("this".startsWith(txt)) {
-            result.addElement(LookupElementBuilder.create("this"))
+            completionResultSet.addElement(LookupElementBuilder.create("this"))
         }
 
         val mustache = parameters.position.parent
@@ -358,6 +371,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
         }
 
-        addLocalJSCompletion(element, result)
+        completionResultSet.addAllElements(result)
+        addLocalJSCompletion(element, completionResultSet)
     }
 }

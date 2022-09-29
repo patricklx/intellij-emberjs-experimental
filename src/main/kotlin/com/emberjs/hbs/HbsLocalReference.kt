@@ -70,28 +70,7 @@ class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<Ps
 }
 
 
-class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : PsiReferenceBase<PsiElement>(leaf) {
-    val named = target?.let { EmberNamedElement(it) }
-    override fun resolve(): PsiElement? {
-        return named
-    }
-
-    override fun getRangeInElement(): TextRange {
-        return TextRange(0, leaf.textLength)
-    }
-
-    override fun calculateDefaultRangeInElement(): TextRange {
-        return leaf.textRangeInParent
-    }
-
-    override fun handleElementRename(newElementName: String): PsiElement {
-        val node = SimpleNodeFactory.createNode(leaf.project, newElementName)
-        return leaf.replace(node)
-    }
-}
-
-
-class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) : PsiReferenceBase<PsiElement>(leaf) {
+class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {
     private var namedXml: EmberNamedAttribute? = null
     private var named: EmberNamedElement?
 
@@ -215,8 +194,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
             }
 
-            if (any is PsiElement && any.references.find { it is HbsLocalReference } != null) {
-                val ref = any.references.find { it is HbsLocalReference }
+            if (any is PsiElement && any.references.find { it is HbReference } != null) {
+                val ref = any.references.find { it is HbReference }
                 return resolveToJs(ref?.resolve(), path, resolveIncomplete)
             }
 
@@ -234,9 +213,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                             val lastId = mustacheImpl.children[0].children.findLast { it.elementType == HbTokenTypes.ID }
                             return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete) ?: res
                         }
-                        val ref = PsiTreeUtil.collectElements(res, { it.references.find { it is HbsLocalReference } != null }).firstOrNull()
+                        val ref = PsiTreeUtil.collectElements(res, { it.references.find { it is HbReference } != null }).firstOrNull()
                         if (ref != null) {
-                            val hbsRef = ref.references.find { it is HbsLocalReference }!!
+                            val hbsRef = ref.references.find { it is HbReference }!!
                             return resolveToJs(hbsRef.resolve(), path.subList(1, max(path.lastIndex, 1)), resolveIncomplete)
                         }
                         return res
@@ -356,9 +335,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             // for this.x.y
-            if (sibling != null && sibling.references.find { it is HbsLocalReference || it is HbsLocalRenameReference } != null) {
-                val ref = sibling.references.find { it is HbsLocalReference } as? HbsLocalReference
-                val yieldRef = ref?.resolveYield()
+            if (sibling != null && sibling.references.find { it is HbReference } != null) {
+                val ref = sibling.references.find { it is HbReference } as? HbReference
+                val yieldRef = (ref as? HbsLocalReference)?.resolveYield()
                 if (yieldRef != null) {
                     val res = resolveToJs(yieldRef, listOf(element.text))
                     return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
@@ -366,7 +345,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 if (ref != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
-                val ref2 = sibling.references.find { it is HbsLocalRenameReference } as HbsLocalRenameReference
+                val ref2 = sibling.references.find { it is HbReference } as HbReference
                 val res = resolveToJs(ref2.resolve(), listOf(element.text))
                 return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
             }
@@ -385,6 +364,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     }
                     return null
                 }
+            }
+
+            val helperElement = EmberUtils.findFirstHbsParamFromParam(element.parent)
+            if (element.parent is HbHash && helperElement != null) {
+                val map = EmberUtils.getArgsAndPositionals(helperElement)
+                val i = map.named.indexOf((element.parent as HbHash).hashName)
+                val v = map.namedRefs.getOrNull(i)
+                return HbsLocalReference(element, v)
             }
 
             val importRef = EmberUtils.referenceImports(element, name)

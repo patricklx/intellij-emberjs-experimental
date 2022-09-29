@@ -32,7 +32,7 @@ object EmberLookupInternalElementBuilder {
             "concat" to listOf("@ember/helper", "helper"),
             "get" to listOf("@ember/helper", "helper"),
             "hash" to listOf("@ember/helper", "helper"),
-            "on" to listOf("@ember/helper", "modifier"),
+            "on" to listOf("@ember/modifier", "modifier"),
             "Input" to listOf("@ember/component", "component"),
             "TextArea" to listOf("@ember/component", "component"),
             "LinkTo" to listOf("@ember/routing", "component"),
