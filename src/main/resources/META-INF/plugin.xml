@@ -21,6 +21,8 @@
         <li>Handlebars autocompletion for tags and mustache paths</li>
         <li>Handlebars parameter hints for helpers/modifiers and components</li>
         <li>Handlebars renaming for mustache ids and html tags</li>
+        <li>Glint Support</li>
+        <li>Find Usage between Js/Ts and Hbs</li>
       </ul>
     ]]></description>
 
