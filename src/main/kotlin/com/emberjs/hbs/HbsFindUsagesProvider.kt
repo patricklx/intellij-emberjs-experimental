@@ -9,6 +9,7 @@ import com.intellij.lang.findUsages.FindUsagesProvider
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.psi.PsiElement
+import com.intellij.psi.css.CssFileType
 import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.elementType
 
@@ -21,6 +22,10 @@ class HbsFindUsagesProvider: FindUsagesProvider {
 
     override fun canFindUsagesFor(psiElement: PsiElement): Boolean {
         val type = psiElement.containingFile.fileType
+        val styleSheetLanguages = arrayOf("sass", "scss", "less")
+        if (styleSheetLanguages.contains(psiElement.containingFile.language.id.lowercase())) {
+            return true
+        }
         return type is JavaScriptFileType || type is TypeScriptFileType || type is HbFileType
     }
 

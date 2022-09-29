@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.2.28
+- improvement: fix some name hints
+- feature: add usage provider between hbs & js/ts/css/sass
+- fix: some improvement to references
+
 ## 2022.2.27
 - fix: make hbs-imports auto import work correctly for named imports
 
