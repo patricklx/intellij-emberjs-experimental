@@ -364,13 +364,13 @@ class EmberUtils {
                 val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
                 signatures?.map { it as? TypeScriptCallSignature }?.forEachIndexed { index, it ->
                     if (it ==null) return@forEachIndexed
-                    val namedRecord = it.parameters[0].jsType?.asRecordType()
+                    val namedRecord = it.parameters.firstOrNull()?.jsType?.asRecordType()
                     val namedParams = namedRecord?.propertyNames
-                    val positional = it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name }
-                    if (positionalen != null && positional.size != positionalen && index != signatures.lastIndex) {
+                    val positional = (it.parameters.size > 1).ifTrue { it.parameters.slice(IntRange(1, it.parameters.lastIndex)).map { it.name } }
+                    if (positionalen != null && positional?.size != positionalen && index != signatures.lastIndex) {
                         return@forEachIndexed
                     }
-                    positional.forEach { data.positional.add(it) }
+                    positional?.forEach { data.positional.add(it) }
                     namedParams?.forEach { data.named.add(it) }
                     namedRecord?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
                     return data
@@ -406,8 +406,8 @@ class EmberUtils {
                 }
 
                 if (array == null) {
-                    arrayName = func.parameters.first().name ?: arrayName
-                    array = func.parameters.first().jsType
+                    arrayName = func.parameters.firstOrNull()?.name ?: arrayName
+                    array = func.parameters.firstOrNull()?.jsType
                     if (func.parameters.size > 1) {
                         named = func.parameters.last().jsType?.asRecordType()?.propertyNames
                         refs = func.parameters.last().jsType?.asRecordType()?.properties?.toList()

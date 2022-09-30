@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.31
+- fix: NoSuchElementException in some cases for helper arguments
+
 ## 2022.2.30
 - feature: add glint annotations to hbs tags in typescript
 
