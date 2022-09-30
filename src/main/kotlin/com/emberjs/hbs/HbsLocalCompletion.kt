@@ -166,7 +166,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
         val map = EmberUtils.getArgsAndPositionals(element)
         val named = map.named.map { LookupElementBuilder.create(it + "=") }
-        result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 10.0) })
+        result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 100.0) })
     }
 
     fun addImportPathCompletions(element: PsiElement, result: CompletionResultSet) {

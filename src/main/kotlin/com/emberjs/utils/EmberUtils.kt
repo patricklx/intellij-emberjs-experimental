@@ -16,7 +16,6 @@ import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
-import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
@@ -31,12 +30,8 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
 import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
-import com.intellij.psi.impl.PsiElementBase
 import com.intellij.psi.impl.file.PsiDirectoryImpl
-import com.intellij.psi.impl.source.resolve.reference.impl.PsiDelegateReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.search.ProjectScope
@@ -147,6 +142,10 @@ class EmberUtils {
                     return Helper(func)
                 }
             }
+            val computeFunc = PsiTreeUtil.collectElements(cls) { it is JSFunction && it.name == "compute" }.firstOrNull() as JSFunction?
+            if (computeFunc is JSFunction) {
+                return Helper(computeFunc)
+            }
             return null
         }
 
@@ -173,9 +172,9 @@ class EmberUtils {
         }
 
         fun resolveToEmber(file: PsiElement?): PsiElement? {
-            return resolveComponent(file)
-                    ?: resolveHelper(file)
+            return resolveHelper(file)
                     ?: resolveDefaultModifier(file)
+                    ?: resolveComponent(file)
                     ?: resolveDefaultExport(file)
                     ?: file
         }
@@ -413,25 +412,26 @@ class EmberUtils {
                         refs = func.parameters.last().jsType?.asRecordType()?.properties?.toList()
                     }
                 }
-                val type = array
-                if (type is JSTupleType) {
+                named?.forEach { data.named.add(it) }
+                refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+
+                val positionalType = array
+                if (positionalType is JSTupleType) {
                     var names: List<String?>? = null
-                    if (type.sourceElement is TypeScriptTupleTypeImpl) {
-                        names = (type.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
+                    if (positionalType.sourceElement is TypeScriptTupleTypeImpl) {
+                        names = (positionalType.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
                     }
-                    if (type.sourceElement is JSDestructuringArray) {
-                        names = (type.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
+                    if (positionalType.sourceElement is JSDestructuringArray) {
+                        names = (positionalType.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }
                     }
                     if (names == null) {
                         data.restparamnames = arrayName
                     }
                     names?.forEach { data.positional.add(it) }
-                    named?.forEach { data.named.add(it) }
-                    refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
                     return data
                 }
 
-                if (type is JSArrayType) {
+                if (positionalType is JSArrayType) {
                     data.restparamnames = arrayName
                     return data
                 }
@@ -440,7 +440,6 @@ class EmberUtils {
             if (func is JSFunction) {
                 val positionals = func.parameters
                 positionals.forEach { data.positional.add(it.name) }
-                positionals.forEach { data.namedRefs.add(it) }
                 return data
             }
 
