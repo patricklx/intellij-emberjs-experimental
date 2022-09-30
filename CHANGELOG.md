@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.30
+- feature: add glint annotations to hbs tags in typescript
+
 ## 2022.2.29
 - fix: some improvement to references
 

@@ -111,6 +111,7 @@
                          unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="TypeScript" implementationClass="TemplateLintExternalAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>

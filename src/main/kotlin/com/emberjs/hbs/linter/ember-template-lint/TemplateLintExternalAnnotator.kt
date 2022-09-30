@@ -9,6 +9,7 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.linter.*
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
@@ -17,6 +18,8 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.parentOfType
 import com.intellij.xml.util.XmlStringUtil
 
 class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternalAnnotator<TemplateLintState>(onTheFly) {
@@ -38,13 +41,15 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
     }
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is HbPsiFile || file.fileType is TypeScriptFileType || file.fileType is JavaScriptFileType
+        return file is HbPsiFile || file.fileType is TypeScriptFileType
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
-        var res: JSLinterAnnotationResult?
+        var res: JSLinterAnnotationResult? = null
         try {
-            res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
+            if (input.psiFile is HbPsiFile) {
+                res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
+            }
         } catch (ex: Exception) {
             res = null
         }
@@ -78,6 +83,10 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
             val errors = GlintLanguageServiceProvider(file.project).getService(file.virtualFile)?.highlight(psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
             errors.forEach {
                 val start = StringUtil.lineColToOffset(file.text, it.line, it.column)
+                if ((file.fileType is TypeScriptFileType) && (file.findElementAt(start)?.let {  PsiTreeUtil.getParentOfType(it, ES6TaggedTemplateExpression::class.java, false) } == null)) {
+                    return@forEach
+                }
+
                 val end = StringUtil.lineColToOffset(file.text, it.endLine, it.endColumn)
                 val escapedDescription: String = XmlStringUtil.escapeString(it.description)
                 val firstLine = StringUtil.notNullize(StringUtil.splitByLines(escapedDescription).first())
