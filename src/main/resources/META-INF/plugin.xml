@@ -32,7 +32,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="202.6397.94"/>
+    <idea-version since-build="213.5744.223"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -122,6 +122,7 @@
         <statusBarWidgetFactory id="glintStatusWidget"
                                 implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
                                 order="before gitWidget"/>
+        <projectIndexingHistoryListener implementation="com.emberjs.index.IndexListener" />
     </extensions>
 
     <projectListeners>

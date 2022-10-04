@@ -96,7 +96,7 @@ class EmberUtils {
                 }
                 val resolved = exp ?: exportImport.fromClause?.references
                         ?.map { (it as? FileReference)?.multiResolve(false)
-                        ?.firstOrNull() ?: it.resolve() }
+                                ?.firstOrNull() ?: it.resolve() }
                         ?.filterNotNull()
                         ?.lastOrNull()
                 if (resolved is ResolveResult) {
@@ -218,8 +218,8 @@ class EmberUtils {
                     ?: dir?.findFile("controller.js")
             val relatedItems = EmberGotoRelatedProvider().getItems(element.originalVirtualFile!!, element.project)
             val related = (relatedItems.find { it.first.type == "component" } ?:
-                          relatedItems.find { it.first.type == "controller" }  ?:
-                          relatedItems.find { it.first.type == "router" })?.second
+            relatedItems.find { it.first.type == "controller" }  ?:
+            relatedItems.find { it.first.type == "router" })?.second
             val relatedFile = related?.let { PsiManager.getInstance(element.project).findFile(it) }
             return cls ?: file?.let { findDefaultExportClass(it) } ?: relatedFile?.let { findDefaultExportClass(it) }
         }
@@ -250,8 +250,8 @@ class EmberUtils {
                 }
                 val resolutions = reference.multiResolve(false)
                 element = resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.ts") }?.element
-                            ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.js") }?.element
-                            ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
+                        ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.js") }?.element
+                                ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
             }
             return element
         }
@@ -323,7 +323,7 @@ class EmberUtils {
 
             val name = parent.children.getOrNull(1)
             if (name?.text == "component") {
-              return parent.children.getOrNull(2)
+                return parent.children.getOrNull(2)
             }
             return name
         }
@@ -615,7 +615,7 @@ class EmberUtils {
             }
 
             val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?:
-                         getFileByPath(parentModule, fullPathToIndexTs) ?: getFileByPath(parentModule, fullPathToIndexDts) ?:containingFile
+            getFileByPath(parentModule, fullPathToIndexTs) ?: getFileByPath(parentModule, fullPathToIndexDts) ?:containingFile
             var cls = findDefaultExportClass(tsFile)
                     ?: findDefaultExportClass(containingFile)
                     ?: file
@@ -708,8 +708,8 @@ class EmberUtils {
 
                 template = jsTemplate as? PsiFile?
                         ?: template
-                        ?: getFileByPath(parentModule, fullPathToHbs)
-                        ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
+                                ?: getFileByPath(parentModule, fullPathToHbs)
+                                ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
 
 
                 if (template?.node?.psi != null) {
