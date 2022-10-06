@@ -71,12 +71,15 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
 
                                     val addedEntries = mutableSetOf<String>()
 
-                                    rootDir.findChild("node_modules")!!.children.forEach {
-                                        val dep = allDependencies.values.find { ce -> it.url.contains("/node_modules/${ce.name}/") }
-                                        if (dep != null && dep.dependencyType == PackageJsonDependency.dependencies) {
-                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                            addedEntries.add(it.url)
+                                    allDependencies.values.forEach {
+                                        val f = rootDir.findChild("node_modules")?.findFileByRelativePath(it.name)
+                                        if (f != null) {
+                                            addedEntries.add(f.url)
+                                            (e.rootModel as ModifiableRootModel).addContentEntry(f.url)
                                         }
+                                    }
+
+                                    rootDir.findChild("node_modules")?.children?.forEach {
                                         if (it.name.contains("ember")) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
                                             addedEntries.add(it.url)
