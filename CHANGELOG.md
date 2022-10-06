@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.34
+- fix: only reset entries from node_modules
+
 ## 2022.2.33
 - improvement: auto include node_modules that are defined in package.json
 

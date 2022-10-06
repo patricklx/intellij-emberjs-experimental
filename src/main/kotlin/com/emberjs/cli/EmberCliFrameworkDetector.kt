@@ -66,7 +66,11 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                                 val entry = MarkRootActionBase.findContentEntry(model, rootDir)
                                 if (entry != null) {
                                     val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                                    (e.rootModel as ModifiableRootModel).clear()
+                                    (e.rootModel as ModifiableRootModel).contentEntries.toList().forEach {
+                                        if (it.url.contains("/node_modules/")) {
+                                            (e.rootModel as ModifiableRootModel).removeContentEntry(it)
+                                        }
+                                    }
                                     val pkg = findMainPackageJson(rootDir)
                                     val allDependencies = pkg?.getAllDependencyEntries() ?: mapOf()
 
