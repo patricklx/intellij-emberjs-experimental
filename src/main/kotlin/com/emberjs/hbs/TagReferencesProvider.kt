@@ -59,6 +59,9 @@ class ResolvedReference(element: PsiElement, private val resolved: PsiElement): 
 fun toAttributeReference(target: XmlAttribute): PsiReference? {
     val name = target.name
     if ((name.startsWith("|") || name.endsWith("|")) && target.descriptor?.declaration != null) {
+        if (name.length == 1) {
+            return null
+        }
         var range = TextRange(0, name.length)
         if (name.startsWith("|")) {
             range = TextRange(1, range.endOffset)

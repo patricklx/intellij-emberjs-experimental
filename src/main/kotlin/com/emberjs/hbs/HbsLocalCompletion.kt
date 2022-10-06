@@ -120,6 +120,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
         }
 
+        if (anything is HbData) {
+            resolve(anything.children.firstOrNull(), result)
+        }
+
         if (anything is XmlAttribute) {
             resolve(anything.descriptor?.declaration, result)
         }

@@ -91,7 +91,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
                 val escapedDescription: String = XmlStringUtil.escapeString(it.description)
                 val firstLine = StringUtil.notNullize(StringUtil.splitByLines(escapedDescription).first())
                 var message = "glint: $firstLine"
-                val code: String = it.code!!
+                val code: String? = it.code
                 message = "$message ($code)"
                 holder.newAnnotation(HighlightSeverity.ERROR, message)
                         .range(TextRange(start, end))
