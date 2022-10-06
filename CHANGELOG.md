@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.33
+- improvement: auto include node_modules that are defined in package.json
+
 ## 2022.2.32
 - improvement: reparse psi of files after index updated
 - fix: null pointer exceptions

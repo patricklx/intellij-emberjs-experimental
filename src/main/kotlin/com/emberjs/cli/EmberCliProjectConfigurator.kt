@@ -3,6 +3,7 @@ package com.emberjs.cli
 import com.emberjs.settings.EmberApplicationOptions
 import com.emberjs.utils.*
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.PackageJsonDependency
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
 import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
 import com.intellij.javascript.nodejs.library.NodeModulesPackageJsonListener
@@ -145,7 +146,13 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             if (EmberApplicationOptions.excludeBowerComponents)
                 entry.addExcludeFolder("$rootUrl/bower_components")
 
+            val pkg = findMainPackageJson(baseDir)
+            val allDependencies = pkg?.allDependencyEntries ?: mapOf()
+
             baseDir.findChild("node_modules")?.children?.forEach {
+                if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
+                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                }
                 if (it.name.contains("ember")) {
                     (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
                 }

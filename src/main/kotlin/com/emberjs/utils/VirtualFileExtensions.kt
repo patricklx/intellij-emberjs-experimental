@@ -144,7 +144,7 @@ val VirtualFile.emberRoot: VirtualFile?
 
 fun findMainPackageJsonFile(file: VirtualFile) = file.emberRoot?.let { it.findChild("package.json") }
 
-fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.parse(it, null) }
+fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.getOrCreate(it) }
 
 fun findMainProjectName(file: VirtualFile):String? {
     val json: PackageJsonData? = findMainPackageJson(file)

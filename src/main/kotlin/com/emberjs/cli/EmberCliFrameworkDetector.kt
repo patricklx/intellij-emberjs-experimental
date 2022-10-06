@@ -3,13 +3,17 @@ package com.emberjs.cli
 
 import com.emberjs.glint.getGlintDescriptor
 import com.emberjs.utils.emberRoot
+import com.emberjs.utils.findMainPackageJson
 import com.emberjs.utils.isEmber
+import com.emberjs.utils.parentEmberModule
 import com.intellij.framework.FrameworkType
 import com.intellij.framework.detection.DetectedFrameworkDescription
 import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
+import com.intellij.javascript.nodejs.PackageJsonDependency
+import com.intellij.javascript.nodejs.packageJson.PackageJsonDependencies
 import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
 import com.intellij.json.JsonFileType
 import com.intellij.openapi.application.ApplicationManager
@@ -62,7 +66,14 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                                 val entry = MarkRootActionBase.findContentEntry(model, rootDir)
                                 if (entry != null) {
                                     val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
+                                    (e.rootModel as ModifiableRootModel).clear()
+                                    val pkg = findMainPackageJson(rootDir)
+                                    val allDependencies = pkg?.getAllDependencyEntries() ?: mapOf()
+
                                     rootDir.findChild("node_modules")!!.children.forEach {
+                                        if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
+                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                        }
                                         if (it.name.contains("ember")) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
                                         }
