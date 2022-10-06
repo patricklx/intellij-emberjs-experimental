@@ -66,26 +66,33 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                                 val entry = MarkRootActionBase.findContentEntry(model, rootDir)
                                 if (entry != null) {
                                     val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                                    (e.rootModel as ModifiableRootModel).contentEntries.toList().forEach {
-                                        if (it.url.contains("/node_modules/")) {
-                                            (e.rootModel as ModifiableRootModel).removeContentEntry(it)
-                                        }
-                                    }
                                     val pkg = findMainPackageJson(rootDir)
                                     val allDependencies = pkg?.getAllDependencyEntries() ?: mapOf()
 
+                                    val addedEntries = mutableSetOf<String>()
+
                                     rootDir.findChild("node_modules")!!.children.forEach {
-                                        if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
+                                        val dep = allDependencies.values.find { ce -> it.url.contains("/node_modules/${ce.name}/") }
+                                        if (dep != null && dep.dependencyType == PackageJsonDependency.dependencies) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                            addedEntries.add(it.url)
                                         }
                                         if (it.name.contains("ember")) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                            addedEntries.add(it.url)
                                         }
                                         if (it.name.contains("@types")) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                            addedEntries.add(it.url)
                                         }
                                         if (it.name.contains("glimmer")) {
                                             (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
+                                            addedEntries.add(it.url)
+                                        }
+                                    }
+                                    (e.rootModel as ModifiableRootModel).contentEntries.toList().forEach { ce ->
+                                        if (!addedEntries.contains(ce.url) && ce.url.contains("/node_modules/")) {
+                                            (e.rootModel as ModifiableRootModel).removeContentEntry(ce)
                                         }
                                     }
                                     modifiableModelsProvider.commitModuleModifiableModel(model)
