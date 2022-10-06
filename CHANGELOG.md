@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.32
+- improvement: reparse psi of files after index updated
+- fix: null pointer exceptions
+
 ## 2022.2.31
 - fix: NoSuchElementException in some cases for helper arguments
 
