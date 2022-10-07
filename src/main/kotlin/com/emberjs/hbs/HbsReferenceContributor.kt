@@ -45,6 +45,14 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent ?: element.originalElement.containingFile.originalFile.parent
         val parts = path.split("/")
 
+        if (element.originalVirtualFile == null) {
+            return arrayOf()
+        }
+
+        if (element.originalVirtualFile?.parentEmberModule == null) {
+            return arrayOf()
+        }
+
         val name = findMainProjectName(element.originalVirtualFile!!)
         var isInTestFolder = false
         if (element.originalVirtualFile!!.path.contains("$name/tests") || element.originalVirtualFile!!.path.contains("$name/test-app")) {
