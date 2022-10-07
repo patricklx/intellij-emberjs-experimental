@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.37
+- fix: only remove non-existing modules from content entries
+- fix: null pointer exceptions
+
 ## 2022.2.34
 - fix: only reset entries from node_modules
 

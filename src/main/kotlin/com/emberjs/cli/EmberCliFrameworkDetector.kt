@@ -94,7 +94,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                                         }
                                     }
                                     (e.rootModel as ModifiableRootModel).contentEntries.toList().forEach { ce ->
-                                        if (!addedEntries.contains(ce.url) && ce.url.contains("/node_modules/")) {
+                                        if (ce.file == null) {
                                             (e.rootModel as ModifiableRootModel).removeContentEntry(ce)
                                         }
                                     }
