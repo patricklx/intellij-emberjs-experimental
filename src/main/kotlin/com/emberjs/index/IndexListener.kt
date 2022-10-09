@@ -7,10 +7,10 @@ import com.intellij.util.indexing.diagnostic.ProjectIndexingHistoryListener
 
 class IndexListener : ProjectIndexingHistoryListener {
     override fun onFinishedIndexing(projectIndexingHistory: ProjectIndexingHistory) {
-        ApplicationManager.getApplication().invokeLater {
-            ApplicationManager.getApplication().runWriteAction {
-                FileContentUtil.reparseOpenedFiles()
-            }
-        }
+        // ApplicationManager.getApplication().invokeLater {
+        //    ApplicationManager.getApplication().runWriteAction {
+        //        FileContentUtil.reparseOpenedFiles()
+        //    }
+        //}
     }
 }
