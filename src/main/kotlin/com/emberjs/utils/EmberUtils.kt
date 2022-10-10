@@ -350,7 +350,7 @@ class EmberUtils {
 
             if (func is TypeScriptVariable) {
                 if (func.jsType is JSGenericTypeImpl) {
-                    val args = ((func.jsType as JSGenericTypeImpl).arguments[0] as JSSimpleRecordTypeImpl).properties.find { it.memberName == "Args" }
+                    val args = (func.jsType as JSGenericTypeImpl).arguments[0].asRecordType().properties.find { it.memberName == "Args" }
                     val positional = (args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Positional" }?.jsType?.sourceElement as? TypeScriptTupleType)?.members?.map { it.tupleMemberName }
                     val namedRecord = args?.jsType?.asRecordType()?.properties?.find { it.memberName == "Args" }?.jsType?.asRecordType()
                     val named = namedRecord?.propertyNames
