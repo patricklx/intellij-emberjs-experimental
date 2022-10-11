@@ -1,11 +1,13 @@
 package com.emberjs.glint
 
+import com.emberjs.utils.emberRoot
 import com.intellij.lang.javascript.JavaScriptBundle
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
 import com.intellij.lang.typescript.tsconfig.TypeScriptStatusBarWidget
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupFactory.ActionSelectionAid
 import com.intellij.openapi.ui.popup.ListPopup
@@ -118,8 +120,11 @@ class GlintStatusBarWidget(project: Project) : EditorBasedStatusBarPopup(project
 }
 
 
-open class GlintRestartServiceAction : AnAction("Restart Glint", "restarts the glint language service", null) {
+open class GlintRestartServiceAction : AnAction("Restart Glint", "Restarts the glint language service", null) {
 
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
+    }
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project
         if (project != null) {
@@ -132,6 +137,9 @@ open class GlintRestartServiceAction : AnAction("Restart Glint", "restarts the g
         if (project != null) {
             val hasStarted = GlintLanguageServiceProvider(project).allServices.firstOrNull()?.isServiceCreated() == true
             val presentation = e.presentation
+            if (project.guessProjectDir()?.emberRoot != null) {
+                presentation.isVisible = true
+            }
             setEnableAndVisible(presentation, hasStarted)
         }
     }
