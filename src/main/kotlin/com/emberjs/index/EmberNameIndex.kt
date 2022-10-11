@@ -45,7 +45,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
                         ProgressManager.checkCanceled()
                         results.addIfNotNull(EmberName.from(file)?.let { it to file })
                     }
-                    CachedValueProvider.Result.create(results, VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS)
+                    CachedValueProvider.Result.create(results, index.getIndexModificationStamp(this.NAME, project))
                 }
             }
         }
