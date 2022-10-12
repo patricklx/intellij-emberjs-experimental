@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2022.2.39
+- fix: remove psi reparsing
+- fix: bad casting exceptions
+- improvement: update ember index when index was updated
+
 ## 2022.2.37
 - fix: only remove non-existing modules from content entries
 - fix: null pointer exceptions
