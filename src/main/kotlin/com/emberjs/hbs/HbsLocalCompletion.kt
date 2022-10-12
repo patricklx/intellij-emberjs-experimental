@@ -38,17 +38,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.util.ProcessingContext
-import com.intellij.codeInsight.lookup.LookupElementBuilder as IntelijLookupElementBuilder
-
-
-class LookupElementBuilder {
-    companion object {
-        fun create(name: String): com.intellij.codeInsight.lookup.LookupElementBuilder {
-            return IntelijLookupElementBuilder.create(name)
-                    .withInsertHandler(HbsInsertHandler())
-        }
-    }
-}
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {

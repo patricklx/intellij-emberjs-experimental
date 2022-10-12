@@ -38,10 +38,13 @@ object EmberLookupInternalElementBuilder {
             "LinkTo" to listOf("@ember/routing", "component"),
     )
     fun create(name: String, useImports: Boolean): LookupElement {
+        val match = mapping.getOrDefault(name, null) ?: return LookupElementBuilder.create(name)
         if (!useImports) {
             return LookupElementBuilder.create(name)
+                    .withTypeText(match[1])
+                    .withTailText(" from ${match[0]}")
+                    .withIcon(EmberIconProvider.getIcon(match[1]) ?: EmberIcons.EMPTY_16)
         }
-        val match = mapping.getOrDefault(name, null) ?: return LookupElementBuilder.create(name)
         val element = LookupElementBuilder
                 .create(name)
                 .withTypeText(match[1])

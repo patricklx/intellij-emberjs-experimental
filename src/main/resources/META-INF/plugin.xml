@@ -122,7 +122,6 @@
         <statusBarWidgetFactory id="glintStatusWidget"
                                 implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
                                 order="before gitWidget"/>
-        <projectIndexingHistoryListener implementation="com.emberjs.index.IndexListener" />
     </extensions>
 
     <projectListeners>
