@@ -1,8 +1,10 @@
 package com.emberjs.index
 
 import com.emberjs.resolver.EmberName
+import com.intellij.javascript.web.webTypes.nodejs.PackageJsonWebTypesRegistryManager
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.search.GlobalSearchScope
@@ -16,7 +18,16 @@ import com.intellij.util.containers.addIfNotNull
 import com.intellij.util.indexing.*
 import com.intellij.util.io.BooleanDataDescriptor
 
+
+
+
 class EmberNameIndex : ScalarIndexExtension<Boolean>() {
+
+    class IndexModificationTracker(val project: Project): ModificationTracker {
+        override fun getModificationCount(): Long {
+            return index.getIndexModificationStamp(NAME, project)
+        }
+    }
 
     override fun getName() = NAME
     override fun getVersion() = 6
@@ -45,7 +56,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
                         ProgressManager.checkCanceled()
                         results.addIfNotNull(EmberName.from(file)?.let { it to file })
                     }
-                    CachedValueProvider.Result.create(results, index.getIndexModificationStamp(this.NAME, project))
+                     CachedValueProvider.Result.create(results, IndexModificationTracker(project))
                 }
             }
         }
