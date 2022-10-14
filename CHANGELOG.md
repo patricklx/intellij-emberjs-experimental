@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.40
+- fix: missing reference for this.x in some cases
+
 ## 2022.2.39
 - fix: remove psi reparsing
 - fix: bad casting exceptions

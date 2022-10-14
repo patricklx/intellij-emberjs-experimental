@@ -339,7 +339,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             // for this.x.y
-            if (sibling != null && element.parent.prevSibling.elementType == HbTokenTypes.SEP) {
+            val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
+                    element.prevSibling.elementType == HbTokenTypes.SEP
+            if (sibling != null && prevSiblingIsSep) {
                 val ref = sibling.references.find { it is HbReference } as? HbReference
                 val yieldRef = (ref as? HbsLocalReference)?.resolveYield()
                 if (yieldRef != null) {
