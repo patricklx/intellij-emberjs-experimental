@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.41
+- fix: null pointer exceptions
+
 ## 2022.2.40
 - fix: missing reference for this.x in some cases
 
