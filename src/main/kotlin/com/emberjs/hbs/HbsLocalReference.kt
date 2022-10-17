@@ -351,8 +351,8 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 if (ref != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
-                val ref2 = sibling.references.find { it is HbReference } as HbReference
-                val res = resolveToJs(ref2.resolve(), listOf(element.text))
+                val ref2 = sibling.references.find { it is HbReference } as HbReference?
+                val res = resolveToJs(ref2?.resolve(), listOf(element.text))
                 return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
             }
 
