@@ -134,7 +134,7 @@ class EmberUtils {
         fun resolveHelper(file: PsiElement?): Helper? {
             val cls = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
             if (cls is JSCallExpression && cls.argumentList != null) {
-                var func: PsiElement? = cls.argumentList!!.arguments.last()
+                var func: PsiElement? = cls.argumentList!!.arguments.lastOrNull()
                 while (func is JSReferenceExpression) {
                     func = func.resolve()
                 }
@@ -152,7 +152,7 @@ class EmberUtils {
         fun resolveTemplateExport(file: PsiFile): ES6TaggedTemplateExpression? {
             val cls = resolveDefaultExport(file)
             if (cls is JSCallExpression && cls.argumentList != null) {
-                var func: PsiElement? = cls.argumentList!!.arguments.last()
+                var func: PsiElement? = cls.argumentList!!.arguments.lastOrNull()
                 while (func is JSReferenceExpression) {
                     func = func.resolve()
                 }
