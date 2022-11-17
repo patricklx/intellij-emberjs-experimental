@@ -66,7 +66,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (anything is PsiFile) {
             val styleSheetLanguages = arrayOf("sass", "scss", "less")
             if (styleSheetLanguages.contains(anything.language.id.lowercase())) {
-                PsiTreeUtil.collectElements(anything) { it is CssRulesetList }.first().children.forEach { (it as CssRulesetImpl).selectors.forEach {
+                PsiTreeUtil.collectElements(anything) { it is CssRulesetList }.first().children.forEach { (it as? CssRulesetImpl)?.selectors?.forEach {
                     result.add(LookupElementBuilder.create(it.text.substring(1)))
                 }}
             }

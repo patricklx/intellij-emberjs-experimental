@@ -2,7 +2,7 @@
 <idea-plugin version="2">
     <extensions defaultExtensionNs="com.intellij">
         <completion.contributor language="Handlebars" implementationClass="com.emberjs.hbs.HbsCompletionContributor"/>
-        <completion.contributor language="HTML" implementationClass="com.emberjs.hbs.HbsCompletionContributor" order="first, before xml"/>
+        <completion.contributor language="HTML" implementationClass="com.emberjs.hbs.HbsCompletionContributor"/>
         <psi.referenceContributor language="Handlebars" implementation="com.emberjs.hbs.HbsReferenceContributor"/>
         <psi.referenceContributor language="HTML" implementation="com.emberjs.hbs.HbsReferenceContributor"/>
 

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.43
+- fix: correct hbs import paths
+
 ## 2022.2.41
 - fix: null pointer exceptions
 

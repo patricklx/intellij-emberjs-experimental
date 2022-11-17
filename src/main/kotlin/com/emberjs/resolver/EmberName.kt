@@ -33,7 +33,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
     val importPath by lazy {
         if (type == "component" || isComponentTemplate) {
             val parts = fullImportPath.split("/").toMutableList()
-            if (parts.last().startsWith("component.") || parts.last().startsWith("template.")  || parts.last().startsWith("index.")) {
+            if (parts.last() == "component" || parts.last() == "template" || parts.last() == "index") {
                 parts.removeLast()
             }
             return@lazy parts.joinToString("/")
