@@ -38,45 +38,42 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.xml.XmlTagNameProvider
 
 class EmberTagNameProvider : XmlTagNameProvider {
-    private fun resolve(anything: PsiElement?, path: MutableList<String>, result: MutableList<LookupElement>) {
+    private fun resolve(anything: PsiElement?, path: MutableList<String>, result: MutableList<LookupElement>, visited: MutableSet<PsiElement> = mutableSetOf()) {
         var refElement: Any? = anything
-        if (anything == null) {
+        if (anything == null || visited.contains(anything)) {
             return
         }
 
+        visited.add(anything)
+
         val resolvedHelper = EmberUtils.handleEmberHelpers(anything)
         if (resolvedHelper != null) {
-            resolve(resolvedHelper, path, result)
+            resolve(resolvedHelper, path, result, visited)
             return
         }
 
         if (anything is XmlAttribute) {
-            resolve(anything.descriptor?.declaration, path, result)
+            resolve(anything.descriptor?.declaration, path, result, visited)
             return
         }
 
         if (anything is EmberNamedElement) {
-            resolve(anything.target, path, result)
+            resolve(anything.target, path, result, visited)
             return
         }
 
         if (anything.references.find { it is HbReference } != null) {
-            resolve(anything.references.find { it is HbReference }!!.resolve(), path, result)
+            resolve(anything.references.find { it is HbReference }!!.resolve(), path, result, visited)
             return
         }
 
-        if (anything.reference is HbReference) {
-            resolve(anything.reference?.resolve(), path, result)
-            return
-        }
-
-        if (anything.reference is HbReference) {
-            resolve(anything.reference?.resolve(), path, result)
+        if (anything.reference is HbReference && !visited.contains(anything.reference?.resolve())) {
+            resolve(anything.reference?.resolve(), path, result, visited)
             return
         }
 
         if (refElement is HbMustache && refElement.text.startsWith("{{yield")) {
-            refElement.children.filter { it is HbParam }.forEach { resolve(it, path, result) }
+            refElement.children.filter { it is HbParam }.forEach { resolve(it, path, result, visited) }
             return
         }
 
@@ -92,7 +89,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             }
             val ids = PsiTreeUtil.collectElements(refElement, { it.elementType == HbTokenTypes.ID && it !is LeafPsiElement })
             if (ids.size == 1 && ids.first().elementType !is HbStringLiteral) {
-                resolve(ids.first(), path, result)
+                resolve(ids.first(), path, result, visited)
                 return
             }
             return
@@ -108,12 +105,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
             val blockParamIdx = params.indexOf(refPsi)
             val param = dereferenceYield.reference?.resolve()?.children?.filter { it is HbParam }?.getOrNull(blockParamIdx)
-            resolve(param, path, result)
-            return
-        }
-
-        if (anything is XmlAttribute) {
-            resolve(anything.descriptor?.declaration, path, result)
+            resolve(param, path, result, visited)
             return
         }
 
