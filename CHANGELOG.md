@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.2.44
+- fix: some hbs references where not working
+- internal: prevent loop in internal code
+
 ## 2022.2.43
 - fix: correct hbs import paths
 
