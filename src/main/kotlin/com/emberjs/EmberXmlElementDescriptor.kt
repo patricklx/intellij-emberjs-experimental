@@ -1,4 +1,5 @@
 package com.emberjs
+import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
@@ -98,7 +99,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
             return ComponentReferenceData()
         }
         val followed = EmberUtils.followReferences(target)
-        if (followed is JSNamedElement || followed is JSFile) {
+        if (followed is JSNamedElement || followed is JSFile || followed is HbPsiFile ) {
             return EmberUtils.getComponentReferenceData(followed)
         }
         val file = f ?: target.containingFile.originalFile
