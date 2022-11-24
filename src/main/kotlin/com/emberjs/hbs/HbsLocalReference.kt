@@ -12,18 +12,22 @@ import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parents
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
 import com.intellij.lang.javascript.psi.resolve.JSReferenceResolver
+import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.util.TextRange
@@ -34,7 +38,9 @@ import com.intellij.psi.css.impl.CssRulesetImpl
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.html.HtmlTagImpl
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtilBase
 import com.intellij.psi.util.elementType
+import com.intellij.psi.util.isAncestor
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
@@ -141,14 +147,37 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
                 val virtualFile = injected.virtualFile
                 return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
-            }
+            } ?: return null
 
             val parts = element.text.split(".")
             var current: PsiElement? = null
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
             } else {
-                current = JSReferenceResolver(tpl as PsiElement).doResolveQualifiedName(JSQualifiedNameImpl.create(parts.first(), null), false).firstOrNull()?.element
+                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
+                current = children.mapNotNull {
+                    if (it is JSVariable && it.name?.equals(parts.first()) == true) {
+                        val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                        if (useScope.isAncestor(tpl)) {
+                            return@mapNotNull it
+                        }
+                    }
+
+                    if (it is ES6ImportDeclaration) {
+                        it.importedBindings.forEach { ib ->
+                            if (ib.name?.equals(parts.first()) == true) {
+                                return@mapNotNull ib
+                            }
+                        }
+                        it.importSpecifiers.forEach {iss ->
+                            val name = iss.alias?.name ?: iss.name ?: ""
+                            if (name == parts.first()) {
+                                return@mapNotNull iss.element
+                            }
+                        }
+                    }
+                    return@mapNotNull null
+                }.firstOrNull()
             }
             return HbsLocalReference(element, current)
         }

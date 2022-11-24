@@ -39,6 +39,15 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.util.ProcessingContext
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.hierarchy.JSHierarchyUtils
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.impl.JSPsiImplUtils
+import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
+import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
+import com.intellij.lang.javascript.psi.util.JSUtils
+import com.intellij.psi.util.isAncestor
+import com.intellij.refactoring.suggested.startOffset
 
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
@@ -235,15 +244,27 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
         val psiManager = PsiManager.getInstance(element.project)
-        val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
-        f?.children?.forEach {
+        val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) ?: return
+        val manager = InjectedLanguageManager.getInstance(element.project)
+        val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+        val tpl = templates.find {
+            val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
+            val virtualFile = injected.virtualFile
+            return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
+        } ?: return
 
-            if (it is JSVarStatement) {
-                result.addAllElements(it.declarations.map { LookupElementBuilder.create(it.name!!) })
+        val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
+        children.forEach {
+            if (it is JSVariable) {
+                val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                if (useScope.isAncestor(tpl)) {
+                    result.addElement(LookupElementBuilder.create(it.name!!))
+                }
             }
 
             if (it is ES6ImportDeclaration) {
-                result.addAllElements(it.importSpecifiers.map { LookupElementBuilder.create(it.alias?.name ?: it.name!! )})
+                result.addAllElements(it.importSpecifiers.mapNotNull {it.alias?.name ?: it.name!! }.map { LookupElementBuilder.create(it)})
+                result.addAllElements(it.importedBindings.mapNotNull { it.name }.map { LookupElementBuilder.create(it)})
             }
         }
     }

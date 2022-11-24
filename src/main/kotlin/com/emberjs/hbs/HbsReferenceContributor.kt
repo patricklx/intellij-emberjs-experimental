@@ -31,7 +31,7 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
         return null
     }
     val res = HbsLocalReference.createReference(element)
-    if (res != null && (res.resolve() as? EmberNamedElement)?.target != element) {
+    if (res?.resolve() != null && (res.resolve() as? EmberNamedElement)?.target != element) {
         return null
     }
     return fn(element)
