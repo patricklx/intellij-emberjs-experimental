@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.2.45
+- fix: better support hbs tag with ember-template-imports
+
 ## 2022.2.44
 - fix: some hbs references where not working
 - internal: prevent loop in internal code
