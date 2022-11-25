@@ -30,13 +30,15 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             path = fullPath
         }
 
-        if (context.file.virtualFile is VirtualFileWindow || context.file.virtualFile.name.endsWith(".gjs") || context.file.virtualFile.name.endsWith(".gts")) {
+        val isGtxFile = context.file.virtualFile.name.endsWith(".gjs") || context.file.virtualFile.name.endsWith(".gts")
+        if (context.file.virtualFile is VirtualFileWindow || isGtxFile) {
             val psiManager = PsiManager.getInstance(context.project)
             var f = context.file
             if (context.file.virtualFile is VirtualFileWindow) {
                 f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
             }
-            val hasTemplateImports = NodeModuleManager.getInstance(context.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-template-imports" } != null
+            val hasHbsTag = NodeModuleManager.getInstance(context.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-template-imports" } != null
+            val hasTemplateImports = isGtxFile || hasHbsTag
             if (!hasTemplateImports) {
                 return
             }
@@ -48,7 +50,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
                     .flatten()
                     .filterNotNull()
             if (names.contains(item.lookupString)) return
-            val importStr = if (inside) "import '{ ${item.lookupString} }' from '$fullPath';\n" else "import ${item.lookupString} from '$fullPath';\n"
+            val importStr = if (inside) "import { ${item.lookupString} } from '$fullPath';\n" else "import ${item.lookupString} from '$fullPath';\n"
             f.viewProvider.document!!.setText(importStr + f.viewProvider.document!!.text)
             return
         }

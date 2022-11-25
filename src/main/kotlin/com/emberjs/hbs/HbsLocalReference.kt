@@ -353,6 +353,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
         }
 
         fun createReference(element: PsiElement): PsiReference? {
+            val ref = this.findReference(element)
+            if (ref?.resolve() == null ) {
+                return null
+            }
+            return ref
+        }
+
+        fun findReference(element: PsiElement): PsiReference? {
             val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
             val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
             val service = GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
