@@ -4,26 +4,13 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.lookup.EmberLookupElementBuilder
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
-import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.psi.impl.ES6ExportDefaultAssignmentImpl
-import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
-import com.intellij.lang.javascript.ecmascript6.TypeScriptUtil
-import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
-import com.intellij.lang.javascript.psi.JSRecordType
 import com.intellij.lang.javascript.psi.JSReferenceExpression
-import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
-import com.intellij.lang.javascript.psi.ecma6.TypeScriptImplicitModule
-import com.intellij.lang.javascript.psi.types.JSTypeofTypeImpl
-import com.intellij.lang.javascript.refactoring.inline.TypescriptInlineTypeHandler
-import com.intellij.lang.typescript.compiler.TypeScriptLanguageServiceProvider
-import com.intellij.lang.typescript.compiler.TypeScriptService
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.PsiElementResolveResult.createResults
 import com.intellij.psi.search.ProjectScope
@@ -44,7 +31,14 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
 
     private val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
-    private val hasHbsImports = NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(element.originalVirtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+    private val hasHbsImports by lazy {
+        var f = element.containingFile
+        if (element.originalVirtualFile is VirtualFileWindow) {
+            val psiManager = PsiManager.getInstance(element.project)
+            f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+        }
+        NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+    }
     private val useImports = hasHbsImports != null
 
 

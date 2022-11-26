@@ -261,11 +261,10 @@ class EmberUtils {
             if (element is ES6ImportedBinding) {
                 var ref: JSModuleReferenceBase? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
                 if (ref == null) {
-                    ref = element.declaration?.fromClause?.references?.findLast { it is TypeScriptFileModuleReference && it.resolve() != null } as TypeScriptFileModuleReference?
+                    val tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? TypeScriptFileModuleReference)?.resolve() }
+                    return tsFiles?.maxByOrNull { it.virtualFile.path.length }
                 }
-                if (ref == null) {
-                    return ref
-                }
+
                 return followReferences(ref.fileReferenceSet.lastReference?.multiResolve(false)?.filterNotNull()?.firstOrNull()?.element)
             }
 

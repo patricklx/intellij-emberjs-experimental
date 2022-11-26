@@ -6,41 +6,30 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.emberjs.EmberAttrDec
-import com.emberjs.EmberAttributeDescriptor
 import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.EmberUtils
-import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
-import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.javascript.flex.JSResolveHelper
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
-import com.intellij.lang.javascript.psi.JSQualifiedNameImpl
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
+import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
-import com.intellij.lang.javascript.psi.resolve.ES6QualifiedNameResolver
+import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
-import com.intellij.lang.javascript.psi.resolve.JSEvaluateContext.JSThisContext
-import com.intellij.lang.javascript.psi.resolve.JSQualifiedNameResolver
-import com.intellij.lang.javascript.psi.resolve.JSReferenceResolver
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse.Kind.let
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.ProjectScope
-import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parents
-import com.intellij.psi.util.parentsWithSelf
+import com.intellij.psi.util.*
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
@@ -147,18 +136,40 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
                 val virtualFile = injected.virtualFile
                 return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
-            }
+            } ?: return null
 
-            val parts = element.name.split(".").toMutableList()
+            val parts = element.name.split(".")
             var current: PsiElement? = null
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
-                parts.removeAt(0)
-            } else if (tpl != null) {
-                current = JSReferenceResolver(tpl as PsiElement).doResolveQualifiedName(JSQualifiedNameImpl.create(parts.first(), null), false).firstOrNull()?.element
+            } else {
+                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
+                current = children.mapNotNull {
+                    if (it is JSVariable && it.name?.equals(parts.first()) == true) {
+                        val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                        if (useScope.isAncestor(tpl)) {
+                            return@mapNotNull it
+                        }
+                    }
+
+                    if (it is ES6ImportDeclaration) {
+                        it.importedBindings.forEach { ib ->
+                            if (ib.name?.equals(parts.first()) == true) {
+                                return@mapNotNull ib
+                            }
+                        }
+                        it.importSpecifiers.forEach {iss ->
+                            val name = iss.alias?.name ?: iss.name ?: ""
+                            if (name == parts.first()) {
+                                return@mapNotNull iss.alias ?: iss
+                            }
+                        }
+                    }
+                    return@mapNotNull null
+                }.firstOrNull()
             }
 
-            parts.forEach {part ->
+            parts.subList(1, parts.size).forEach {part ->
                 current = (current as? JSTypeOwner)?.jsType?.asRecordType()?.properties?.find { it.memberName == part }?.jsType?.sourceElement
             }
 
