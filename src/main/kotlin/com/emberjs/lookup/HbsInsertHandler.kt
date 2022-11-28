@@ -46,7 +46,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             val names = f.children.filter { it is ES6ImportDeclaration }
                     .map { it as ES6ImportDeclaration }
                     .toTypedArray()
-                    .map { it.importedBindings.map { it.name } + it.importSpecifiers.map { it.alias ?: it.name }}
+                    .map { it.importedBindings.map { it.name } + it.importSpecifiers.map { it.alias?.name ?: it.name }}
                     .flatten()
                     .filterNotNull()
             if (names.contains(item.lookupString)) return
