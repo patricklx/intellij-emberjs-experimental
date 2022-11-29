@@ -32,14 +32,14 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     private val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
     private val hasHbsImports by lazy {
-        var f = element.containingFile
+        var f = element.containingFile.originalFile
         if (element.originalVirtualFile is VirtualFileWindow) {
             val psiManager = PsiManager.getInstance(element.project)
             f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
         }
         NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
     }
-    private val useImports = hasHbsImports != null
+    private val useImports by lazy { hasHbsImports != null }
 
 
     open fun matches(module: EmberName) =
