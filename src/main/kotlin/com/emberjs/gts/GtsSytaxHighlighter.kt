@@ -20,15 +20,14 @@ import com.intellij.psi.tree.TokenSet
 import javax.swing.Icon
 
 
-object GtsLanguage : Language() {
-    val INSTANCE: GtsLanguage = GtsLanguage()
+class GtsLanguage : Language("Gts") {
+    companion object {
+        val INSTANCE = GtsLanguage()
+    }
 }
 
 internal object SimpleIcons {
     val icon: Icon = IconLoader.getIcon("/icons/jar-gray.png", SimpleIcons::class.java)
-        @Nullable get() {
-            return SimpleIcons.field
-        }
 }
 
 class GtsLexerAdapter : FlexAdapter(GtsLexer(null)) {
