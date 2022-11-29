@@ -8,8 +8,8 @@ import com.intellij.psi.TokenType;
 
 %%
 
-%class GtdLexer
-%implements GtdLexer
+%class GtsLexer
+%implements FlexLexer
 %unicode
 %function advance
 %type IElementType
