@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-java@v2.3.1
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'zulu'
 
       - uses: actions/cache@v1
