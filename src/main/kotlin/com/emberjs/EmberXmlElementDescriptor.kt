@@ -102,8 +102,8 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         if (followed is JSNamedElement || followed is JSFile || followed is HbPsiFile ) {
             return EmberUtils.getComponentReferenceData(followed)
         }
-        val file = f ?: target.containingFile.originalFile
-        if (this.tag.originalVirtualFile?.path == file.originalVirtualFile?.path) {
+        val file = f ?: target.containingFile?.originalFile
+        if (file == null || this.tag.originalVirtualFile?.path == file.originalVirtualFile?.path) {
             return ComponentReferenceData()
         }
 

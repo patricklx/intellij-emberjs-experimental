@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.1
+- fix: null pointer excpetions
+
 ## 2022.3.0
 - feature: upgrade intellij idea
 

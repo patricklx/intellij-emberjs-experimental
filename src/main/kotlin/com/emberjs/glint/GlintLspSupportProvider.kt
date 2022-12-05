@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun getServerDescriptor(project: Project, p1: VirtualFile): LspServerDescriptor {
         val workingDir = project.guessProjectDir()!!
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }!!.virtualFile
+        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
         if (glintPkg == null) {
             return LspServerDescriptor.emptyDescriptor()
         }
