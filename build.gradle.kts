@@ -5,15 +5,15 @@ plugins {
     // Java support
     id("java")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.6.21"
+    id("org.jetbrains.kotlin.jvm") version "1.7.22"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.9.0"
+    id("org.jetbrains.intellij") version "1.10.0"
 }
 
 
 
 group = "com.emberjs"
-version = "2022.2.45"
+version = "2022.3.0"
 
 // Configure project's dependencies
 repositories {
@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2022.2")
+    version.set("2022.3")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
@@ -42,7 +42,7 @@ intellij {
     // Example: platformPlugins = com.intellij.java, com.jetbrains.php:203.4449.22
     //
     // com.dmarcotte.handlebars: see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
-    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:222.3345.108"))
+    plugins.set(listOf("JavaScriptLanguage", "CSS", "yaml", "com.dmarcotte.handlebars:223.7571.117"))
 
     sandboxDir.set(project.rootDir.canonicalPath + "/.sandbox")
 }

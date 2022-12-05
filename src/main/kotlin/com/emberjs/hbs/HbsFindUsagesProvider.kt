@@ -16,7 +16,7 @@ import com.intellij.psi.util.elementType
 class HbsFindUsagesProvider: FindUsagesProvider {
 
     override fun getWordsScanner(): WordsScanner {
-        val ID = TokenSet.create(HbTokenTypes.ID);
+        val ID = TokenSet.create(HbTokenTypes.ID, HbTokenTypes.PARAM);
         return DefaultWordsScanner(HbLexer(), ID, HbTokenTypes.COMMENTS, HbTokenTypes.STRING_LITERALS)
     }
 

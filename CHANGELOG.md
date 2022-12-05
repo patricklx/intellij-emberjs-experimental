@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.0
+- feature: upgrade intellij idea
+
 ## 2022.2.45
 - fix: better support hbs tag with ember-template-imports
 
