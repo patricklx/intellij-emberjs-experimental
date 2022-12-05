@@ -8,6 +8,7 @@ import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.lang.javascript.DialectDetector
 import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
+import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile

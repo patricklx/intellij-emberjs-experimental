@@ -4,13 +4,8 @@ import com.emberjs.settings.EmberApplicationOptions
 import com.emberjs.utils.*
 import com.intellij.ide.projectView.actions.MarkRootActionBase
 import com.intellij.javascript.nodejs.PackageJsonDependency
-import com.intellij.javascript.nodejs.library.NodeModulesDirectoryChecker
-import com.intellij.javascript.nodejs.library.NodeModulesDirectoryManager
-import com.intellij.javascript.nodejs.library.NodeModulesPackageJsonListener
 import com.intellij.lang.javascript.dialects.JSLanguageLevel
 import com.intellij.lang.javascript.library.JSLibraryManager
-import com.intellij.lang.javascript.linter.jshint.JSHintConfiguration
-import com.intellij.lang.javascript.linter.jshint.JSHintState
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
@@ -19,7 +14,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ContentEntry
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.libraries.Library.ModifiableModel
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.DirectoryProjectConfigurator

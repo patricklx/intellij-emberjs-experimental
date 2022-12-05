@@ -16,12 +16,13 @@ import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
 import com.intellij.injected.editor.VirtualFileWindow
+import com.intellij.javascript.JSModuleBaseReference
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.javascript.frameworks.modules.JSModuleReferenceBase
+import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
@@ -29,10 +30,10 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
-import com.intellij.lang.typescript.modules.TypeScriptFileModuleReference
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
+import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -259,9 +260,9 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is ES6ImportedBinding) {
-                var ref: JSModuleReferenceBase? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
+                var ref: JSModuleReference? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
                 if (ref == null) {
-                    val tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? TypeScriptFileModuleReference)?.resolve() }
+                    val tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     return tsFiles?.maxByOrNull { it.virtualFile.path.length }
                 }
 

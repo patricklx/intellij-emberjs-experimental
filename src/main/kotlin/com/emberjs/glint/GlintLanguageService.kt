@@ -75,7 +75,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
 
     override fun isServiceCreated() = withServer { isRunning || isMalfunctioned } ?: false
 
-    override fun showStatusBar() = withServer { totalFilesOpened != 0 } ?: false
+    override fun showStatusBar() = withServer { isServiceCreated() } ?: false
 
     override fun getStatusText() = withServer {
         when {

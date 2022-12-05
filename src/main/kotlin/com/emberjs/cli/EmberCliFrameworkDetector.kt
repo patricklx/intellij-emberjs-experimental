@@ -12,8 +12,6 @@ import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
-import com.intellij.javascript.nodejs.PackageJsonDependency
-import com.intellij.javascript.nodejs.packageJson.PackageJsonDependencies
 import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
 import com.intellij.json.JsonFileType
 import com.intellij.openapi.application.ApplicationManager

@@ -38,6 +38,7 @@
          on how to target different products -->
     <depends>com.intellij.modules.lang</depends>
     <depends>JavaScript</depends>
+    <depends>com.intellij.css</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
