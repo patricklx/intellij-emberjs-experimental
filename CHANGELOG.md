@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.3
+- fix: bad cast when checking css (hbs imports)
+
 ## 2022.3.1
 - fix: null pointer excpetions
 

@@ -189,7 +189,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             if (any is PsiFile) {
                 val styleSheetLanguages = arrayOf("sass", "scss", "less")
                 if (styleSheetLanguages.contains(any.language.id.lowercase())) {
-                    PsiTreeUtil.collectElements(any) { it is CssRulesetList }.first().children.forEach { (it as CssRulesetImpl).selectors.forEach {
+                    PsiTreeUtil.collectElements(any) { it is CssRulesetList }.first().children.forEach { (it as? CssRulesetImpl)?.selectors?.forEach {
                         if (it.text == "." + path.first()) {
                             return it
                         }
@@ -198,7 +198,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             if (any is CssSelector && any.ruleset?.block != null) {
-                any.ruleset!!.block!!.children.map { it as? CssRulesetImpl }.filterNotNull().forEach{ it.selectors.forEach {
+                any.ruleset!!.block!!.children.mapNotNull { it as? CssRulesetImpl }.forEach{ it.selectors.forEach {
                     if (it.text == "." + path.first()) {
                         return it
                     }
