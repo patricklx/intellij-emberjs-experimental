@@ -5,6 +5,8 @@
 This plugin provides basic [Ember.js](http://emberjs.com/) support to all
 [JetBrains](https://www.jetbrains.com/) IDEs that support JavaScript.
 
+fork of https://github.com/Turbo87/intellij-emberjs with additional features
+
 
 Features
 -------------------------------------------------------------------------------
@@ -37,7 +39,7 @@ Installation
 -------------------------------------------------------------------------------
 
 This plugin is published on the
-[JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/8049): 
+[JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/15499-ember-experimental-js): 
 
     Preferences... → Plugins → Browse Repositories ... → Search for "Ember.js"
 
@@ -46,8 +48,8 @@ This plugin is published on the
 
 Clone this repository:
 
-    git clone https://github.com/Turbo87/intellij-emberjs.git
-    cd intellij-emberjs
+    git clone https://github.com/patricklx/intellij-emberjs-experimental.git
+    cd intellij-emberjs-experimental
 
 Build a plugin zip file:
 
