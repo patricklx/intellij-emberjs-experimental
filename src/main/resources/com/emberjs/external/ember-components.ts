@@ -1,4 +1,6 @@
-class Component<T> {}
+class Component<T> {
+  args: T
+}
 
 type LinkToArgs = {
   route: string
