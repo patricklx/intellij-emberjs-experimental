@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.4
+- fix: completion for arguments of internal components did not work
+
 ## 2022.3.3
 - fix: bad cast when checking css (hbs imports)
 
