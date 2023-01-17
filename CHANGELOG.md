@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.5
+- improvement: improve references for template imports
+
 ## 2022.3.4
 - fix: completion for arguments of internal components did not work
 

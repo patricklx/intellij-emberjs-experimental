@@ -7,6 +7,7 @@ import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lsp.*
+import com.intellij.lsp.methods.LspServerMethodWithReturnValue
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
@@ -16,6 +17,9 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.FileContentUtil
+import org.eclipse.lsp4j.ServerCapabilities
+import org.eclipse.lsp4j.services.LanguageServer
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
@@ -35,12 +39,14 @@ class GlintLspSupportProvider : LspServerSupportProvider {
 
 
 class GlintLanguageServerConnectorStdio(serverDescriptor: LspServerDescriptor, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(serverDescriptor, processHandler, ) {
+
+
     override fun getFilePath(file: VirtualFile): String {
-        var path =super.getFilePath(file).replace(":", "%3A")
+        var path = super.getFilePath(file)
         if (!path.startsWith("/")) {
             path = "/$path"
         }
-        return path
+        return URLEncoder.encode(path, "utf-8").replace("%2F", "/")
     }
 
     override fun initializeServer() {
@@ -77,7 +83,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     ?: throw RuntimeException("glint is not installed")
             val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
                     ?: throw RuntimeException("glint lsp was not found")
-            //commandLine.addParameter("--inspect")
+//            commandLine.addParameter("--inspect")
             commandLine.addParameter(file.path)
             commandLine.addParameter("--stdio")
             commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())

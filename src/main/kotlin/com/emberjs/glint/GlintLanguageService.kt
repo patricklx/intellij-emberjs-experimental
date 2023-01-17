@@ -2,8 +2,11 @@ package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.utils.emberRoot
+import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.injected.editor.DocumentWindow
+import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.integration.JSAnnotationError
@@ -32,11 +35,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.NotNullLazyValue
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import icons.JavaScriptLanguageIcons.Typescript
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
@@ -114,8 +119,22 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement> {
-        val element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset)
-        return getDescriptor()?.getElementDefinitions(element)?.toTypedArray() ?: emptyArray()
+        val element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset+1)!!
+        class DelegateElement(val element: PsiElement, val origElement: PsiElement, val documentWindow: DocumentWindow): PsiElement by element {
+            override fun getTextRange(): TextRange {
+                val range = origElement.textRange
+                val hostRange = documentWindow.hostRanges.first()
+                return TextRange(hostRange.startOffset + range.startOffset, hostRange.startOffset + range.endOffset)
+            }
+        }
+        var elem: Any = element
+        if (document is DocumentWindow) {
+            val vfile = (element.originalVirtualFile as VirtualFileWindow).delegate
+            val f = PsiManager.getInstance(element.project).findFile(vfile)!!
+            elem = f.findElementAt(document.hostRanges.first().startOffset + element.textOffset)!!
+            elem = DelegateElement(elem, element, document)
+        }
+        return getDescriptor()?.getElementDefinitions(elem as PsiElement)?.toTypedArray() ?: emptyArray()
     }
 
 

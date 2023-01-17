@@ -13,6 +13,7 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
+import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
@@ -25,6 +26,7 @@ import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
@@ -261,7 +263,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                     ?: forTagName(tag.project, tag.name)
                     ?: let {
                         val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
-                        val document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
+                        var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
                         val service = GlintLanguageServiceProvider(tag.project).getService(tag.originalVirtualFile!!)
                         service?.getNavigationFor(document, tag)?.firstOrNull()
                     }
