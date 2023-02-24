@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.3.6
+- improvement: more improvements for references for template imports
+
 ## 2022.3.5
 - improvement: improve references for template imports
 

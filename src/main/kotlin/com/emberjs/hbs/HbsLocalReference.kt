@@ -379,7 +379,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val res = resolveToJs(yieldRef, listOf(element.text))
                     return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
-                if (ref != null) {
+                if (ref != null && resolveToJs(ref.resolve(), listOf(element.text)) != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
