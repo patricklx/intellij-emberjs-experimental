@@ -44,6 +44,19 @@
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
+        <lang.parserDefinition
+                language="Gts"
+                implementationClass="com.emberjs.gts.GtsParserDefinition"/>
+        <fileType
+                name="Gts File"
+                implementationClass="com.emberjs.gts.GtsFileType"
+                fieldName="INSTANCE"
+                language="Gts"
+                extensions="gts"/>
+        <lang.syntaxHighlighterFactory
+                language="Gts"
+                implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>

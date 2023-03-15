@@ -3,7 +3,7 @@ package org.intellij.sdk.language;
 
 import com.intellij.lexer.FlexLexer;
 import com.intellij.psi.tree.IElementType;
-import org.intellij.sdk.language.psi.SimpleTypes;
+import com.emberjs.gts.GtsTokenTypes;
 import com.intellij.psi.TokenType;
 
 %%

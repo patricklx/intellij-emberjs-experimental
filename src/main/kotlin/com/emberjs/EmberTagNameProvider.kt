@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.TagReference
@@ -25,6 +26,7 @@ import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.openapi.util.Key
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiNameIdentifierOwner
