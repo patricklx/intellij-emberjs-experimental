@@ -2,13 +2,16 @@ package com.emberjs.gts
 
 import com.dmarcotte.handlebars.HbHighlighter
 import com.dmarcotte.handlebars.HbLanguage
-import com.dmarcotte.handlebars.parsing.HbElementType
 import com.dmarcotte.handlebars.parsing.HbLexer
+import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.intellij.lang.Language
+import com.intellij.lang.LanguageParserDefinitions
 import com.intellij.lang.html.HTMLLanguage
+import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.DialectOptionHolder
 import com.intellij.lang.javascript.JSElementType
+import com.intellij.lang.javascript.JSElementTypes
 import com.intellij.lang.javascript.JSTokenTypes
 import com.intellij.lang.javascript.JavaScriptHighlightingLexer
 import com.intellij.lang.javascript.dialects.TypeScriptLanguageDialect
@@ -16,6 +19,7 @@ import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
+import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
 import com.intellij.openapi.editor.colors.EditorColorsScheme
@@ -26,17 +30,19 @@ import com.intellij.openapi.fileTypes.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.FileViewProvider
-import com.intellij.psi.MultiplePsiFilesPerDocumentFileViewProvider
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiManager
+import com.intellij.psi.*
+import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.stubs.PsiFileStub
 import com.intellij.psi.templateLanguages.TemplateLanguage
-import com.intellij.psi.tree.*
+import com.intellij.psi.tree.IElementType
+import com.intellij.psi.tree.IFileElementType
+import com.intellij.psi.tree.IStubFileElementType
+import com.intellij.psi.tree.OuterLanguageElementType
 import javax.swing.Icon
 
 
 class GtsLanguage : Language("Gts"), TemplateLanguage {
+
     companion object {
         val INSTANCE = GtsLanguage()
     }
@@ -73,7 +79,7 @@ class GtsParserDefinition : TypeScriptParserDefinition() {
     }
 
     override fun createLexer(project: Project?): Lexer {
-        return GtsLexerAdapter()
+        return GtsLexerAdapter(hideMode = true)
     }
 
     override fun createFile(viewProvider: FileViewProvider): JSFile {
@@ -90,7 +96,60 @@ internal object SimpleIcons {
 
 class HbsParseableElementType() {
     companion object {
-        val INSTANCE = JSElementType("HB_TOKEN")
+        val HB_TOKEN = JSElementType("HB_TOKEN")
+        val HTML_TOKEN = JSElementType("HTML_TOKEN")
+    }
+}
+
+class HtmlLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectOptionHolder.TSX)) : LookAheadLexer(baseLexer) {
+    val hbLexer = HbLexer()
+    val htmlLexer = HtmlLexer()
+    private val outerElementType = IElementType("JS_CONTENT", HbLanguage.INSTANCE)
+    override fun lookAhead(baseLexer: Lexer) {
+        if (baseLexer.tokenType == JSTokenTypes.XML_START_TAG_START) {
+            // Parse all sub tokens
+            var counter = 1
+            var isEnd = false
+            val start = baseLexer.tokenStart
+            while (baseLexer.tokenType != null) {
+                baseLexer.advance()
+                if (baseLexer.tokenType == JSTokenTypes.XML_START_TAG_START) {
+                    counter++
+                }
+                if (baseLexer.tokenType == JSTokenTypes.XML_END_TAG_START) {
+                    isEnd = true
+                }
+                if (baseLexer.tokenType == JSTokenTypes.XML_TAG_NAME) {
+                    if (isEnd && baseLexer.tokenText == "template") {
+                        break
+                    }
+                    isEnd = false
+                }
+            }
+            while (baseLexer.tokenType != JSTokenTypes.XML_TAG_END) {
+                baseLexer.advance()
+            }
+            baseLexer.advance()
+            val end = baseLexer.tokenEnd
+            hbLexer.start(baseLexer.bufferSequence, start, end)
+            htmlLexer.start(baseLexer.bufferSequence, start, end)
+            while (hbLexer.tokenType != null) {
+                if (hbLexer.tokenType != HbTokenTypes.CONTENT) {
+                    addToken(hbLexer.tokenEnd, HbTokenTypes.OUTER_ELEMENT_TYPE)
+                } else {
+                    while (htmlLexer.tokenEnd < hbLexer.tokenEnd) {
+                        if (htmlLexer.tokenStart >= hbLexer.tokenStart) {
+                            addToken(htmlLexer.tokenEnd, htmlLexer.tokenType)
+                        }
+                        htmlLexer.advance()
+                    }
+                }
+                hbLexer.advance()
+            }
+        } else {
+            addToken(TokenType.WHITE_SPACE)
+            baseLexer.advance()
+        }
     }
 }
 
@@ -121,13 +180,13 @@ class HbLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectO
             while (baseLexer.tokenType != JSTokenTypes.XML_TAG_END) {
                 baseLexer.advance()
             }
+            baseLexer.advance()
             val end = baseLexer.tokenEnd
             hbLexer.start(baseLexer.bufferSequence, start, end)
             while (hbLexer.tokenType != null) {
                 addToken(hbLexer.tokenEnd, hbLexer.tokenType)
                 hbLexer.advance()
             }
-            baseLexer.advance()
         } else {
             addToken(outerElementType)
             baseLexer.advance()
@@ -135,19 +194,15 @@ class HbLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectO
     }
 }
 
-class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectOptionHolder.TSX)) : LookAheadLexer(baseLexer) {
+class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectOptionHolder.TSX), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
     val hbLexer = HbLexer()
     override fun lookAhead(baseLexer: Lexer) {
         if (baseLexer.tokenType == JSTokenTypes.XML_START_TAG_START) {
             // Parse all sub tokens
-            var counter = 1
             var isEnd = false
             val start = baseLexer.tokenStart
             while (baseLexer.tokenType != null) {
                 baseLexer.advance()
-                if (baseLexer.tokenType == JSTokenTypes.XML_START_TAG_START) {
-                    counter++
-                }
                 if (baseLexer.tokenType == JSTokenTypes.XML_END_TAG_START) {
                     isEnd = true
                 }
@@ -158,22 +213,52 @@ class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(Dialect
                     isEnd = false
                 }
             }
-            while (baseLexer.tokenType != JSTokenTypes.XML_TAG_END) {
+            while (baseLexer.tokenType != JSTokenTypes.XML_TAG_END && baseLexer.tokenType != null) {
                 baseLexer.advance()
             }
             val end = baseLexer.tokenEnd
-//            hbLexer.start(baseLexer.bufferSequence, start, end)
-//            while (hbLexer.tokenType != null) {
-//                addToken(hbLexer.tokenEnd, hbLexer.tokenType)
-//                hbLexer.advance()
-//            }
-            baseLexer.advance()
-            addToken(HbsParseableElementType.INSTANCE)
-//            addToken(HbsParseableElementType.INSTANCE)
+            if (hideMode) {
+                addToken(end, JSElementTypes.OUTER_LANGUAGE_ELEMENT_EXPRESSION)
+                return
+            }
+            var lastHbContent = 0
+            hbLexer.start(baseLexer.bufferSequence, start, end)
+            while (hbLexer.tokenType != null) {
+                if (hbLexer.tokenType != HbTokenTypes.CONTENT) {
+                    lastHbContent = hbLexer.tokenEnd
+                } else {
+                    if (lastHbContent > 0) {
+                        addToken(lastHbContent, HbsParseableElementType.HB_TOKEN)
+                        lastHbContent = 0
+                    }
+                    addToken(hbLexer.tokenEnd, HbsParseableElementType.HTML_TOKEN)
+                }
+                hbLexer.advance()
+            }
         } else {
             addToken(baseLexer.tokenType)
             baseLexer.advance()
         }
+    }
+
+    override fun getTokenType(): IElementType? {
+        if (baseLexer.tokenType == null) {
+            return null
+        }
+        return super.getTokenType()
+    }
+}
+
+
+class GtsHtmlParserDefinition: HTMLParserDefinition() {
+    override fun createLexer(project: Project?): Lexer {
+        return HtmlLexerAdapter()
+    }
+}
+
+class GtsHbParserDefinition: HbParseDefinition() {
+    override fun createLexer(project: Project?): Lexer {
+        return HbLexerAdapter()
     }
 }
 
@@ -200,6 +285,13 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
     }
 }
 
+class GtsFileViewProviderFactory: FileViewProviderFactory {
+    override fun createFileViewProvider(file: VirtualFile, language: Language?, manager: PsiManager, eventSystemEnabled: Boolean): FileViewProvider {
+        return GtsFileViewProvider(manager, file, eventSystemEnabled)
+    }
+
+}
+
 class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled) {
     override fun getBaseLanguage(): Language {
         return GtsLanguage.INSTANCE
@@ -213,6 +305,18 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
         return GtsFileViewProvider(this.manager, virtualFile, false);
     }
 
+    override fun createFile(lang: Language): PsiFile? {
+        if (lang.id == GtsLanguage.INSTANCE.id) {
+            return GtsParserDefinition().createFile(this)
+        }
+        if (lang.id == HTMLLanguage.INSTANCE.id) {
+            return GtsHtmlParserDefinition().createFile(this)
+        }
+        if (lang.id == HbLanguage.INSTANCE.id) {
+            return GtsHbParserDefinition().createFile(this)
+        }
+        return null
+    }
 }
 
 
@@ -229,8 +333,8 @@ class GtsHighlighter(val project: Project?, val virtualFile: VirtualFile?, val c
         init {
             val htmlLang = Language.findLanguageByID("HTML")!!
             val htmlSyntax = SyntaxHighlighterFactory.getSyntaxHighlighter(htmlLang, project, virtualFile)
-            this.registerLayer(HbTokenTypes.STATEMENTS, LayerDescriptor(HbHighlighter(), ""))
-            this.registerLayer(HbTokenTypes.CONTENT, LayerDescriptor(htmlSyntax, ""))
+            this.registerLayer(HbsParseableElementType.HB_TOKEN, LayerDescriptor(HbHighlighter(), ""))
+            this.registerLayer(HbsParseableElementType.HTML_TOKEN, LayerDescriptor(htmlSyntax, ""))
         }
 }
 

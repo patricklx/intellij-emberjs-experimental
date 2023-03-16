@@ -44,6 +44,7 @@
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
         <lang.parserDefinition
                 language="Gts"
