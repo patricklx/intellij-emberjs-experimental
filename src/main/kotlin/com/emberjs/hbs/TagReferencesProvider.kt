@@ -24,6 +24,7 @@ import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
+import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
 import com.intellij.openapi.editor.Document
@@ -127,18 +128,33 @@ class TagReferencesProvider : PsiReferenceProvider() {
     companion object {
 
         fun resolveToLocalJs(element: XmlTag): PsiElement? {
-            if (element.originalVirtualFile !is VirtualFileWindow) {
+            var tpl: Any? = null
+            var f: PsiFile? = null
+            if (element.originalVirtualFile is VirtualFileWindow) {
+                val psiManager = PsiManager.getInstance(element.project)
+                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+                val manager = InjectedLanguageManager.getInstance(element.project)
+                val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+                tpl = templates.find {
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                    val virtualFile = injected.virtualFile
+                    return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
+                } ?: return null
+            }
+
+            if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+                val view = element.containingFile.viewProvider
+                val JS = Language.findLanguageByID("JavaScript")!!
+                val TS = Language.findLanguageByID("TypeScript")!!
+                val tsView = view.getPsi(TS)
+                val jsView = view.getPsi(JS)
+                f = tsView ?: jsView
+                tpl = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
+            }
+
+            if (tpl == null) {
                 return null
             }
-            val psiManager = PsiManager.getInstance(element.project)
-            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
-            val manager = InjectedLanguageManager.getInstance(element.project)
-            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
-            val tpl = templates.find {
-                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
-                val virtualFile = injected.virtualFile
-                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
-            } ?: return null
 
             val parts = element.name.split(".")
             var current: PsiElement? = null
@@ -149,7 +165,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
                         val useScope = JSUseScopeProvider.getUseScopeElement(it)
-                        if (useScope.isAncestor(tpl)) {
+                        if (useScope.isAncestor(tpl as PsiElement)) {
                             return@mapNotNull it
                         }
                     }

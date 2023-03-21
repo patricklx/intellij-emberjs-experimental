@@ -58,6 +58,10 @@
         <lang.syntaxHighlighterFactory
                 language="Gts"
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
+        <completion.contributor language="Gts" implementationClass="com.emberjs.gts.GtsCompletion"/>
+        <psi.referenceContributor language="Gts" implementation="com.emberjs.gts.GtsReferenceContributor"/>
+        <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
+
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
@@ -96,7 +100,7 @@
         <defaultLiveTemplates file="com/emberjs/template/Ember.js"/>
         <defaultLiveTemplates file="com/emberjs/template/HTMLBars"/>
         <liveTemplateContext
-                implementation="com.emberjs.template.EmberContext"/>
+                implementation="com.emberjs.template.EmberContext" contextId="ember-context"/>
 
         <!-- deprecated and only included for legacy reasons -->
         <moduleType id="EMBER_MODULE" implementationClass="com.emberjs.project.EmberModuleType"/>

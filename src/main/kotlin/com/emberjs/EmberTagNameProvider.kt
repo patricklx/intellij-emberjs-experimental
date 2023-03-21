@@ -25,11 +25,11 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.openapi.util.Key
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiManager
-import com.intellij.psi.PsiNameIdentifierOwner
+import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -37,6 +37,7 @@ import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.suggested.startOffset
 import com.intellij.xml.XmlTagNameProvider
 
 class EmberTagNameProvider : XmlTagNameProvider {
@@ -203,13 +204,32 @@ class EmberTagNameProvider : XmlTagNameProvider {
     }
 
     fun fromLocalJs(element: XmlTag, elements: MutableList<LookupElement>) {
-        if (element.originalVirtualFile !is VirtualFileWindow && !element.containingFile.name.endsWith(".gjs") && !element.containingFile.name.endsWith(".gts")) {
-            return
-        }
-        val psiManager = PsiManager.getInstance(element.project)
-        var f = psiManager.findFile(element.originalVirtualFile!!)
+        var tpl: Any? = null
+        var f: PsiFile? = null
         if (element.originalVirtualFile is VirtualFileWindow) {
-            f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)
+            val psiManager = PsiManager.getInstance(element.project)
+            f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+            val manager = InjectedLanguageManager.getInstance(element.project)
+            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+            tpl = templates.find {
+                val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                val virtualFile = injected.virtualFile
+                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
+            } ?: return
+        }
+
+        if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+            val view = element.containingFile.viewProvider
+            val JS = Language.findLanguageByID("JavaScript")!!
+            val TS = Language.findLanguageByID("TypeScript")!!
+            val tsView = view.getPsi(TS)
+            val jsView = view.getPsi(JS)
+            f = tsView ?: jsView
+            tpl = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
+        }
+
+        if (tpl == null) {
+            return
         }
 
         val namedElements = PsiTreeUtil.collectElements(f!!) { it is PsiNameIdentifierOwner && it.name != null }

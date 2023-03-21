@@ -2,6 +2,8 @@
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsFile
+import com.emberjs.gts.GtsFileType
 import com.emberjs.icons.EmberIcons
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.lang.annotation.AnnotationHolder
@@ -9,6 +11,7 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.linter.*
+import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -41,7 +44,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
     }
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is HbPsiFile || file.fileType is TypeScriptFileType
+        return file is HbPsiFile || file.fileType is TypeScriptFileType || file.fileType is GtsFileType
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
@@ -80,6 +83,9 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
                     .setDefaultFileLevelErrorIcon(EmberIcons.TEMPLATE_LINT_16)
                     .apply()
             val psiFile = PsiManager.getInstance(file.project).findFile(file.originalVirtualFile!!)!!
+            if (file is JSFile && psiFile is GtsFile) {
+                return
+            }
             val errors = GlintLanguageServiceProvider(file.project).getService(file.virtualFile)?.highlight(psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
             errors.forEach {
                 val start = StringUtil.lineColToOffset(file.text, it.line, it.column)

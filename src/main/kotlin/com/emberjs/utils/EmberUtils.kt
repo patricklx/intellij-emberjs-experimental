@@ -205,6 +205,14 @@ class EmberUtils {
             }
             var dir = element.containingFile.originalFile.containingDirectory
             var cls: JSElement? = null
+            if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+                val view = element.containingFile.viewProvider
+                val JS = Language.findLanguageByID("JavaScript")!!
+                val TS = Language.findLanguageByID("TypeScript")!!
+
+                val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
+                cls = PsiTreeUtil.findFirstParent(inJs, { it is JSClass }) as JSElement?
+            }
             if (element.originalVirtualFile is VirtualFileWindow) {
                 val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
                 val psiManager = PsiManager.getInstance(element.project)
