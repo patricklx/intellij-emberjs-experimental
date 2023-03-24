@@ -3,6 +3,7 @@ package com.emberjs.cli
 import com.emberjs.icons.EmberIcons
 import com.intellij.javascript.nodejs.util.NodePackage
 import com.intellij.lang.javascript.boilerplate.NpmPackageProjectGenerator
+import com.intellij.lang.javascript.boilerplate.NpxPackageDescriptor
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ContentEntry
@@ -36,5 +37,11 @@ open class EmberCliProjectGenerator : NpmPackageProjectGenerator() {
     override fun generateProject(project: Project, baseDir: VirtualFile, settings: NpmPackageProjectGenerator.Settings, module: Module) {
         EmberCliProjectConfigurator.setupEmber(project, module, baseDir)
         super.generateProject(project, baseDir, settings, module)
+    }
+
+    override fun getNpxCommands(): List<NpxPackageDescriptor.NpxCommand> {
+        return listOf(
+                NpxPackageDescriptor.NpxCommand("ember-cli", "")
+        )
     }
 }

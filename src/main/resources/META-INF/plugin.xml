@@ -58,14 +58,15 @@
         <lang.syntaxHighlighterFactory
                 language="Gts"
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
-        <completion.contributor language="Gts" implementationClass="com.emberjs.gts.GtsCompletion"/>
-        <psi.referenceContributor language="Gts" implementation="com.emberjs.gts.GtsReferenceContributor"/>
+        <completion.contributor language="TypeScript" implementationClass="com.emberjs.gts.GtsCompletion"/>
+        <psi.referenceContributor language="TypeScript" implementation="com.emberjs.gts.GtsReferenceContributor"/>
         <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
 
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
+        <moduleBuilder builderClass="com.emberjs.cli.EmberCLIProjectModuleBuilder"/>
         <lsp.serverSupportProvider implementationClass="com.emberjs.glint.GlintLspSupportProvider" language="Handlebars"/>
         <lang.findUsagesProvider language="Handlebars"
                                  implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
@@ -151,6 +152,7 @@
 
     <extensions defaultExtensionNs="JavaScript">
         <moduleReferenceContributor implementation="com.emberjs.resolver.EmberModuleReferenceContributor"/>
+        <languageServiceProvider order="first" implementation="com.emberjs.glint.GlintLanguageServiceProvider" />
     </extensions>
     <actions>
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">

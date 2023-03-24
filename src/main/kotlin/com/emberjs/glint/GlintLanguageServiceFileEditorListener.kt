@@ -1,5 +1,9 @@
 package com.emberjs.glint
 
+import com.emberjs.gts.GtsFileType
+import com.intellij.lang.javascript.service.JSLanguageServiceProvider
+import com.intellij.lang.typescript.compiler.TypeScriptService
+import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile
@@ -12,7 +16,7 @@ class GlintLanguageServiceFileEditorListener : FileEditorManagerListener {
     }
 
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
-        if (source.getAllEditors(file).size == 0) {
+        if (source.getAllEditors(file).isEmpty()) {
             val project = source.project
             val provider = GlintLanguageServiceProvider(project)
             if (provider.isHighlightingCandidate(file)) {

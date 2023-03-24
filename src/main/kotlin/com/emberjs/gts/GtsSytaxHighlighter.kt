@@ -14,11 +14,20 @@ import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
+import com.intellij.lang.javascript.ecmascript6.TypeScriptReferenceContributor
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.lexer.HtmlLexer
+import com.intellij.lang.javascript.service.JSHighlightingInfoBuilder
+import com.intellij.lang.javascript.service.JSLanguageServiceProvider
+import com.intellij.lang.javascript.service.protocol.JSLanguageServiceAnswer
+import com.intellij.lang.typescript.compiler.TypeScriptCompilerSettings
+import com.intellij.lang.typescript.compiler.TypeScriptService
+import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
+import com.intellij.lang.typescript.compiler.languageService.ide.TypeScriptLanguageServiceCompletionContributor
+import com.intellij.lang.typescript.compiler.languageService.protocol.TypeScriptServiceStandardOutputProtocol
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.TypeScriptServiceInitialStateObject
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
 import com.intellij.openapi.editor.colors.EditorColorsScheme
@@ -42,12 +51,13 @@ import com.intellij.psi.templateLanguages.TemplateDataModifications
 import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
+import com.intellij.util.Consumer
 import com.intellij.util.ProcessingContext
 import javax.swing.Icon
 
 val TS = Language.findLanguageByID("TypeScript")!!
 
-class GtsLanguage : Language("Gts") {
+class GtsLanguage : Language(TS,"Gts") {
 
     companion object {
         val INSTANCE = GtsLanguage()
@@ -117,6 +127,17 @@ class GtsElementTypes {
             }
         }
         val GTS_FILE_NODE_TYPE = object : IFileElementType("GTS", GtsLanguage.INSTANCE) {
+            override fun equals(other: Any?): Boolean {
+                if (other == TypeScriptFileType.INSTANCE) {
+                    return true
+                }
+                return super.equals(other)
+            }
+
+            override fun hashCode(): Int {
+                return TypeScriptFileType.INSTANCE.hashCode()
+            }
+
             override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
                 val project = psi.project;
                 val languageForParser = getLanguageForParser(psi)
@@ -155,15 +176,14 @@ class GtsParserDefinition : TypeScriptParserDefinition() {
     }
 
     override fun createFile(viewProvider: FileViewProvider): JSFile {
-        val mdxFile = GtsFile(viewProvider)
-        return mdxFile
+        return GtsFile(viewProvider)
     }
 
 }
 
 
-internal object SimpleIcons {
-    val icon: Icon = IconLoader.getIcon("/icons/jar-gray.png", SimpleIcons::class.java)
+internal object GtsIcons {
+    val icon: Icon = IconLoader.getIcon("/icons/glimmer.svg", GtsIcons::class.java)
 }
 class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectOptionHolder.TSX), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
     val hbLexer = HbLexer()
@@ -242,7 +262,7 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
     }
 
     override fun getIcon(): Icon? {
-        return null
+        return GtsIcons.icon
     }
 }
 
@@ -324,45 +344,34 @@ class GtsSyntaxHighlighter: JSHighlighter(DialectOptionHolder.TS, false) {
 
 
 class GtsCompletion: CompletionContributor() {
-    val cap: PsiElementPattern.Capture<JSElement> = PlatformPatterns.psiElement(JSElement::class.java)
 
-    class GtsCompletion : CompletionProvider<CompletionParameters>() {
-        override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
-            val languageService = GlintLanguageServiceProvider(parameters.position.project)
-            val service = languageService.getService(parameters.originalFile.originalVirtualFile!!)!!
-            val completions = service.updateAndGetCompletionItems(parameters.originalFile.originalVirtualFile!!, parameters)?.get()
-            completions?.let {
-                result.addAllElements(it.map { it.intoLookupElement() })
-            }
-        }
+    override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
 
-    }
-    init {
-        extend(CompletionType.BASIC, cap, GtsCompletion())
+//        val file = parameters.originalFile
+//        if (file is JSFileImpl && file.fileType == GtsFileType.INSTANCE) {
+//            val element = parameters.position
+//            val languageService = GlintLanguageServiceProvider(element.project).getService(file.virtualFile)
+//            if (languageService != null && languageService.isServiceCreated()) {
+//                val items = languageService?.updateAndGetCompletionItems(file.virtualFile, parameters)?.get()
+//                items?.let {
+//                    result.addAllElements(items.map { it.intoLookupElement() })
+//                }
+//                return
+//            }
+//            val list = JSLanguageServiceProvider.getLeanguageServices(file.project)
+//            val service = list.find { it is TypeScriptServerServiceImpl && !it.isDisabledByContext(file.virtualFile) } as? TypeScriptServerServiceImpl
+//            val context = JSHighlightingInfoBuilder.createUpdateContext(file.project) { it -> true }
+//            service?.openEditor(file.virtualFile)
+//            service?.update(context)
+//            val items = service?.updateAndGetCompletionItems(file.virtualFile, parameters)?.get()
+//            items?.let {
+//                result.addAllElements(items.map { it.intoLookupElement() })
+//            }
+//        }
     }
 }
 
-class GtsReferenceContributor : PsiReferenceContributor() {
-
-    val cap: PsiElementPattern.Capture<JSElement> = PlatformPatterns.psiElement(JSElement::class.java)
-    override fun registerReferenceProviders(registrar: PsiReferenceRegistrar) {
-        with(registrar) {
-            register(cap) {
-                val target = it
-                val psiFile = PsiManager.getInstance(target.project).findFile(target.originalVirtualFile!!)
-                val document = PsiDocumentManager.getInstance(target.project).getDocument(psiFile!!)!!
-                val service = GlintLanguageServiceProvider(target.project).getService(target.originalVirtualFile!!)
-                val resolved = service?.getNavigationFor(document, target)?.firstOrNull()
-                return@register resolved?.let { ResolvedReference(target, it) }
-            }
-        }
-    }
-
-    private fun PsiReferenceRegistrar.register(pattern: ElementPattern<out PsiElement>, fn: (PsiElement) -> PsiReference?) {
-        registerReferenceProvider(pattern, object : PsiReferenceProvider() {
-            override fun getReferencesByElement(element: PsiElement, context: ProcessingContext) = arrayOf(fn(element)).filterNotNull().toTypedArray()
-        })
-    }
+class GtsReferenceContributor : TypeScriptReferenceContributor() {
 
 }
 

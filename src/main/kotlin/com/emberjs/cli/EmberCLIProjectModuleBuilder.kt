@@ -1,0 +1,9 @@
+package com.emberjs.cli
+
+import com.intellij.ide.util.projectWizard.WebTemplateNewProjectWizard
+import com.intellij.ide.util.projectWizard.WizardContext
+import com.intellij.ide.wizard.GeneratorNewProjectWizardBuilderAdapter
+import com.intellij.lang.javascript.boilerplate.JavaScriptNewTemplatesFactoryBase
+import com.intellij.platform.ProjectTemplate
+
+class EmberCLIProjectModuleBuilder: GeneratorNewProjectWizardBuilderAdapter(WebTemplateNewProjectWizard(EmberCliProjectGenerator()))

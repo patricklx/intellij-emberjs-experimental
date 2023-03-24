@@ -56,18 +56,18 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
         } catch (ex: Exception) {
             res = null
         }
-        var fileLevelAnnotation: JSLinterFileLevelAnnotation? = null
+//        var fileLevelAnnotation: JSLinterFileLevelAnnotation? = null
         val errors: MutableList<JSLinterError> = mutableListOf()
-        try {
-            val list = GlintLanguageServiceProvider(input.project).getService(input.virtualFile)?.highlight(input.psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
-            errors.addAll(list.map { JSLinterError(it.line, it.column, it.description, "glint", it.severity) }.toMutableList())
-        } catch (ex: Exception) {
-            fileLevelAnnotation = JSLinterFileLevelAnnotation("Failed to get glint annotations")
-        }
+//        try {
+//            val list = GlintLanguageServiceProvider(input.project).getService(input.virtualFile)?.highlight(input.psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
+//            errors.addAll(list.map { JSLinterError(it.line, it.column, it.description, "glint", it.severity) }.toMutableList())
+//        } catch (ex: Exception) {
+//            fileLevelAnnotation = JSLinterFileLevelAnnotation("Failed to get glint annotations")
+//        }
         errors.addAll(res?.errors ?: listOf())
-        if (fileLevelAnnotation != null) {
-            return JSLinterAnnotationResult.createLinterResult(input, fileLevelAnnotation, errors.toList(), null as VirtualFile?)
-        }
+//        if (fileLevelAnnotation != null) {
+//            return JSLinterAnnotationResult.createLinterResult(input, fileLevelAnnotation, errors.toList(), null as VirtualFile?)
+//        }
         return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
     }
 
@@ -86,6 +86,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
             if (file is JSFile && psiFile is GtsFile) {
                 return
             }
+            return
             val errors = GlintLanguageServiceProvider(file.project).getService(file.virtualFile)?.highlight(psiFile)?.get()?.map { it as GlintAnnotationError } ?: listOf()
             errors.forEach {
                 val start = StringUtil.lineColToOffset(file.text, it.line, it.column)
