@@ -14,9 +14,10 @@ import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
-import com.intellij.lang.javascript.service.JSLanguageService
-import com.intellij.lang.javascript.service.JSLanguageServiceProvider
-import com.intellij.lang.javascript.service.JSLanguageServiceResultContainer
+import com.intellij.lang.javascript.service.*
+import com.intellij.lang.javascript.service.protocol.JSLanguageServiceAnswer
+import com.intellij.lang.javascript.service.protocol.JSLanguageServiceCommand
+import com.intellij.lang.javascript.service.protocol.JSLanguageServiceObject
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceProtocol
 import com.intellij.lang.javascript.service.ui.JSLanguageServiceToolWindowManager
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
@@ -65,6 +66,46 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
             if (project.guessProjectDir()?.emberRoot != null) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
 
+
+class GlintLanguageServiceQueue: JSLanguageServiceQueue(){
+    override fun dispose() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getStartErrorMessage(): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun getState(): JSLanguageServiceExecutor.State {
+        TODO("Not yet implemented")
+    }
+
+    override fun isValid(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun resetCaches() {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> executeWithCache(p0: JSLanguageServiceCacheableCommand, p1: JSLanguageServiceCacheableCommandProcessor<out T>): CompletableFuture<T>? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> execute(p0: JSLanguageServiceCommand, p1: JSLanguageServiceCommandProcessor<T>): CompletableFuture<T>? {
+        TODO("Not yet implemented")
+    }
+
+    override fun executeNoBlocking(p0: JSLanguageServiceCommand, p1: Consumer<in JSLanguageServiceAnswer>?, p2: Consumer<in JSLanguageServiceObject>?): CompletableFuture<Void>? {
+        TODO("Not yet implemented")
+    }
+
+    override fun executeNoBlocking(p0: JSLanguageServiceCommand, p1: Consumer<in JSLanguageServiceAnswer>?): CompletableFuture<Void>? {
+        TODO("Not yet implemented")
+    }
+
+}
+
 class GlintTypeScriptService(private val project: Project) : TypeScriptServerServiceImpl(project), Disposable {
     companion object {
         private val LOG = Logger.getInstance(GlintTypeScriptService::class.java)
@@ -84,11 +125,8 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptServerSer
         return glintPkg.path
     }
 
-    override fun createProtocol(readyConsumer: Consumer<*>, tsServicePath: String): JSLanguageServiceProtocol? {
-        if (this.getServicePath() != null) {
-            return super.createProtocol(readyConsumer, this.getServicePath()!!)
-        }
-        return null
+    override fun createLanguageServiceQueue(): JSLanguageServiceQueue? {
+        return super.createLanguageServiceQueue()
     }
 
     fun getDescriptor(virtualFile: VirtualFile): LspServerDescriptor? {
