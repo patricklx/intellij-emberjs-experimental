@@ -67,7 +67,7 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 }
 
 
-class GlintLanguageServiceQueue: JSLanguageServiceQueue(){
+class GlintLanguageServiceQueue: JSLanguageServiceQueue{
     override fun dispose() {
         TODO("Not yet implemented")
     }
@@ -126,7 +126,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptServerSer
     }
 
     override fun createLanguageServiceQueue(): JSLanguageServiceQueue? {
-        return super.createLanguageServiceQueue()
+        return GlintLanguageServiceQueue()
     }
 
     fun getDescriptor(virtualFile: VirtualFile): LspServerDescriptor? {
