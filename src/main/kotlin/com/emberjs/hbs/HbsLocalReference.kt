@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GtsElementTypes
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
@@ -146,7 +147,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 } ?: return null
             }
 
-            if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+            if (element.containingFile.viewProvider is GtsFileViewProvider) {
                 val view = element.containingFile.viewProvider
                 val JS = Language.findLanguageByID("JavaScript")!!
                 val TS = Language.findLanguageByID("TypeScript")!!

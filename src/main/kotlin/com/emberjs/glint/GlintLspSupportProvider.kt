@@ -1,5 +1,6 @@
 package com.emberjs.glint
 
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
@@ -12,6 +13,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -21,6 +23,7 @@ import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.services.LanguageServer
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.function.Consumer
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun getServerDescriptor(project: Project, p1: VirtualFile): LspServerDescriptor {
@@ -127,6 +130,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     override fun useGenericHighlighting() = true
 
-    override fun useGenericNavigation() = false
+    override fun useGenericNavigation() = true
     override fun dispose() {}
 }

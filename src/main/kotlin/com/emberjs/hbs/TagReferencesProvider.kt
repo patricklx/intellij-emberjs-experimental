@@ -8,6 +8,7 @@ import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
@@ -142,7 +143,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 } ?: return null
             }
 
-            if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+            if (element.containingFile.viewProvider is GtsFileViewProvider) {
                 val view = element.containingFile.viewProvider
                 val JS = Language.findLanguageByID("JavaScript")!!
                 val TS = Language.findLanguageByID("TypeScript")!!

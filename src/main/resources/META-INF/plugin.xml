@@ -132,7 +132,6 @@
                          unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
-        <externalAnnotator language="TypeScript" implementationClass="TemplateLintExternalAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
@@ -140,9 +139,6 @@
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
-        <statusBarWidgetFactory id="glintStatusWidget"
-                                implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
-                                order="before gitWidget"/>
     </extensions>
 
     <projectListeners>
@@ -158,7 +154,5 @@
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
         </action>
-        <action id="Glint.Restart.Service"
-                class="com.emberjs.glint.GlintRestartServiceAction" />
     </actions>
 </idea-plugin>

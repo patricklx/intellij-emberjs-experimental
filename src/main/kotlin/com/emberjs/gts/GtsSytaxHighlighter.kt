@@ -127,17 +127,6 @@ class GtsElementTypes {
             }
         }
         val GTS_FILE_NODE_TYPE = object : IFileElementType("GTS", GtsLanguage.INSTANCE) {
-            override fun equals(other: Any?): Boolean {
-                if (other == TypeScriptFileType.INSTANCE) {
-                    return true
-                }
-                return super.equals(other)
-            }
-
-            override fun hashCode(): Int {
-                return TypeScriptFileType.INSTANCE.hashCode()
-            }
-
             override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
                 val project = psi.project;
                 val languageForParser = getLanguageForParser(psi)

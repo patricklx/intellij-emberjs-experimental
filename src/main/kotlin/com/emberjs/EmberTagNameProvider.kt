@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.TagReference
@@ -218,7 +219,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             } ?: return
         }
 
-        if (element.containingFile.viewProvider is MultiplePsiFilesPerDocumentFileViewProvider) {
+        if (element.containingFile.viewProvider is GtsFileViewProvider) {
             val view = element.containingFile.viewProvider
             val JS = Language.findLanguageByID("JavaScript")!!
             val TS = Language.findLanguageByID("TypeScript")!!
