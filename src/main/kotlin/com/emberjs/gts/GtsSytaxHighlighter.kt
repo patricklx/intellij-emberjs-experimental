@@ -9,25 +9,34 @@ import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.hbs.ResolvedReference
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.*
+import com.intellij.embedding.EmbeddingElementType
 import com.intellij.lang.*
 import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.ecmascript6.TypeScriptReferenceContributor
+import com.intellij.lang.javascript.ecmascript6.TypeScriptUtil
 import com.intellij.lang.javascript.highlighting.JSHighlighter
+import com.intellij.lang.javascript.library.download.TypeScriptAllStubsFile
 import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
+import com.intellij.lang.javascript.psi.resolve.JavaScriptTypeHelper
 import com.intellij.lang.javascript.service.JSHighlightingInfoBuilder
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceAnswer
+import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
+import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
+import com.intellij.lang.typescript.TypeScriptGoToDeclarationHandler
+import com.intellij.lang.typescript.TypeScriptStubElementTypes
 import com.intellij.lang.typescript.compiler.TypeScriptCompilerSettings
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
 import com.intellij.lang.typescript.compiler.languageService.ide.TypeScriptLanguageServiceCompletionContributor
 import com.intellij.lang.typescript.compiler.languageService.protocol.TypeScriptServiceStandardOutputProtocol
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.TypeScriptServiceInitialStateObject
+import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
 import com.intellij.openapi.editor.colors.EditorColorsScheme
@@ -45,17 +54,20 @@ import com.intellij.patterns.PsiElementPattern
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.tree.LeafElement
-import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
-import com.intellij.psi.templateLanguages.TemplateDataElementType
-import com.intellij.psi.templateLanguages.TemplateDataModifications
-import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
-import com.intellij.psi.tree.IElementType
-import com.intellij.psi.tree.IFileElementType
+import com.intellij.psi.templateLanguages.*
+import com.intellij.psi.tree.*
+import com.intellij.psi.util.elementType
+import com.intellij.psi.xml.XmlTokenType
+import com.intellij.ui.IconManager
 import com.intellij.util.Consumer
+import com.intellij.util.ImageLoader
 import com.intellij.util.ProcessingContext
+import com.intellij.util.diff.FlyweightCapableTreeStructure
+import com.openhtmltopdf.resource.ImageResource
+import com.petebevin.markdown.HTMLToken
 import javax.swing.Icon
 
-val TS = Language.findLanguageByID("TypeScript")!!
+val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
 
 class GtsLanguage : Language(TS,"Gts") {
 
@@ -74,14 +86,18 @@ class GtsFile(viewProvider: FileViewProvider?) : JSFileImpl(viewProvider!!, GtsL
     }
 }
 
-class GtsElementTypes {
-    companion object {
-        val HB_TOKEN = JSElementType("HB_TOKEN")
-        val JS_TOKEN = JSElementType("JS_TOKEN")
-        val HTML_TOKEN = JSElementType("HTML_TOKEN")
-        val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_FRAGMENT", GtsLanguage.INSTANCE)
-        val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
-        val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", GtsLanguage.INSTANCE, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
+class TSTemplate(val ts: TypeScriptEmbeddedContentElementType = TypeScriptEmbeddedContentElementType(TS, "GTS_")):
+        EmbeddingElementType by ts,
+        ICustomParsingType by ts,
+        ILazyParseableElementTypeBase by ts,
+        ILightLazyParseableElementType by ts,
+        JEEmbeddedBlockElementType by ts,
+        TemplateDataElementType.TemplateAwareElementType by ts,
+        TemplateDataElementType("GTS_TS", TS, GtsElementTypes.JS_TOKEN, GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) {
+
+            override fun parseContents(node: ASTNode): ASTNode? {
+                return super.parseContents(node)
+            }
             override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
                 return TS
             }
@@ -93,7 +109,29 @@ class GtsElementTypes {
                     super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
                 }
             }
-        }
+}
+
+class GtsElementTypes {
+    companion object {
+        val HB_TOKEN = JSElementType("HB_TOKEN")
+        val JS_TOKEN = JSElementType("JS_TOKEN")
+        val HTML_TOKEN = JSElementType("HTML_TOKEN")
+        val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_EMBEDDED_CONTENT", GtsLanguage.INSTANCE)
+        val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
+        val TS_CONTENT_ELEMENT_TYPE = TSTemplate()
+//        val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
+//            override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
+//                return TS
+//            }
+//            override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
+//                val r = Regex("=\\s*$")
+//                return if (r.containsMatchIn(tokenText)) {
+//                    TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "\"\"")
+//                } else {
+//                    super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
+//                }
+//            }
+//        }
         val HTML_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_HTML", GtsLanguage.INSTANCE, HTML_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
 
             override fun createBaseLexer(viewProvider: TemplateLanguageFileViewProvider?): Lexer {
@@ -127,6 +165,17 @@ class GtsElementTypes {
             }
         }
         val GTS_FILE_NODE_TYPE = object : IFileElementType("GTS", GtsLanguage.INSTANCE) {
+            override fun equals(other: Any?): Boolean {
+                if (other == TypeScriptFileType.INSTANCE) {
+                    return true
+                }
+                return super.equals(other)
+            }
+
+            override fun hashCode(): Int {
+                return TypeScriptFileType.INSTANCE.hashCode()
+            }
+
             override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
                 val project = psi.project;
                 val languageForParser = getLanguageForParser(psi)
@@ -140,6 +189,7 @@ class GtsElementTypes {
 }
 
 class GtsParserDefinition : TypeScriptParserDefinition() {
+
     override fun getFileNodeType(): IFileElementType {
         return GtsElementTypes.GTS_FILE_NODE_TYPE
     }
@@ -172,28 +222,30 @@ class GtsParserDefinition : TypeScriptParserDefinition() {
 
 
 internal object GtsIcons {
-    val icon: Icon = IconLoader.getIcon("/icons/glimmer.svg", GtsIcons::class.java)
+    val icon: Icon = IconLoader.getIcon("/com/emberjs/icons/glimmer.svg", GtsIcons::class.java)
 }
-class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(DialectOptionHolder.TSX), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
+
+class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
     val hbLexer = HbLexer()
     override fun lookAhead(baseLexer: Lexer) {
-        if (baseLexer.tokenType == JSTokenTypes.XML_START_TAG_START) {
+        if (baseLexer.tokenType == XmlTokenType.XML_START_TAG_START && baseLexer.bufferSequence.substring(baseLexer.currentPosition.offset, baseLexer.bufferEnd).startsWith("<template")) {
+            baseLexer.advance()
             // Parse all sub tokens
             var isEnd = false
             val start = baseLexer.tokenStart
             while (baseLexer.tokenType != null) {
                 baseLexer.advance()
-                if (baseLexer.tokenType == JSTokenTypes.XML_END_TAG_START) {
+                if (baseLexer.tokenType == XmlTokenType.XML_TAG_END) {
                     isEnd = true
                 }
-                if (baseLexer.tokenType == JSTokenTypes.XML_TAG_NAME) {
+                if (baseLexer.tokenType == XmlTokenType.XML_TAG_NAME) {
                     if (isEnd && baseLexer.tokenText == "template") {
                         break
                     }
                     isEnd = false
                 }
             }
-            while (baseLexer.tokenType != JSTokenTypes.XML_TAG_END && baseLexer.tokenType != null) {
+            while (baseLexer.tokenType != XmlTokenType.XML_TAG_END && baseLexer.tokenType != null) {
                 baseLexer.advance()
             }
             val end = baseLexer.tokenEnd
@@ -223,7 +275,7 @@ class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(Dialect
                 return
             }
             var end = baseLexer.tokenEnd
-            while (baseLexer.tokenType != JSTokenTypes.XML_START_TAG_START && baseLexer.tokenType != null) {
+            while ((baseLexer.tokenType != XmlTokenType.XML_START_TAG_START || !baseLexer.bufferSequence.substring(baseLexer.currentPosition.offset, baseLexer.bufferEnd).startsWith("<template")) && baseLexer.tokenType != null) {
                 end = baseLexer.tokenEnd
                 baseLexer.advance()
             }
@@ -233,6 +285,18 @@ class GtsLexerAdapter(val baseLexer: Lexer = JavaScriptHighlightingLexer(Dialect
 }
 
 class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+        return TypeScriptFileType.INSTANCE.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other == TypeScriptFileType.INSTANCE) {
+            return true
+        }
+        return super.equals(other)
+    }
 
     companion object {
         val INSTANCE = GtsFileType()

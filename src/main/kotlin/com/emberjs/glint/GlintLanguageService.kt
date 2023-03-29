@@ -1,7 +1,9 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
+import com.emberjs.hbs.HbReference
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -14,15 +16,22 @@ import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
+import com.intellij.lang.javascript.psi.JSReferenceExpression
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptSingleTypeImpl
 import com.intellij.lang.javascript.service.*
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceProtocol
 import com.intellij.lang.javascript.service.ui.JSLanguageServiceToolWindowManager
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptCompilerService
 import com.intellij.lang.typescript.compiler.TypeScriptService
+import com.intellij.lang.typescript.compiler.TypeScriptService.CompletionMergeStrategy
+import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
+import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceCompletionEntry
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.TypeScriptServiceCommandClean
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse.CompletionEntryDetail
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
 import com.intellij.lang.typescript.compiler.ui.TypeScriptServerServiceSettings
 import com.intellij.lang.typescript.tsconfig.TypeScriptConfigService
 import com.intellij.lsp.LspServer
@@ -49,12 +58,14 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.util.Consumer
 import icons.JavaScriptLanguageIcons.Typescript
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
 import java.util.stream.Stream
+import javax.swing.text.AbstractDocument.LeafElement
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
 
@@ -67,6 +78,7 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 }
 
 class GlintTypeScriptService(private val project: Project) : TypeScriptService, Disposable {
+    var currentlyChecking: PsiElement? =null
     companion object {
         private val LOG = Logger.getInstance(GlintTypeScriptService::class.java)
         fun getInstance(project: Project): GlintTypeScriptService = project.getService(GlintTypeScriptService::class.java)
@@ -103,7 +115,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
-        return TypeScriptService.CompletionMergeStrategy.NON
+        return CompletionMergeStrategy.MERGE
     }
 
     override fun updateAndGetCompletionItems(virtualFile: VirtualFile, parameters: CompletionParameters): Future<List<TypeScriptService.CompletionEntry>?>? {
@@ -132,8 +144,19 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         return completedFuture(items.map { GlintCompletionEntry(descriptor.getResolvedCompletionItem((it as GlintCompletionEntry).item)) })
     }
 
-    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement> {
+    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
         var element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset+1)!!
+        if (currentlyChecking == null && element.containingFile is HbPsiFile) {
+            currentlyChecking = sourceElement
+            if (element is LeafPsiElement) {
+                element = element.parent!!
+            }
+            if (element.reference is HbReference || element.references.find { it is HbReference } != null) {
+                currentlyChecking = null
+                return null
+            }
+            currentlyChecking = null
+        }
         if (sourceElement.getContainingFile().fileType == GtsFileType.INSTANCE) {
             element = sourceElement
         }
@@ -151,7 +174,8 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             elem = f.findElementAt(document.hostRanges.first().startOffset + element.textOffset)!!
             elem = DelegateElement(elem, element, document)
         }
-        return getDescriptor()?.getElementDefinitions(elem as PsiElement)?.toTypedArray() ?: emptyArray()
+
+        return getDescriptor()?.getElementDefinitions(elem as PsiElement)?.toTypedArray()
     }
 
 
