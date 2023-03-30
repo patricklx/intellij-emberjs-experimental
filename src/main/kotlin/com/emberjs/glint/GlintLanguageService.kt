@@ -16,24 +16,14 @@ import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
-import com.intellij.lang.javascript.psi.JSReferenceExpression
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptSingleTypeImpl
-import com.intellij.lang.javascript.service.*
-import com.intellij.lang.javascript.service.protocol.JSLanguageServiceProtocol
-import com.intellij.lang.javascript.service.ui.JSLanguageServiceToolWindowManager
+import com.intellij.lang.javascript.service.JSLanguageService
+import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
-import com.intellij.lang.typescript.compiler.TypeScriptCompilerService
 import com.intellij.lang.typescript.compiler.TypeScriptService
-import com.intellij.lang.typescript.compiler.TypeScriptService.CompletionMergeStrategy
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceCompletionEntry
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.TypeScriptServiceCommandClean
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse.CompletionEntryDetail
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
-import com.intellij.lang.typescript.compiler.ui.TypeScriptServerServiceSettings
-import com.intellij.lang.typescript.tsconfig.TypeScriptConfigService
 import com.intellij.lsp.LspServer
 import com.intellij.lsp.LspServerDescriptor
 import com.intellij.lsp.LspServerManager
@@ -42,30 +32,22 @@ import com.intellij.lsp.data.LspDiagnostic
 import com.intellij.lsp.data.LspSeverity
 import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.NotNullLazyValue
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.util.Consumer
-import icons.JavaScriptLanguageIcons.Typescript
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
 import java.util.stream.Stream
-import javax.swing.text.AbstractDocument.LeafElement
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
 
@@ -76,6 +58,8 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
     override fun getAllServices() =
             if (project.guessProjectDir()?.emberRoot != null) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
+
+
 
 class GlintTypeScriptService(private val project: Project) : TypeScriptService, Disposable {
     var currentlyChecking: PsiElement? =null
@@ -115,12 +99,27 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
-        return CompletionMergeStrategy.MERGE
+        return TypeScriptLanguageServiceUtil.getCompletionMergeStrategy(parameters, file, context)
     }
 
     override fun updateAndGetCompletionItems(virtualFile: VirtualFile, parameters: CompletionParameters): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
-        return completedFuture(descriptor.getCompletionItems(parameters).map { descriptor.getResolvedCompletionItem(it) }.map { GlintCompletionEntry(it) })
+        return completedFuture(descriptor.getCompletionItems(parameters)
+                .map { descriptor.getResolvedCompletionItem(it) }.
+                map {
+                    val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
+                    detail.name = it.completionItem.label
+                    detail.kind = it.completionItem.kind.name
+                    val doc = TypeScriptSymbolDisplayPart()
+                    doc.text = it.documentation
+                    doc.kind = "text"
+                    val disp = TypeScriptSymbolDisplayPart()
+                    disp.kind = it.completionItem.kind?.name
+                    disp.text = it.detail
+                    detail.documentation = arrayOf(doc)
+                    detail.displayParts = arrayOf(disp)
+                    TypeScriptServerServiceCompletionEntry(detail)
+                })
     }
 
     override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): Collection<IntentionAction> {
@@ -212,7 +211,6 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
-        return null
         val server = getDescriptor()?.server ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
         val changedUnsaved = collectChangedUnsavedFiles()

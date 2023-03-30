@@ -1,6 +1,6 @@
 package com.emberjs.glint
 
-import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.dmarcotte.handlebars.file.HbFileType
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
@@ -8,22 +8,17 @@ import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lsp.*
-import com.intellij.lsp.methods.LspServerMethodWithReturnValue
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
-import org.eclipse.lsp4j.ServerCapabilities
-import org.eclipse.lsp4j.services.LanguageServer
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.function.Consumer
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun getServerDescriptor(project: Project, p1: VirtualFile): LspServerDescriptor {
@@ -70,8 +65,18 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 @Service
 class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(), Disposable {
-
+    val psiManager = PsiManager.getInstance(myProject)
     override fun getProject(): Project = myProject
+
+    override fun diagnosticReceived(file: VirtualFile?) {
+        ApplicationManager.getApplication().runReadAction {
+            val psiFile = file?.let { psiManager.findFile(it) }
+            if (file?.fileType == HbFileType.INSTANCE && psiFile != null) {
+                project.getService(GlintTypeScriptService::class.java).highlight(psiFile)
+            }
+        }
+        super.diagnosticReceived(file)
+    }
 
     override fun createStdioServerStartingCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!
@@ -126,10 +131,11 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     override fun getSocketModeDescriptor(): SocketModeDescriptor? = null
 
-    override fun useGenericCompletion() = true
+    override fun useGenericCompletion() = false
 
-    override fun useGenericHighlighting() = true
+    override fun useGenericHighlighting() = false
 
     override fun useGenericNavigation() = true
     override fun dispose() {}
 }
+

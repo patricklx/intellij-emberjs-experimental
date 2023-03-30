@@ -58,8 +58,6 @@
         <lang.syntaxHighlighterFactory
                 language="Gts"
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
-        <completion.contributor language="TypeScript" implementationClass="com.emberjs.gts.GtsCompletion"/>
-        <psi.referenceContributor language="TypeScript" implementation="com.emberjs.gts.GtsReferenceContributor"/>
         <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
 
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
@@ -132,6 +130,7 @@
                          unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>

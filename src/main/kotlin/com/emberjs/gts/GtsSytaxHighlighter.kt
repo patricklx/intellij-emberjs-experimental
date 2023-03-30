@@ -5,37 +5,17 @@ import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.emberjs.glint.GlintLanguageServiceProvider
-import com.emberjs.hbs.ResolvedReference
-import com.emberjs.utils.originalVirtualFile
-import com.intellij.codeInsight.completion.*
 import com.intellij.embedding.EmbeddingElementType
 import com.intellij.lang.*
 import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
-import com.intellij.lang.javascript.ecmascript6.TypeScriptReferenceContributor
-import com.intellij.lang.javascript.ecmascript6.TypeScriptUtil
 import com.intellij.lang.javascript.highlighting.JSHighlighter
-import com.intellij.lang.javascript.library.download.TypeScriptAllStubsFile
-import com.intellij.lang.javascript.psi.JSElement
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.lang.javascript.psi.resolve.JavaScriptTypeHelper
-import com.intellij.lang.javascript.service.JSHighlightingInfoBuilder
-import com.intellij.lang.javascript.service.JSLanguageServiceProvider
-import com.intellij.lang.javascript.service.protocol.JSLanguageServiceAnswer
 import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
 import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
-import com.intellij.lang.typescript.TypeScriptGoToDeclarationHandler
-import com.intellij.lang.typescript.TypeScriptStubElementTypes
-import com.intellij.lang.typescript.compiler.TypeScriptCompilerSettings
-import com.intellij.lang.typescript.compiler.TypeScriptService
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
-import com.intellij.lang.typescript.compiler.languageService.ide.TypeScriptLanguageServiceCompletionContributor
-import com.intellij.lang.typescript.compiler.languageService.protocol.TypeScriptServiceStandardOutputProtocol
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.TypeScriptServiceInitialStateObject
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
@@ -48,23 +28,15 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.patterns.ElementPattern
-import com.intellij.patterns.PlatformPatterns
-import com.intellij.patterns.PsiElementPattern
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.tree.LeafElement
-import com.intellij.psi.templateLanguages.*
+import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
+import com.intellij.psi.templateLanguages.TemplateDataElementType
+import com.intellij.psi.templateLanguages.TemplateDataModifications
+import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
 import com.intellij.psi.tree.*
-import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTokenType
-import com.intellij.ui.IconManager
-import com.intellij.util.Consumer
-import com.intellij.util.ImageLoader
-import com.intellij.util.ProcessingContext
-import com.intellij.util.diff.FlyweightCapableTreeStructure
-import com.openhtmltopdf.resource.ImageResource
-import com.petebevin.markdown.HTMLToken
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
@@ -235,10 +207,10 @@ class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean 
             val start = baseLexer.tokenStart
             while (baseLexer.tokenType != null) {
                 baseLexer.advance()
-                if (baseLexer.tokenType == XmlTokenType.XML_TAG_END) {
+                if (baseLexer.tokenType == XmlTokenType.XML_END_TAG_START) {
                     isEnd = true
                 }
-                if (baseLexer.tokenType == XmlTokenType.XML_TAG_NAME) {
+                if (baseLexer.tokenType == XmlTokenType.XML_NAME) {
                     if (isEnd && baseLexer.tokenText == "template") {
                         break
                     }
@@ -393,39 +365,6 @@ class GtsSyntaxHighlighter: JSHighlighter(DialectOptionHolder.TS, false) {
     override fun getHighlightingLexer(): Lexer {
         return GtsLexerAdapter()
     }
-}
-
-
-class GtsCompletion: CompletionContributor() {
-
-    override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
-
-//        val file = parameters.originalFile
-//        if (file is JSFileImpl && file.fileType == GtsFileType.INSTANCE) {
-//            val element = parameters.position
-//            val languageService = GlintLanguageServiceProvider(element.project).getService(file.virtualFile)
-//            if (languageService != null && languageService.isServiceCreated()) {
-//                val items = languageService?.updateAndGetCompletionItems(file.virtualFile, parameters)?.get()
-//                items?.let {
-//                    result.addAllElements(items.map { it.intoLookupElement() })
-//                }
-//                return
-//            }
-//            val list = JSLanguageServiceProvider.getLeanguageServices(file.project)
-//            val service = list.find { it is TypeScriptServerServiceImpl && !it.isDisabledByContext(file.virtualFile) } as? TypeScriptServerServiceImpl
-//            val context = JSHighlightingInfoBuilder.createUpdateContext(file.project) { it -> true }
-//            service?.openEditor(file.virtualFile)
-//            service?.update(context)
-//            val items = service?.updateAndGetCompletionItems(file.virtualFile, parameters)?.get()
-//            items?.let {
-//                result.addAllElements(items.map { it.intoLookupElement() })
-//            }
-//        }
-    }
-}
-
-class GtsReferenceContributor : TypeScriptReferenceContributor() {
-
 }
 
 
