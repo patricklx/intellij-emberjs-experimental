@@ -116,7 +116,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
-            getGlintDescriptor(context.project!!).server.start()
+            getGlintDescriptor(context.project!!).server
         }
         return mutableListOf()
     }

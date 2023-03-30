@@ -27,11 +27,6 @@ import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerSer
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
 import com.intellij.lsp.LspServer
-import com.intellij.lsp.LspServerDescriptor
-import com.intellij.lsp.LspServerManager
-import com.intellij.lsp.data.LspCompletionItem
-import com.intellij.lsp.data.LspDiagnostic
-import com.intellij.lsp.data.LspSeverity
 import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger

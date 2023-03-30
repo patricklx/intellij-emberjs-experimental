@@ -9,6 +9,9 @@ import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lsp.*
+import com.intellij.lsp.api.LspServerDescriptor
+import com.intellij.lsp.api.LspServerManager
+import com.intellij.lsp.api.LspServerSupportProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -22,17 +25,8 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
-    override fun getServerDescriptor(project: Project, p1: VirtualFile): LspServerDescriptor {
-        val workingDir = project.guessProjectDir()!!
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-        if (glintPkg == null) {
-            return LspServerDescriptor.emptyDescriptor()
-        }
-        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-        if (file == null) {
-            return LspServerDescriptor.emptyDescriptor()
-        }
-        return project.getService(GlintLspServerDescriptor::class.java)
+    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
+        TODO("Not yet implemented")
     }
 }
 
@@ -65,21 +59,14 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 
 @Service
-class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(), Disposable {
+class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
-    override fun getProject(): Project = myProject
+    fun getProject(): Project = myProject
 
-    override fun diagnosticReceived(file: VirtualFile?) {
-        ApplicationManager.getApplication().runReadAction {
-            val psiFile = file?.let { psiManager.findFile(it) }
-            if (file?.fileType == HbFileType.INSTANCE && psiFile != null) {
-                project.getService(GlintTypeScriptService::class.java).highlight(psiFile)
-            }
-        }
-        super.diagnosticReceived(file)
-    }
+    val server get() =
+            LspServerManager.getInstance(project).getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
-    override fun createStdioServerStartingCommandLine(): GeneralCommandLine {
+    override fun createCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         val commandLine = GeneralCommandLine()
@@ -105,15 +92,10 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return commandLine
     }
 
-    override fun createServerConnector(): LanguageServerConnector {
-        val socketModeDescriptor = this.socketModeDescriptor
-        return if (socketModeDescriptor != null) {
-            LanguageServerConnectorSocket(this, socketModeDescriptor)
-        } else {
-            val startingCommandLine = createStdioServerStartingCommandLine()
-            LOG.debug("$this: starting server process using: $startingCommandLine")
-            GlintLanguageServerConnectorStdio(this, OSProcessHandler(startingCommandLine))
-        }
+    override fun createServerConnector(lspServer: LspServer): LanguageServerConnector {
+        val startingCommandLine = createCommandLine()
+        LOG.debug("$this: starting server process using: $startingCommandLine")
+        return GlintLanguageServerConnectorStdio(this, OSProcessHandler(startingCommandLine))
     }
 
     override fun createInitializationOptions(): Any {
@@ -128,15 +110,9 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return super.getLanguageId(file)
     }
 
-    override fun getRoot(): VirtualFile = project.guessProjectDir()!!
-
-    override fun getSocketModeDescriptor(): SocketModeDescriptor? = null
-
-    override fun useGenericCompletion() = false
-
-    override fun useGenericHighlighting() = false
-
-    override fun useGenericNavigation() = true
+    override fun isSupportedFile(file: VirtualFile): Boolean {
+        TODO("Not yet implemented")
+    }
     override fun dispose() {}
 }
 
