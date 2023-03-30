@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.AttrPsiReference
 import com.emberjs.EmberAttrDec
 import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.hbs.HbsModuleReference
@@ -23,6 +24,7 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
+import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
@@ -205,6 +207,14 @@ class EmberUtils {
             }
             var dir = element.containingFile.originalFile.containingDirectory
             var cls: JSElement? = null
+            if (element.containingFile.viewProvider is GtsFileViewProvider) {
+                val view = element.containingFile.viewProvider
+                val JS = Language.findLanguageByID("JavaScript")!!
+                val TS = Language.findLanguageByID("TypeScript")!!
+
+                val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
+                cls = PsiTreeUtil.findFirstParent(inJs, { it is JSClass }) as JSElement?
+            }
             if (element.originalVirtualFile is VirtualFileWindow) {
                 val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
                 val psiManager = PsiManager.getInstance(element.project)
@@ -262,8 +272,11 @@ class EmberUtils {
             if (element is ES6ImportedBinding) {
                 var ref: JSModuleReference? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
                 if (ref == null) {
-                    val tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
-                    return tsFiles?.maxByOrNull { it.virtualFile.path.length }
+                    var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
+                    if (tsFiles?.isEmpty() == true) {
+                        tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? JSFileModuleReference)?.resolve() }
+                    }
+                    return tsFiles?.filter { it is JSFile }?.maxByOrNull { it.virtualFile.path.length }
                 }
 
                 return followReferences(ref.fileReferenceSet.lastReference?.multiResolve(false)?.filterNotNull()?.firstOrNull()?.element)

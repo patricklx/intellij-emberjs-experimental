@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2022.4.0
+- feature: Support gts files
+- feature: support new project dialog
+
 ## 2022.3.6
 - improvement: more improvements for references for template imports
 

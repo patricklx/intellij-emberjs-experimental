@@ -7,13 +7,13 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.7.22"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.11.0"
+    id("org.jetbrains.intellij") version "1.13.0"
 }
 
 
 
 group = "com.emberjs"
-version = "2022.3.6"
+version = "2022.4.0"
 
 // Configure project's dependencies
 repositories {
@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2022.3")
+    version.set("2022.3.2")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
@@ -70,3 +70,5 @@ tasks.test {
 tasks.buildSearchableOptions {
     enabled = false
 }
+
+sourceSets["main"].java.srcDirs("src/main/gen")

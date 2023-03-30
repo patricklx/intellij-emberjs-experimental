@@ -6,6 +6,8 @@ import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.EmberAttrDec
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsElementTypes
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
@@ -20,6 +22,7 @@ import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
@@ -130,18 +133,33 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
     companion object {
 
         fun resolveToLocalJs(element: PsiElement): HbsLocalReference? {
-            if (element.originalVirtualFile !is VirtualFileWindow) {
+            var tpl: Any? = null
+            var f: PsiFile? = null
+            if (element.originalVirtualFile is VirtualFileWindow) {
+                val psiManager = PsiManager.getInstance(element.project)
+                f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
+                val manager = InjectedLanguageManager.getInstance(element.project)
+                val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+                tpl = templates.find {
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                    val virtualFile = injected.virtualFile
+                    return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
+                } ?: return null
+            }
+
+            if (element.containingFile.viewProvider is GtsFileViewProvider) {
+                val view = element.containingFile.viewProvider
+                val JS = Language.findLanguageByID("JavaScript")!!
+                val TS = Language.findLanguageByID("TypeScript")!!
+                val tsView = view.getPsi(TS)
+                val jsView = view.getPsi(JS)
+                f = tsView ?: jsView
+                tpl = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
+            }
+
+            if (tpl == null) {
                 return null
             }
-            val psiManager = PsiManager.getInstance(element.project)
-            val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
-            val manager = InjectedLanguageManager.getInstance(element.project)
-            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
-            val tpl = templates.find {
-                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
-                val virtualFile = injected.virtualFile
-                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
-            } ?: return null
 
             val parts = element.text.split(".")
             var current: PsiElement? = null
@@ -152,7 +170,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
                         val useScope = JSUseScopeProvider.getUseScopeElement(it)
-                        if (useScope.isAncestor(tpl)) {
+                        if (useScope.isAncestor(tpl as PsiElement)) {
                             return@mapNotNull it
                         }
                     }

@@ -47,7 +47,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
             val res: EmberNamedElement? = tag.references.last().resolve() as? EmberNamedElement?
-            if (res == null) {
+            if (res == null && !tag.text.startsWith(":") && !tag.text.first().isUpperCase()) {
                 return null
             }
             return EmberXmlElementDescriptor(tag, res)

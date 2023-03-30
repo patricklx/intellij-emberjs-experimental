@@ -44,10 +44,27 @@
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
+        <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
+        <lang.parserDefinition
+                language="Gts"
+                implementationClass="com.emberjs.gts.GtsParserDefinition"/>
+        <fileType
+                name="Gts File"
+                implementationClass="com.emberjs.gts.GtsFileType"
+                fieldName="INSTANCE"
+                language="Gts"
+                extensions="gts"/>
+        <lang.syntaxHighlighterFactory
+                language="Gts"
+                implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
+        <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
+
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
+        <moduleBuilder builderClass="com.emberjs.cli.EmberCLIProjectModuleBuilder"/>
         <lsp.serverSupportProvider implementationClass="com.emberjs.glint.GlintLspSupportProvider" language="Handlebars"/>
         <lang.findUsagesProvider language="Handlebars"
                                  implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
@@ -82,7 +99,7 @@
         <defaultLiveTemplates file="com/emberjs/template/Ember.js"/>
         <defaultLiveTemplates file="com/emberjs/template/HTMLBars"/>
         <liveTemplateContext
-                implementation="com.emberjs.template.EmberContext"/>
+                implementation="com.emberjs.template.EmberContext" contextId="ember-context"/>
 
         <!-- deprecated and only included for legacy reasons -->
         <moduleType id="EMBER_MODULE" implementationClass="com.emberjs.project.EmberModuleType"/>
@@ -113,7 +130,7 @@
                          unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
-        <externalAnnotator language="TypeScript" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
@@ -121,9 +138,6 @@
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
-        <statusBarWidgetFactory id="glintStatusWidget"
-                                implementation="com.emberjs.glint.GlintStatusBarWidgetFactory"
-                                order="before gitWidget"/>
     </extensions>
 
     <projectListeners>
@@ -133,12 +147,11 @@
 
     <extensions defaultExtensionNs="JavaScript">
         <moduleReferenceContributor implementation="com.emberjs.resolver.EmberModuleReferenceContributor"/>
+        <languageServiceProvider order="first" implementation="com.emberjs.glint.GlintLanguageServiceProvider" />
     </extensions>
     <actions>
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
         </action>
-        <action id="Glint.Restart.Service"
-                class="com.emberjs.glint.GlintRestartServiceAction" />
     </actions>
 </idea-plugin>
