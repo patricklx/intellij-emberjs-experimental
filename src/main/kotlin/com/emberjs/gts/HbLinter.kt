@@ -16,6 +16,9 @@ class InitialInfo {
 class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, List<GlintAnnotationError>>() {
 
     override fun collectInformation(file: PsiFile): InitialInfo? {
+        if (file.viewProvider is GtsFileViewProvider) {
+            return null
+        }
         val initialInfo = InitialInfo()
         initialInfo.file = file
         return initialInfo
