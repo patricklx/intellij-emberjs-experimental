@@ -19,12 +19,17 @@ class EmberInspectionSuppressor: InspectionSuppressor {
             val f = element.containingFile
             val manager = InjectedLanguageManager.getInstance(element.project)
             val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
-            val tpl = templates.mapNotNull {
+            var tpl = templates.mapNotNull {
                 val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@mapNotNull null
                 val hbs = injected.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
                 val html = injected.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
                 return@mapNotNull arrayOf<PsiFile>(hbs, html)
             }.toTypedArray().flatten()
+            if (element.containingFile.fileType == GtsFileType.INSTANCE) {
+                val hbs = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+                val html = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+                tpl = arrayOf<PsiFile>(hbs, html).toList()
+            }
 
 
             return element.importedBindings.any { ib ->

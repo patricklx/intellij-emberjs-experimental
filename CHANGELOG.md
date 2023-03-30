@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.4.1
+- fix: fix Unused imports in gts files
+
 ## 2022.4.0
 - feature: Support gts files
 - feature: support new project dialog
