@@ -1,6 +1,7 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil

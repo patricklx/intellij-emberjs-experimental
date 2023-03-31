@@ -5,17 +5,37 @@ import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
+import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.utils.ifTrue
 import com.intellij.embedding.EmbeddingElementType
+import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.lang.*
+import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
+import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
+import com.intellij.lang.ecmascript6.psi.impl.ES6CreateImportUtil
+import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
+import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
+import com.intellij.lang.javascript.config.JSImportResolveContext
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.highlighting.JSHighlighter
+import com.intellij.lang.javascript.index.IndexedFileTypeProvider
+import com.intellij.lang.javascript.modules.JSImportCandidateDescriptor
+import com.intellij.lang.javascript.modules.JSImportPlaceInfo
+import com.intellij.lang.javascript.modules.imports.JSImportCandidatesBase
+import com.intellij.lang.javascript.modules.imports.JSImportDescriptor
+import com.intellij.lang.javascript.modules.imports.JSImportExportType
+import com.intellij.lang.javascript.modules.imports.JSSimpleImportCandidate
+import com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor
+import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
+import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
 import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
+import com.intellij.lang.typescript.tsconfig.*
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
@@ -31,12 +51,18 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.tree.LeafElement
+import com.intellij.psi.search.FilenameIndex
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
 import com.intellij.psi.templateLanguages.TemplateDataElementType
 import com.intellij.psi.templateLanguages.TemplateDataModifications
 import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
 import com.intellij.psi.tree.*
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.xml.XmlTokenType
+import com.intellij.util.Processor
+import java.util.function.Predicate
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
@@ -380,4 +406,127 @@ class GtsAstFactory : ASTFactory() {
 
         return (if (type === GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) OuterLanguageElementImpl(type, text) else super.createLeaf(type, text))
     }
+}
+
+
+val GTS_DEFAULT_EXTENSIONS_WITH_DOT = arrayOf(".gts", ".gjs")
+
+class GtsImportResolver(project: Project,
+                                resolveContext: JSImportResolveContext,
+                                private val contextFile: VirtualFile): TypeScriptFileImportsResolverImpl(project, resolveContext, GTS_DEFAULT_EXTENSIONS_WITH_DOT, listOf(GtsFileType.INSTANCE)) {
+
+    override fun processAllFilesInScope(includeScope: GlobalSearchScope, processor: Processor<in VirtualFile>) {
+        if (includeScope == GlobalSearchScope.EMPTY_SCOPE) return
+
+        //accept all, even without lang="ts"
+        super.processAllFilesInScope(includeScope, processor)
+    }
+}
+
+class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
+    override fun isImplicitTypeScriptFile(project: Project, file: VirtualFile): Boolean {
+        if (!FileTypeRegistry.getInstance().isFileOfType(file, GtsFileType.INSTANCE)) return false
+
+        val psiFile = PsiManager.getInstance(project).findFile(file) ?: return false
+
+        return psiFile.viewProvider is GtsFileViewProvider
+    }
+
+    override fun getExtensions(): Array<String> = GTS_DEFAULT_EXTENSIONS_WITH_DOT
+
+    override fun contributeResolver(project: Project, config: TypeScriptConfig): TypeScriptFileImportsResolver {
+        return GtsImportResolver(project, config.resolveContext, config.configFile)
+    }
+
+    override fun contributeResolver(project: Project,
+                                    context: TypeScriptImportResolveContext,
+                                    contextFile: VirtualFile): TypeScriptFileImportsResolver? {
+        val detectedEmber = FrameworkDetectionManager.getInstance(project).detectedFrameworks.find { it is EmberCliFrameworkDetector.EmberFrameworkDescription } != null
+        if (detectedEmber) {
+            return GtsImportResolver(project, context, contextFile)
+        }
+        return null
+    }
+}
+
+class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImportCandidatesBase(placeInfo) {
+
+    class Info(val type: String, val name: String, val virtualFile: VirtualFile)
+
+    private val candidates: Map<String, List<Info>> by lazy {
+        FilenameIndex.getAllFilesByExt(project, "gts",
+                createProjectImportsScope(placeInfo, getStructureModuleRoot(placeInfo)))
+                .map { getExports(it) }
+                .flatten()
+                .groupBy { it.name }
+    }
+
+    fun getExports(virtualFile: VirtualFile): List<Info> {
+        val exports = mutableListOf<Info>()
+        var file = PsiManager.getInstance(placeInfo.project).findFile(virtualFile)
+        if (file == null) {
+            return exports
+        }
+        file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+        val defaultExport = ES6PsiUtil.findDefaultExport(file) as ES6ExportDefaultAssignment?
+        if (defaultExport != null) {
+            exports.add(Info("default", defaultExport.namedElement?.name ?: getComponentName(virtualFile), virtualFile))
+            exports.add(Info("default", getComponentName(virtualFile), virtualFile))
+        }
+
+        val namedExports = PsiTreeUtil.collectElements(file) { (it as? JSElementBase)?.isExported == true && !it.isExportedWithDefault}.map { it as JSElementBase }
+        namedExports.forEach {
+            exports.add(Info("named", it.name!!, virtualFile))
+        }
+        return exports
+    }
+
+    override fun processCandidates(ref: String,
+                                   processor: JSCandidatesProcessor) {
+        val place = myPlaceInfo.place
+        val candidates = candidates[ref]
+        candidates?.forEach { processor.processCandidate(GtsImportCandidate(ref, place, it)) }
+    }
+
+    override fun getNames(keyFilter: Predicate<in String>): Set<String> {
+        return candidates.keys.filter(keyFilter::test).toSet()
+    }
+
+    private fun getComponentName(virtualFile: VirtualFile): String {
+        return if (virtualFile.name == "index.gts") {
+            virtualFile.parent.name
+        }
+        else {
+            virtualFile.nameWithoutExtension
+        }
+    }
+
+    class Factory : JSImportCandidatesProvider.CandidatesFactory {
+        override fun createProvider(placeInfo: JSImportPlaceInfo): JSImportCandidatesProvider {
+            return GtsComponentCandidatesProvider(placeInfo)
+        }
+    }
+}
+
+class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponentCandidatesProvider.Info)
+    : JSSimpleImportCandidate(name, null, place) {
+    override fun createDescriptor(): JSImportDescriptor? {
+        val place = place ?: return null
+        val type = info.type.equals("named").ifTrue { ES6ImportPsiUtil.ImportExportType.SPECIFIER } ?: ES6ImportPsiUtil.ImportExportType.DEFAULT
+        val desc = ES6CreateImportUtil.getImportDescriptor(name, null, info.virtualFile, place, true)
+        val info = ES6ImportPsiUtil.CreateImportExportInfo(info.name, info.name, type, ES6ImportExportDeclaration.ImportExportPrefixKind.IMPORT)
+        return JSImportCandidateDescriptor(desc!!.moduleDescriptor, info.importedName, info.exportedName, info.importExportPrefixKind, info.importType)
+    }
+
+    override fun getContainerText(): String {
+        return descriptor?.moduleName ?: ""
+    }
+
+    override fun getIcon(flags: Int): Icon {
+        return GtsIcons.icon
+    }
+}
+
+class GtsIndexedFileTypeProvider : IndexedFileTypeProvider {
+    override fun getFileTypesToIndex(): Array<FileType> = arrayOf(GtsFileType.INSTANCE)
 }

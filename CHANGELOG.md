@@ -2,6 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2022.4.3
+- feature: Support GTS imports and GTS exports resolution
+
+## 2022.4.2
+- fix: gts files have duplicate error messages
+
 ## 2022.4.1
 - fix: fix Unused imports in gts files
 

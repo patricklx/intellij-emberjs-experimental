@@ -132,7 +132,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         }
     }
 
-    private inner class EmberFrameworkDescription(val root: VirtualFile, val files: Collection<VirtualFile>) : DetectedFrameworkDescription() {
+    public inner class EmberFrameworkDescription(val root: VirtualFile, val files: Collection<VirtualFile>) : DetectedFrameworkDescription() {
         override fun getDetector() = this@EmberCliFrameworkDetector
         override fun getRelatedFiles() = files
         override fun getSetupText() = "Configure this module for Ember.js development"

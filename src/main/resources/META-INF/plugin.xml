@@ -149,6 +149,9 @@
     <extensions defaultExtensionNs="JavaScript">
         <moduleReferenceContributor implementation="com.emberjs.resolver.EmberModuleReferenceContributor"/>
         <languageServiceProvider order="first" implementation="com.emberjs.glint.GlintLanguageServiceProvider" />
+        <tsImportResolver implementation="com.emberjs.gts.GtsTypeScriptImportsResolverProvider" />
+        <importCandidatesFactory implementation="com.emberjs.gts.GtsComponentCandidatesProvider$Factory" />
+        <indexedFileTypeProvider implementation="com.emberjs.gts.GtsIndexedFileTypeProvider"/>
     </extensions>
     <actions>
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">

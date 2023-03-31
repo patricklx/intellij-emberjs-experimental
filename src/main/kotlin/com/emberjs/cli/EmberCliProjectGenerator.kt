@@ -25,7 +25,7 @@ open class EmberCliProjectGenerator : NpmPackageProjectGenerator() {
     private val USE_EMBROIDER_KEY = Key.create<Boolean>("emberjs.use.embroider")
     private val USE_LANGUAGE_KEY = Key.create<String>("emberjs.use.language")
 
-    override fun getName() = "Ember CLI App"
+    override fun getName() = "Ember"
 
     @Language("HTML")
     override fun getDescription() = "<html>A framework for creating ambitious web applications: <a href=\"http://emberjs.com/\">http://emberjs.com/</a></html>"
