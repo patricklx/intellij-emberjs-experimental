@@ -4,7 +4,11 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
+import com.emberjs.AttrPsiReference
+import com.emberjs.EmberAttrDec
+import com.emberjs.EmberXmlElementDescriptor
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.cli.EmberFrameworkType
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
@@ -14,9 +18,7 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
-import com.emberjs.xml.AttrPsiReference
-import com.emberjs.xml.EmberAttrDec
-import com.emberjs.xml.EmberXmlElementDescriptor
+import com.intellij.framework.detection.DetectedFrameworkDescription
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.JSModuleBaseReference
@@ -25,6 +27,7 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
@@ -47,6 +50,7 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
+import com.jetbrains.rd.generator.nova.PredefinedType
 
 class ArgData(
         var value: String = "",

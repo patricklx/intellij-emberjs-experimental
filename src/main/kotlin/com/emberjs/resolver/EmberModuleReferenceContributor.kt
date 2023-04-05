@@ -1,22 +1,14 @@
 package com.emberjs.resolver
 
-import com.dmarcotte.handlebars.file.HbFileType
-import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.emberjs.cli.EmberCliProjectConfigurator
 import com.emberjs.utils.*
-import com.intellij.ide.highlighter.HtmlFileType
-import com.intellij.lang.javascript.DialectDetector
-import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
-import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.*
-import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
-import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
-import org.jetbrains.annotations.NotNull
-import org.jetbrains.annotations.Nullable
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiReferenceProvider
 import java.util.regex.Pattern
 
 open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePaths: List<String>, val extensions: Array<out String>?) : JSExactFileReference(context, range, filePaths, extensions) {

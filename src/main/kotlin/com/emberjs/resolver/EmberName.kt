@@ -7,6 +7,7 @@ import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore.isAncestor
 import com.intellij.openapi.vfs.VirtualFile
+import java.nio.file.FileSystem
 
 data class EmberName(val type: String, val path: String, val filePath: String = "", val virtualFile: VirtualFile? = null) {
 

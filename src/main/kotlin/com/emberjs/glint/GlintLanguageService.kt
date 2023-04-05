@@ -145,7 +145,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                         detail.name = it.label
                         detail.kind = it.kind.name
                         val doc = TypeScriptSymbolDisplayPart()
-                        doc.text = it.documentation.left
+                        doc.text = it.documentation?.left ?: ""
                         doc.kind = "text"
                         val disp = TypeScriptSymbolDisplayPart()
                         disp.kind = it.kind?.name
