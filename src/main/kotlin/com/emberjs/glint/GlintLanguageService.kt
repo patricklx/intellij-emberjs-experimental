@@ -8,11 +8,13 @@ import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
+import com.intellij.lang.javascript.completion.JSInsertHandler
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
@@ -40,6 +42,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -104,22 +107,12 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
 
     override fun updateAndGetCompletionItems(virtualFile: VirtualFile, parameters: CompletionParameters): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
-        return completedFuture(descriptor.getCompletionItems(parameters)
-                .map { descriptor.getResolvedCompletionItem(it) }.
-                map {
-                    val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
-                    detail.name = it.completionItem.label
-                    detail.kind = it.completionItem.kind.name
-                    val doc = TypeScriptSymbolDisplayPart()
-                    doc.text = it.documentation
-                    doc.kind = "text"
-                    val disp = TypeScriptSymbolDisplayPart()
-                    disp.kind = it.completionItem.kind?.name
-                    disp.text = it.detail
-                    detail.documentation = arrayOf(doc)
-                    detail.displayParts = arrayOf(disp)
-                    TypeScriptServerServiceCompletionEntry(detail)
-                })
+        return withServer {
+            val items = completedFuture(descriptor.getCompletionItems(parameters)).get().toList().map { GlintCompletionEntry(it) }
+            val file = PsiManager.getInstance(project).findFile(virtualFile)!!
+            val doc = PsiDocumentManager.getInstance(project).getDocument(file)!!
+            return@withServer getDetailedCompletionItems(virtualFile, items, doc, parameters.offset)
+        }
     }
 
     override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): Collection<IntentionAction> {
@@ -140,7 +133,24 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                                             document: Document,
                                             positionInFileOffset: Int): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
-        return completedFuture(items.map { GlintCompletionEntry(descriptor.getResolvedCompletionItem((it as GlintCompletionEntry).item)) })
+        return withServer {
+            return@withServer completedFuture(items.map { descriptor.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
+                    .map { descriptor.getResolvedCompletionItem(it) }
+                    .map {
+                        val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
+                        detail.name = it.label
+                        detail.kind = it.kind?.name
+                        val doc = TypeScriptSymbolDisplayPart()
+                        doc.text = it.documentation ?: ""
+                        doc.kind = "text"
+                        val disp = TypeScriptSymbolDisplayPart()
+                        disp.kind = it.kind?.name
+                        disp.text = it.detail
+                        detail.documentation = arrayOf(doc)
+                        detail.displayParts = arrayOf(disp)
+                        TypeScriptServerServiceCompletionEntry(detail)
+                    })
+        }
     }
 
     override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
@@ -254,7 +264,9 @@ class GlintCompletionEntry(internal val item: LspCompletionItem) : TypeScriptSer
     override val name: String get() = item.label
     val detail: String? get() = item.detail
 
-    override fun intoLookupElement() = item.intoLookupElement()
+    override fun intoLookupElement() = LookupElementBuilder.create(item.label)
+            .withTypeText(item.detail, true)
+            .withInsertHandler(JSInsertHandler.DEFAULT)
 }
 
 class GlintAnnotationError(val diagnostic: LspDiagnostic, private val path: String?) : JSAnnotationError {

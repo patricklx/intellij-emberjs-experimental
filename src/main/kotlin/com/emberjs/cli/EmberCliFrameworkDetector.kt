@@ -110,8 +110,8 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         newFiles.removeIf { !it.path.endsWith("package.json") || it.parent != it.emberRoot || !it.parent.isEmber }
         val rootDir = newFiles.firstOrNull()?.parent
 
-        if (rootDir != null && !isConfigured(newFiles, context.project)) {
-            return mutableListOf(EmberFrameworkDescription(rootDir, newFiles))
+        if (rootDir != null && context.project != null) {
+            return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
         } else if (rootDir != null) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
@@ -121,7 +121,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         return mutableListOf()
     }
 
-    private fun isConfigured(files: Collection<VirtualFile>, project: Project?): Boolean {
+    public fun isConfigured(files: Collection<VirtualFile>, project: Project?): Boolean {
         if (project == null) return false
 
         return files.any { file ->
@@ -132,12 +132,16 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         }
     }
 
-    public inner class EmberFrameworkDescription(val root: VirtualFile, val files: Collection<VirtualFile>) : DetectedFrameworkDescription() {
+    public inner class EmberFrameworkDescription(val root: VirtualFile, val files: Collection<VirtualFile>, val project: Project) : DetectedFrameworkDescription() {
         override fun getDetector() = this@EmberCliFrameworkDetector
         override fun getRelatedFiles() = files
         override fun getSetupText() = "Configure this module for Ember.js development"
         override fun equals(other: Any?) = other is EmberFrameworkDescription && this.files == other.files
         override fun hashCode() = files.hashCode()
+
+        override fun canSetupFramework(allDetectedFrameworks: MutableCollection<out DetectedFrameworkDescription>): Boolean {
+            return !detector.isConfigured(files, project)
+        }
 
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
             listenNodeModules(root, modulesProvider)

@@ -1,4 +1,4 @@
-package com.emberjs
+package com.emberjs.xml
 
 import com.intellij.lang.ASTNode
 import com.intellij.lang.Language
@@ -16,8 +16,6 @@ import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlAttributeValue
 import com.intellij.psi.xml.XmlElement
 import com.intellij.psi.xml.XmlTag
-import org.jetbrains.annotations.NotNull
-import org.jetbrains.annotations.Nullable
 import javax.swing.Icon
 
 class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiReference?, private val references: Array<PsiReference>?) : XmlAttributeDecl {

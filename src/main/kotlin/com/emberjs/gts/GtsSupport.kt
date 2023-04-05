@@ -6,6 +6,10 @@ import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.icons.EmberIcons
+import com.emberjs.index.EmberNameIndex
+import com.emberjs.resolver.EmberName
+import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
 import com.intellij.embedding.EmbeddingElementType
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
@@ -24,10 +28,7 @@ import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
 import com.intellij.lang.javascript.modules.JSImportCandidateDescriptor
 import com.intellij.lang.javascript.modules.JSImportPlaceInfo
-import com.intellij.lang.javascript.modules.imports.JSImportCandidatesBase
-import com.intellij.lang.javascript.modules.imports.JSImportDescriptor
-import com.intellij.lang.javascript.modules.imports.JSImportExportType
-import com.intellij.lang.javascript.modules.imports.JSSimpleImportCandidate
+import com.intellij.lang.javascript.modules.imports.*
 import com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.JSElementBase
@@ -51,8 +52,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.tree.LeafElement
+import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
 import com.intellij.psi.templateLanguages.TemplateDataElementType
 import com.intellij.psi.templateLanguages.TemplateDataModifications
@@ -180,7 +183,7 @@ class GtsElementTypes {
                 val builder = PsiBuilderFactory.getInstance().createBuilder(project, chameleon, null, languageForParser, chameleon.chars)
                 val parser = GtsParserDefinition().createParser(project)
                 val node = parser.parse(this, builder)
-                return node.firstChildNode
+                return node.firstChildNode ?: PsiWhiteSpaceImpl("")
             }
         }
     }
@@ -421,6 +424,10 @@ class GtsImportResolver(project: Project,
         //accept all, even without lang="ts"
         super.processAllFilesInScope(includeScope, processor)
     }
+
+    override fun getExtensionsWithDot(): Array<String> {
+        return super.getExtensionsWithDot() + arrayOf(".gts", ".gjs")
+    }
 }
 
 class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
@@ -441,7 +448,7 @@ class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
     override fun contributeResolver(project: Project,
                                     context: TypeScriptImportResolveContext,
                                     contextFile: VirtualFile): TypeScriptFileImportsResolver? {
-        val detectedEmber = FrameworkDetectionManager.getInstance(project).detectedFrameworks.find { it is EmberCliFrameworkDetector.EmberFrameworkDescription } != null
+        val detectedEmber = EmberUtils.isEmber(project)
         if (detectedEmber) {
             return GtsImportResolver(project, context, contextFile)
         }
@@ -451,15 +458,35 @@ class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
 
 class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImportCandidatesBase(placeInfo) {
 
-    class Info(val type: String, val name: String, val virtualFile: VirtualFile)
+    class Info(val type: String, val name: String, val icon: Icon, val virtualFile: VirtualFile)
 
     private val candidates: Map<String, List<Info>> by lazy {
-        FilenameIndex.getAllFilesByExt(project, "gts",
+        val list = FilenameIndex.getAllFilesByExt(project, "gts",
                 createProjectImportsScope(placeInfo, getStructureModuleRoot(placeInfo)))
                 .map { getExports(it) }
                 .flatten()
-                .groupBy { it.name }
+                .toMutableList()
+
+        val scope = ProjectScope.getAllScope(project)
+
+        // Collect all components from the index
+        EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "component" }
+                .mapNotNull { getComponentTemplateInfo(it) }
+                .toCollection(list)
+
+        // Collect all component templates from the index
+        EmberNameIndex.getFilteredProjectKeys(scope) { it.isComponentTemplate }
+                .mapNotNull { getComponentTemplateInfo(it) }
+                .toCollection(list)
+
+        return@lazy list.groupBy { it.name }
     }
+
+    fun getComponentTemplateInfo(name: EmberName): Info? {
+        val file = name.virtualFile ?: return null
+        return Info("default", name.tagName, EmberIcons.COMPONENT_16, file)
+    }
+
 
     fun getExports(virtualFile: VirtualFile): List<Info> {
         val exports = mutableListOf<Info>()
@@ -470,13 +497,13 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
         file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         val defaultExport = ES6PsiUtil.findDefaultExport(file) as ES6ExportDefaultAssignment?
         if (defaultExport != null) {
-            exports.add(Info("default", defaultExport.namedElement?.name ?: getComponentName(virtualFile), virtualFile))
-            exports.add(Info("default", getComponentName(virtualFile), virtualFile))
+            exports.add(Info("default", defaultExport.namedElement?.name ?: getComponentName(virtualFile), GtsIcons.icon, virtualFile))
+            exports.add(Info("default", getComponentName(virtualFile), GtsIcons.icon, virtualFile))
         }
 
         val namedExports = PsiTreeUtil.collectElements(file) { (it as? JSElementBase)?.isExported == true && !it.isExportedWithDefault}.map { it as JSElementBase }
         namedExports.forEach {
-            exports.add(Info("named", it.name!!, virtualFile))
+            exports.add(Info("named", it.name!!, GtsIcons.icon, virtualFile))
         }
         return exports
     }
@@ -508,14 +535,32 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
     }
 }
 
+class GtsJSModuleDescriptor(val descriptor: JSModuleDescriptor): JSModuleDescriptor by descriptor {
+    override fun getModuleName(): String {
+        val name = descriptor.moduleName
+        val toRemove = arrayOf("app", "addon")
+        val parts = name.split("/").toMutableList()
+        if (name.startsWith("@")) {
+            if (toRemove.contains(parts.getOrNull(2))) {
+                parts.removeAt(2)
+            }
+            return parts.joinToString("/")
+        }
+        if (toRemove.contains(parts.getOrNull(1))) {
+            parts.removeAt(1)
+        }
+        return parts.joinToString("/")
+    }
+}
+
 class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponentCandidatesProvider.Info)
     : JSSimpleImportCandidate(name, null, place) {
     override fun createDescriptor(): JSImportDescriptor? {
-        val place = place ?: return null
+        val place = place?.let { it.containingFile.viewProvider.getPsi(TS) } ?: return null
         val type = info.type.equals("named").ifTrue { ES6ImportPsiUtil.ImportExportType.SPECIFIER } ?: ES6ImportPsiUtil.ImportExportType.DEFAULT
         val desc = ES6CreateImportUtil.getImportDescriptor(name, null, info.virtualFile, place, true)
         val info = ES6ImportPsiUtil.CreateImportExportInfo(info.name, info.name, type, ES6ImportExportDeclaration.ImportExportPrefixKind.IMPORT)
-        return JSImportCandidateDescriptor(desc!!.moduleDescriptor, info.importedName, info.exportedName, info.importExportPrefixKind, info.importType)
+        return JSImportCandidateDescriptor(GtsJSModuleDescriptor(desc!!.moduleDescriptor), info.importedName, info.exportedName, info.importExportPrefixKind, info.importType)
     }
 
     override fun getContainerText(): String {
@@ -523,7 +568,7 @@ class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponent
     }
 
     override fun getIcon(flags: Int): Icon {
-        return GtsIcons.icon
+        return info.icon
     }
 }
 

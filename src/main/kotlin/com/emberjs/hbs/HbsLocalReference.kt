@@ -4,7 +4,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
-import com.emberjs.EmberAttrDec
+import com.emberjs.xml.EmberAttrDec
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFileViewProvider

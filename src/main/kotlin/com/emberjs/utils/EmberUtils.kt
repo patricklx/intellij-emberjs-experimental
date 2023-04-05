@@ -4,9 +4,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.emberjs.AttrPsiReference
-import com.emberjs.EmberAttrDec
-import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
@@ -16,6 +14,10 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
+import com.emberjs.xml.AttrPsiReference
+import com.emberjs.xml.EmberAttrDec
+import com.emberjs.xml.EmberXmlElementDescriptor
+import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.JSModuleBaseReference
 import com.intellij.lang.Language
@@ -23,7 +25,6 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
 import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
@@ -32,6 +33,8 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.*
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
@@ -68,6 +71,13 @@ class Modifier(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
 
 class EmberUtils {
     companion object {
+
+        fun isEmber(project: Project): Boolean {
+            return project.guessProjectDir()?.isEmber ?: false
+        }
+        fun isEnabledEmberProject(project: Project): Boolean {
+            return FrameworkDetectionManager.getInstance(project).detectedFrameworks.find { it.detector is EmberCliFrameworkDetector && (it.detector as EmberCliFrameworkDetector).isConfigured(it.relatedFiles, project) } != null
+        }
 
         fun resolveModifier(file: PsiElement?): Array<JSFunction?> {
             val func = (file as? PsiFile)?.let { resolveDefaultExport(it) } ?: file
@@ -270,7 +280,7 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is ES6ImportedBinding) {
-                var ref: JSModuleReference? = element.declaration?.fromClause?.references?.find { it is EmberJSModuleReference } as EmberJSModuleReference?
+                var ref:EmberJSModuleReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
                 if (ref == null) {
                     var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     if (tsFiles?.isEmpty() == true) {
@@ -279,7 +289,7 @@ class EmberUtils {
                     return tsFiles?.filter { it is JSFile }?.maxByOrNull { it.virtualFile.path.length }
                 }
 
-                return followReferences(ref.fileReferenceSet.lastReference?.multiResolve(false)?.filterNotNull()?.firstOrNull()?.element)
+                return followReferences(ref.resolve())
             }
 
             if (element is EmberNamedElement) {

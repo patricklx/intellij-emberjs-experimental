@@ -85,8 +85,9 @@
         <annotator language="ECMAScript 6" implementationClass="com.emberjs.psi.EmberInjectionAnnotator"/>
         <annotator language="ECMAScript 6" implementationClass="com.emberjs.psi.EmberRelationshipAnnotator"/>
 
-        <xml.tagNameProvider implementation="com.emberjs.EmberTagNameProvider"/>
-        <xml.elementDescriptorProvider implementation="com.emberjs.EmberXmlElementDescriptorProvider"/>
+        <xml.tagNameProvider implementation="com.emberjs.xml.EmberTagNameProvider"/>
+        <xml.xmlExtension implementation="com.emberjs.xml.HbXmlExtension" order="first" />
+        <xml.elementDescriptorProvider implementation="com.emberjs.xml.EmberXmlElementDescriptorProvider"/>
 
         <testFinder implementation="com.emberjs.navigation.EmberTestFinder"/>
 

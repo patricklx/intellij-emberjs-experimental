@@ -1,6 +1,6 @@
-package com.emberjs
+package com.emberjs.xml
 
-import com.emberjs.EmberXmlElementDescriptor.Companion.forTag
+import com.emberjs.xml.EmberXmlElementDescriptor.Companion.forTag
 import com.intellij.psi.impl.source.html.HtmlFileImpl
 import com.intellij.psi.impl.source.xml.XmlElementDescriptorProvider
 import com.intellij.psi.xml.XmlTag

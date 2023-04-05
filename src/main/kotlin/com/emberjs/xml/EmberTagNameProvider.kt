@@ -1,4 +1,4 @@
-package com.emberjs
+package com.emberjs.xml
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
@@ -6,11 +6,8 @@ import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
-import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.TagReference
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.lookup.EmberLookupInternalElementBuilder
@@ -19,16 +16,25 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
+import com.intellij.codeInsight.completion.InsertHandler
+import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
+import com.intellij.codeInsight.completion.XmlTagInsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
-import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.codeInsight.lookup.LookupElementBuilder as LookupElementBuilderIntelij
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.completion.JSImportCompletionUtil
+import com.intellij.lang.javascript.modules.JSImportPlaceInfo
+import com.intellij.lang.javascript.modules.imports.JSImportAction
+import com.intellij.lang.javascript.modules.imports.JSImportCandidate
+import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
+import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
-import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.openapi.util.Key
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
@@ -39,7 +45,21 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
+import com.intellij.util.containers.ContainerUtil
 import com.intellij.xml.XmlTagNameProvider
+import java.util.function.Predicate
+
+
+class LookupElementBuilder() {
+    companion object {
+        fun create(obj: Any): com.intellij.codeInsight.lookup.LookupElementBuilder {
+            return LookupElementBuilderIntelij.create(obj).withInsertHandler(XmlTagInsertHandler())
+        }
+        fun create(obj: Any, name: String): com.intellij.codeInsight.lookup.LookupElementBuilder {
+            return LookupElementBuilderIntelij.create(obj, name).withInsertHandler(XmlTagInsertHandler())
+        }
+    }
+}
 
 class EmberTagNameProvider : XmlTagNameProvider {
     private fun resolve(anything: PsiElement?, path: MutableList<String>, result: MutableList<LookupElement>, visited: MutableSet<PsiElement> = mutableSetOf()) {
@@ -236,7 +256,44 @@ class EmberTagNameProvider : XmlTagNameProvider {
         val namedElements = PsiTreeUtil.collectElements(f!!) { it is PsiNameIdentifierOwner && it.name != null }
         val collection = namedElements.map { ES6PsiUtil.createResolver(f).getLocalElements((it as PsiNameIdentifierOwner).name!!, listOf(f)) }.flatten().toMutableList()
         collection += namedElements.map { ES6PsiUtil.createResolver(f).getTopLevelElements((it as PsiNameIdentifierOwner).name!!, false) }.flatten()
-        elements.addAll(collection.map { it as? PsiNameIdentifierOwner}.filterNotNull().map {  LookupElementBuilder.create(it, it.name!!) })
+        elements.addAll(collection.map { it as? PsiNameIdentifierOwner}.filterNotNull().map { LookupElementBuilder.create(it, it.name!!) })
+    }
+
+    fun forGtsFiles(tag: XmlTag, lookupElements: MutableList<LookupElement>) {
+        val info = JSImportPlaceInfo(tag)
+        val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
+        val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.startsWith(tagName) }
+        val providers = JSImportCandidatesProvider.getProviders(info)
+        JSImportCompletionUtil.processExportedElements(tag, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
+            val candidate = if (elements.size == 1) ContainerUtil.getFirstItem(elements) else null
+            if (candidate == null) {
+                return@processExportedElements true
+            }
+            val element = candidate.element
+            val lookupElement = LookupElementBuilder.create(element ?: candidate.name, candidate.name)
+                    .withTailText(" from ${candidate.descriptor?.moduleName ?: "unknown"}")
+                    .withTypeText("component")
+                    .withIcon(EmberIconProvider.getIcon("component"))
+                    .withCaseSensitivity(true)
+                    .withInsertHandler(object : InsertHandler<LookupElement> {
+                        override fun handleInsert(context: InsertionContext, item: LookupElement) {
+                            val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+                            val action = JSImportAction(context.editor, tag, name!!)
+                            val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
+                            if (candidateWithExecutors.size == 1) {
+                                action.executeFor((candidateWithExecutors[0] as JSImportCandidateWithExecutor), null)
+                            } else {
+                                action.executeForAllVariants(null)
+                            }
+                            PsiDocumentManager.getInstance(context.project).doPostponedOperationsAndUnblockDocument(context.document)
+                            XmlTagInsertHandler.INSTANCE.handleInsert(context, item)
+                            context.commitDocument()
+                        }
+
+                    })
+            lookupElements.add(lookupElement)
+            true
+        }
     }
 
     override fun addTagNameVariants(elements: MutableList<LookupElement>?, tag: XmlTag, prefix: String?) {
@@ -245,6 +302,10 @@ class EmberTagNameProvider : XmlTagNameProvider {
         fromImports(tag, elements)
         fromLocalJs(tag, elements)
         if (tag.name.startsWith(":")) {
+            return
+        }
+        if (tag.containingFile.viewProvider is GtsFileViewProvider) {
+            forGtsFiles(tag, elements)
             return
         }
 
@@ -301,8 +362,7 @@ fun toLookupElement(name: EmberName, useImports: Boolean, priority: Double = 90.
     if (useImports) {
         tagName = name.tagName
     }
-    val lookupElement = LookupElementBuilder
-            .create(name, tagName)
+    val lookupElement = LookupElementBuilder.create(name, tagName)
             .withTailText(" from ${name.importPath}")
             .withTypeText("component")
             .withIcon(EmberIconProvider.getIcon("component"))
