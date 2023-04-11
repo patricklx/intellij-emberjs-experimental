@@ -301,8 +301,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val service = languageService.getService(element.originalVirtualFile!!)
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
-        if (element.containingFile.fileType is HtmlFileType) {
-            val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map { it as GlintCompletionEntry }?.map {
+        if (element.containingFile.fileType is HtmlFileType && parameters.isExtendedCompletion) {
+            val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map {
                 if (completionResultSet.prefixMatcher.prefix == "@") {
                     LookupElementBuilder.create("@" + it.name)
                 } else {
@@ -310,7 +310,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 }
 
             }
-            if (results != null && results.size < 500) {
+            if (results != null && results.size < 100) {
                 completionResultSet.addAllElements(results)
             }
             return
@@ -331,9 +331,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val before = result.size
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
             val didAdd = before != result.size
-            if (!didAdd) {
-                val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get() ?: arrayListOf()
-                if (items.size < 500) {
+            if (!didAdd && parameters.isExtendedCompletion) {
+                val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()
+                        ?: arrayListOf()
+                if (items.size < 100) {
                     result.addAll(items.map { it.intoLookupElement() })
                 }
             }

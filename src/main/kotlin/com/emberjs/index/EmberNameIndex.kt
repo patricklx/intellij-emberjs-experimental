@@ -30,7 +30,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
     }
 
     override fun getName() = NAME
-    override fun getVersion() = 6
+    override fun getVersion() = 7
     override fun getKeyDescriptor() = BooleanDataDescriptor.INSTANCE
     override fun dependsOnFileContent() = false
 
@@ -40,7 +40,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
     companion object {
         val NAME: ID<Boolean, Void> = ID.create("ember.names")
-        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars")
+        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "gts")
 
         private val index: FileBasedIndex get() = FileBasedIndex.getInstance()
 

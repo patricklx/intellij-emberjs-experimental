@@ -1,4 +1,4 @@
-package com.emberjs
+package com.emberjs.xml
 
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement

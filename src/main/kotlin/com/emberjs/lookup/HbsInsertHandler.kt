@@ -1,12 +1,13 @@
 package com.emberjs.lookup
 
-import com.emberjs.FullPathKey
-import com.emberjs.InsideKey
-import com.emberjs.PathKey
+import com.emberjs.xml.FullPathKey
+import com.emberjs.xml.InsideKey
+import com.emberjs.xml.PathKey
 import com.emberjs.hbs.HbsLocalReference
 import com.emberjs.utils.ifElse
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
+import com.intellij.codeInsight.completion.XmlTagInsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
@@ -17,6 +18,7 @@ import com.intellij.psi.util.PsiTreeUtil
 class HbsInsertHandler : InsertHandler<LookupElement> {
 
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
+        XmlTagInsertHandler().handleInsert(context, item)
         if (PsiTreeUtil.collectElements(item.psiElement) { it.references.find { it is HbsLocalReference } != null }.size > 0) {
             return
         }

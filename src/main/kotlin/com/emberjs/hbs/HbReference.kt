@@ -1,7 +1,7 @@
 package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
-import com.emberjs.EmberAttrDec
+import com.emberjs.xml.EmberAttrDec
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory

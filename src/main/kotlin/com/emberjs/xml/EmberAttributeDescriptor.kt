@@ -1,9 +1,7 @@
-package com.emberjs
+package com.emberjs.xml
 
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptLiteralType
-import com.intellij.lang.javascript.psi.ecma6.TypeScriptUnionOrIntersectionType
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptPropertySignatureImpl
-import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptStringLiteralTypeImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptUnionOrIntersectionTypeImpl
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference

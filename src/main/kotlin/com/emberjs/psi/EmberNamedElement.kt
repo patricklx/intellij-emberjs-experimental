@@ -2,7 +2,7 @@ package com.emberjs.psi
 
 import com.dmarcotte.handlebars.psi.HbBlockWrapper
 import com.dmarcotte.handlebars.psi.HbPsiElement
-import com.emberjs.EmberAttrDec
+import com.emberjs.xml.EmberAttrDec
 import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.parents
 import com.intellij.injected.editor.VirtualFileWindow

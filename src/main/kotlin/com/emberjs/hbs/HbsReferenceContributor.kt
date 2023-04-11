@@ -3,6 +3,7 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
@@ -24,6 +25,9 @@ import com.intellij.util.ProcessingContext
 
 fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference? {
     if (element.text.contains(".")) {
+        return null
+    }
+    if (element.containingFile.viewProvider is GtsFileViewProvider) {
         return null
     }
     val res = HbsLocalReference.createReference(element)

@@ -5,8 +5,8 @@ import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
-import com.emberjs.EmberAttrDec
-import com.emberjs.EmberXmlElementDescriptor
+import com.emberjs.xml.EmberAttrDec
+import com.emberjs.xml.EmberXmlElementDescriptor
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.index.EmberNameIndex
@@ -277,7 +277,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             }
 
             return resolveToLocalJs(tag)
-                    ?: forTagName(tag.project, tag.name)
+                    ?: forTagName(tag)
                     ?: let {
                         val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
                         var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
@@ -286,7 +286,12 @@ class TagReferencesProvider : PsiReferenceProvider() {
                     }
         }
 
-        fun forTagName(project: Project, tagName: String): PsiElement? {
+        fun forTagName(tag: XmlTag): PsiElement? {
+            if (tag.containingFile.viewProvider is GtsFileViewProvider) {
+                return null
+            }
+            val tagName = tag.name
+            val project = tag.project
             val name = tagName
                     .replace(Regex("-(.)")) { it.groupValues.last().uppercase() }
                     .replace(Regex("/(.)")) { "::" + it.groupValues.last().uppercase() }

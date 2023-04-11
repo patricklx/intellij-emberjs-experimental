@@ -1,8 +1,8 @@
 package com.emberjs.lookup
 
-import com.emberjs.FullPathKey
-import com.emberjs.InsideKey
-import com.emberjs.PathKey
+import com.emberjs.xml.FullPathKey
+import com.emberjs.xml.InsideKey
+import com.emberjs.xml.PathKey
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.icons.EmberIcons
 import com.emberjs.resolver.EmberName

@@ -4,10 +4,11 @@ import com.emberjs.EmberFileType
 import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parents
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore.isAncestor
 import com.intellij.openapi.vfs.VirtualFile
 
-data class EmberName(val type: String, val path: String, val filePath: String = "") {
+data class EmberName(val type: String, val path: String, val filePath: String = "", val virtualFile: VirtualFile? = null) {
 
     val indexSuffix = Regex("/index[^/]*$")
     val fullImportPath = filePath.replace(indexSuffix, "")
@@ -41,7 +42,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
         fullImportPath.replace(indexSuffix, "")
     }
 
-    val storageKey by lazy { "$type:$name:$fullImportPath" }
+    val storageKey by lazy { "$type:$name:$fullImportPath:${virtualFile?.path}" }
 
     val fullName by lazy { "$type:$name" }
 
@@ -113,8 +114,9 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
 
         fun from(storageKey: String): EmberName? {
             val parts = storageKey.split(":")
+            val file = parts.getOrNull(3)?.let { LocalFileSystem.getInstance().findFileByPath(it) }
             return when {
-                parts.count() >= 2 -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "")
+                parts.count() >= 3 && file != null -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
                 else -> null
             }
         }
@@ -208,7 +210,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
 
                 val name = "$path/${file.nameWithoutExtension}".removePrefix("/")
 
-                return EmberName("styles", name.removeSuffix(".module"))
+                return EmberName("styles", name.removeSuffix(".module"), "", file)
             }
 
             return EmberFileType.FOLDER_NAMES[typeFolder.name]?.let { type ->
@@ -232,13 +234,13 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
 
                 if (type == EmberFileType.COMPONENT) {
                     if (file.extension == "hbs") {
-                        return EmberName(EmberFileType.TEMPLATE.name.lowercase(), "components/$pathFromTypeRoot", path)
+                        return EmberName(EmberFileType.TEMPLATE.name.lowercase(), "components/$pathFromTypeRoot", path, file)
                     }
                     if (file.extension == "css" || file.extension == "scss") {
-                        return EmberName("styles", "components/${pathFromTypeRoot.removeSuffix(".module")}")
+                        return EmberName("styles", "components/${pathFromTypeRoot.removeSuffix(".module")}", "", file)
                     }
                 }
-                return EmberName(type.name.lowercase(), pathFromTypeRoot, path)
+                return EmberName(type.name.lowercase(), pathFromTypeRoot, path, file)
             }
         }
 
@@ -262,7 +264,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
 
                 val name = "$path/${file.nameWithoutExtension.removeSuffix("-test")}".removePrefix("/")
 
-                EmberName("${type.name.lowercase()}$testSuffix", name)
+                EmberName("${type.name.lowercase()}$testSuffix", name, "", file)
             }
         }
 
@@ -280,7 +282,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
 
             val name = "$path/${file.nameWithoutExtension.removeSuffix("-test")}".removePrefix("/")
 
-            return EmberName("acceptance-test", name)
+            return EmberName("acceptance-test", name, file.path, file)
         }
 
         fun fromPod(appFolder: VirtualFile?, file: VirtualFile): EmberName? {
@@ -294,7 +296,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
                         .map { it.name }
                         .reversed()
                         .joinToString("/")
-                        .let { EmberName("styles", it) }
+                        .let { EmberName("styles", it, file.path, file) }
             }
 
             return EmberFileType.FILE_NAMES[file.name]?.let { type ->
@@ -309,7 +311,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
                                 else -> it
                             }
                         }
-                        .let { EmberName(type.name.lowercase(), it,this.getImportPath(type, file) ?: file.path) }
+                        .let { EmberName(type.name.lowercase(), it,this.getImportPath(type, file) ?: file.path, file) }
             }
         }
 
@@ -340,7 +342,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
                             }
                         }
 
-                EmberName("${type.name.lowercase()}$testSuffix", name)
+                EmberName("${type.name.lowercase()}$testSuffix", name, "", file)
             }
         }
     }
