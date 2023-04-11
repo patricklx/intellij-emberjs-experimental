@@ -23,10 +23,12 @@ import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
+import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceCompletionEntry
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
 import com.intellij.lsp.LspServer
+import com.intellij.lsp.api.LspServerManager
 import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
@@ -42,6 +44,9 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import org.eclipse.lsp4j.CompletionItem
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
@@ -58,23 +63,26 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 }
 
 
-
 class GlintTypeScriptService(private val project: Project) : TypeScriptService, Disposable {
-    var currentlyChecking: PsiElement? =null
+    var currentlyChecking: PsiElement? = null
+
     companion object {
         private val LOG = Logger.getInstance(GlintTypeScriptService::class.java)
         fun getInstance(project: Project): GlintTypeScriptService = project.getService(GlintTypeScriptService::class.java)
     }
 
-    fun getDescriptor(virtualFile: VirtualFile): LspServerDescriptor? {
-        return if (!LspServerManager.isFileAcceptable(virtualFile)) null else getDescriptor()
+    fun getDescriptor(virtualFile: VirtualFile): GlintLspServerDescriptor? {
+        return if (getDescriptor()?.isSupportedFile(virtualFile) == true)
+            getDescriptor()
+        else
+            null
     }
 
-    fun getDescriptor(): LspServerDescriptor? {
+    fun getDescriptor(): GlintLspServerDescriptor? {
         return if (project.guessProjectDir()?.emberRoot != null) getGlintDescriptor(project) else null
     }
 
-    private fun <T> withServer(action: LspServer.() -> T): T? = getDescriptor()?.server?.action()
+    private fun <T> withServer(action: LspServer.() -> T): T? = getDescriptor()!!.server?.action()
 
     override val name = "Glint TypeScript LSP"
     override fun isServiceCreated() = withServer { isRunning || isMalfunctioned } ?: false
@@ -90,10 +98,11 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun openEditor(file: VirtualFile) {
-        getDescriptor(file)?.server?.fileOpened(file)
+
     }
+
     override fun closeLastEditor(file: VirtualFile) {
-        getDescriptor(file)?.server?.fileClosed(file)
+
     }
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
@@ -103,7 +112,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     override fun updateAndGetCompletionItems(virtualFile: VirtualFile, parameters: CompletionParameters): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
         return withServer {
-            val items = completedFuture(descriptor.getCompletionItems(parameters)).get().toList().map { GlintCompletionEntry(it) }
+            val items = completedFuture(descriptor.server!!.getCompletionItems(parameters)).get().toList().map { GlintCompletionEntry(it) }
             val file = PsiManager.getInstance(project).findFile(virtualFile)!!
             val doc = PsiDocumentManager.getInstance(project).getDocument(file)!!
             return@withServer getDetailedCompletionItems(virtualFile, items, doc, parameters.offset)
@@ -115,12 +124,12 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             return emptyList()
         }
         val descriptor = getDescriptor(file.virtualFile) ?: return emptyList()
-        return descriptor.getCodeActions(file, result.diagnostic) { command, _ ->
+        return descriptor.server?.getCodeActions(file, result.diagnostic) { command, _ ->
             if (command == "x") {
                 return@getCodeActions true
             }
             return@getCodeActions false
-        }
+        } ?: emptyList()
     }
 
     override fun getDetailedCompletionItems(virtualFile: VirtualFile,
@@ -129,14 +138,14 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                                             positionInFileOffset: Int): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
         return withServer {
-            return@withServer completedFuture(items.map { descriptor.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
-                    .map { descriptor.getResolvedCompletionItem(it) }
+            return@withServer completedFuture(items.map { descriptor.server!!.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
+                    .map { descriptor.server!!.getResolvedCompletionItem(it) }
                     .map {
                         val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
                         detail.name = it.label
-                        detail.kind = it.kind?.name
+                        detail.kind = it.kind.name
                         val doc = TypeScriptSymbolDisplayPart()
-                        doc.text = it.documentation ?: ""
+                        doc.text = it.documentation.left
                         doc.kind = "text"
                         val disp = TypeScriptSymbolDisplayPart()
                         disp.kind = it.kind?.name
@@ -149,7 +158,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
-        var element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset)!!
+        var element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset + 1)!!
         if (currentlyChecking == null && element.containingFile is HbPsiFile) {
             currentlyChecking = sourceElement
             if (element is LeafPsiElement) {
@@ -164,13 +173,14 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         if (sourceElement.getContainingFile().fileType == GtsFileType.INSTANCE) {
             element = sourceElement
         }
-        class DelegateElement(val element: PsiElement, val origElement: PsiElement, val documentWindow: DocumentWindow): PsiElement by element {
+        class DelegateElement(val element: PsiElement, val origElement: PsiElement, val documentWindow: DocumentWindow) : PsiElement by element {
             override fun getTextRange(): TextRange {
                 val range = origElement.textRange
                 val hostRange = documentWindow.hostRanges.first()
                 return TextRange(hostRange.startOffset + range.startOffset, hostRange.startOffset + range.endOffset)
             }
         }
+
         var elem: Any = element
         if (document is DocumentWindow) {
             val vfile = (element.originalVirtualFile as VirtualFileWindow).delegate
@@ -179,7 +189,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             elem = DelegateElement(elem, element, document)
         }
 
-        return getDescriptor()?.getElementDefinitions(elem as PsiElement)?.toTypedArray()
+        return getDescriptor()?.server?.getElementDefinitions(elem as PsiElement)?.toTypedArray()
     }
 
 
@@ -209,9 +219,14 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             completedFuture(quickInfo(element))
 
     override fun restart(recreateToolWindow: Boolean) {
-        val descriptor = getDescriptor()
-        if (!project.isDisposed && descriptor != null) {
-            descriptor.restart()
+        val lspServerManager = LspServerManager.getInstance(project)
+        val lspServers = lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java)
+        lspServers.forEach { lspServerManager.stopServer(it) }
+        if (!lspServers.isEmpty()) {
+            getGlintDescriptor(project)?.let {
+                lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, it)
+            }
+            TypeScriptMessageBus.get(project).changed()
         }
     }
 
@@ -246,16 +261,16 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             file.fileType is JavaScriptFileType
 
     override fun isAcceptable(file: VirtualFile) = file.fileType is HbFileType ||
-                                                   file.fileType is TypeScriptFileType ||
-                                                   file.fileType is GtsFileType ||
-                                                   file.fileType is JavaScriptFileType
+            file.fileType is TypeScriptFileType ||
+            file.fileType is GtsFileType ||
+            file.fileType is JavaScriptFileType
 
     override fun dispose() {
         return
     }
 }
 
-class GlintCompletionEntry(internal val item: LspCompletionItem) : TypeScriptService.CompletionEntry {
+class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntry {
     override val name: String get() = item.label
     val detail: String? get() = item.detail
 
@@ -264,20 +279,20 @@ class GlintCompletionEntry(internal val item: LspCompletionItem) : TypeScriptSer
             .withInsertHandler(JSInsertHandler.DEFAULT)
 }
 
-class GlintAnnotationError(val diagnostic: LspDiagnostic, private val path: String?) : JSAnnotationError {
+class GlintAnnotationError(val diagnostic: Diagnostic, private val path: String?) : JSAnnotationError {
     override fun getLine() = diagnostic.range.start.line
-    val endLine = diagnostic.range.asEclipseLspRange().end.line
-    val endColumn = diagnostic.range.asEclipseLspRange().end.character
+    val endLine = diagnostic.range.end.line
+    val endColumn = diagnostic.range.end.character
     override fun getColumn() = diagnostic.range.start.character
-    val code by lazy { diagnostic.asEclipseLspDiagnostic().source?.toString() }
+    val code by lazy { diagnostic.source?.toString() }
 
     override fun getAbsoluteFilePath(): String? = path
 
-    override fun getDescription(): String = diagnostic.asEclipseLspDiagnostic().source + " " + diagnostic.message
+    override fun getDescription(): String = diagnostic.source + " " + diagnostic.message
 
     override fun getCategory() = when (diagnostic.severity) {
-        LspSeverity.Error -> ERROR_CATEGORY
-        LspSeverity.Warning -> WARNING_CATEGORY
-        LspSeverity.Hint, LspSeverity.Information -> INFO_CATEGORY
+        DiagnosticSeverity.Error -> ERROR_CATEGORY
+        DiagnosticSeverity.Warning -> WARNING_CATEGORY
+        DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> INFO_CATEGORY
     }
 }

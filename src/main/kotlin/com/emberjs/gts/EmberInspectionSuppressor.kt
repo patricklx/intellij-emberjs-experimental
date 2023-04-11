@@ -12,7 +12,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.refactoring.suggested.startOffset
 
 
-class EmberInspectionSuppressor: InspectionSuppressor {
+class EmberInspectionSuppressor : InspectionSuppressor {
 
     override fun isSuppressedFor(element: PsiElement, toolId: String): Boolean {
         if (toolId.lowercase().contains("unused") && element is ES6ImportDeclaration) {
@@ -20,7 +20,8 @@ class EmberInspectionSuppressor: InspectionSuppressor {
             val manager = InjectedLanguageManager.getInstance(element.project)
             val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
             var tpl = templates.mapNotNull {
-                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@mapNotNull null
+                val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile
+                        ?: return@mapNotNull null
                 val hbs = injected.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
                 val html = injected.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
                 return@mapNotNull arrayOf<PsiFile>(hbs, html)
@@ -37,19 +38,19 @@ class EmberInspectionSuppressor: InspectionSuppressor {
                     PsiTreeUtil.collectElements(it) { el -> el.reference?.isReferenceTo(ib) == true || el.references.find { it.isReferenceTo(ib) } != null }.filterNotNull().isNotEmpty()
                 }
             } ||
-            element.importSpecifiers.any { isp ->
-                tpl.any {
-                    PsiTreeUtil.collectElements(it) { el -> el.reference?.isReferenceTo(isp) == true || el.references.find { it.isReferenceTo(isp) } != null }.filterNotNull().isNotEmpty()
-                } || let {
-                    if (isp.alias == null) {
-                        return@any false
-                    }
-                    tpl.any {
-                        PsiTreeUtil.collectElements(it) { el -> el.reference?.isReferenceTo(isp.alias!!) == true || el.references.find { it.isReferenceTo(isp.alias!!) } != null }.filterNotNull().isNotEmpty()
-                    }
-                }
+                    element.importSpecifiers.any { isp ->
+                        tpl.any {
+                            PsiTreeUtil.collectElements(it) { el -> el.reference?.isReferenceTo(isp) == true || el.references.find { it.isReferenceTo(isp) } != null }.filterNotNull().isNotEmpty()
+                        } || let {
+                            if (isp.alias == null) {
+                                return@any false
+                            }
+                            tpl.any {
+                                PsiTreeUtil.collectElements(it) { el -> el.reference?.isReferenceTo(isp.alias!!) == true || el.references.find { it.isReferenceTo(isp.alias!!) } != null }.filterNotNull().isNotEmpty()
+                            }
+                        }
 
-            }
+                    }
         }
         return false
     }

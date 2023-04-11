@@ -31,6 +31,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
     override fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>, isProjectCreatedWithWizard: Boolean) {
         this.configureProject(project, baseDir, moduleRef);
     }
+
     fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>) {
         val module = ModuleManager.getInstance(project).modules.singleOrNull()
         System.out.println("configureProject: $module ${baseDir.isEmber}")
@@ -97,8 +98,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
                 if (create) {
                     System.out.println("lib associateWithProject: " + libName)
                     libraryMappings.associateWithProject(libName)
-                }
-                else
+                } else
                     libraryMappings.disassociateWithProject(libName)
 
                 commitChanges()

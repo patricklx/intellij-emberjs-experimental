@@ -1,4 +1,3 @@
-
 import com.intellij.ide.actionsOnSave.ActionOnSaveBackedByOwnConfigurable
 import com.intellij.ide.actionsOnSave.ActionOnSaveContext
 import com.intellij.lang.javascript.linter.JSLinterConfigurable
@@ -8,7 +7,7 @@ import com.intellij.ui.components.ActionLink
 
 class TemplateLintConfigurable(project: Project, fullModeDialog: Boolean = false) :
         JSLinterConfigurable<TemplateLintState>(
-        project, TemplateLintConfiguration::class.java, fullModeDialog) {
+                project, TemplateLintConfiguration::class.java, fullModeDialog) {
 
     companion object {
         const val ID = "configurable.emberjs.hbs.lint"
@@ -33,8 +32,8 @@ class TemplateLintConfigurable(project: Project, fullModeDialog: Boolean = false
     }
 
     class TemplateLintOnSaveActionInfo(context: ActionOnSaveContext) :
-        ActionOnSaveBackedByOwnConfigurable<TemplateLintConfigurable>(
-            context, ID, TemplateLintConfigurable::class.java) {
+            ActionOnSaveBackedByOwnConfigurable<TemplateLintConfigurable>(
+                    context, ID, TemplateLintConfigurable::class.java) {
 
         override fun getActionOnSaveName(): String {
             return TemplateLintBundle.message("hbs.lint.run.on.save.checkbox.on.actions.on.save.page")

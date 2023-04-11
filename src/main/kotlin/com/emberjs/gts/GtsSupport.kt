@@ -10,11 +10,12 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
-import com.intellij.embedding.EmbeddingElementType
 import com.intellij.formatting.*
 import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
 import com.intellij.formatting.templateLanguages.TemplateLanguageBlock
 import com.intellij.formatting.templateLanguages.TemplateLanguageFormattingModelBuilder
+import com.intellij.formatting.FormattingContext
+import com.intellij.formatting.FormattingModel
 import com.intellij.lang.*
 import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
@@ -40,7 +41,6 @@ import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidates
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
 import com.intellij.lang.javascript.types.JSFileElementType
 import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
 import com.intellij.lang.typescript.tsconfig.*
@@ -49,8 +49,6 @@ import com.intellij.lang.xml.XmlFormattingModel
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
-import com.intellij.openapi.application.Application
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -62,15 +60,15 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
-import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.DocumentBasedFormattingModel
 import com.intellij.psi.formatter.FormattingDocumentModelImpl
-import com.intellij.psi.formatter.xml.*
+import com.intellij.psi.formatter.xml.AnotherLanguageBlockWrapper
+import com.intellij.psi.formatter.xml.HtmlPolicy
+import com.intellij.psi.formatter.xml.XmlBlock
+import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.SourceTreeToPsiMap
-import com.intellij.psi.impl.source.codeStyle.CodeEditUtil
-import com.intellij.psi.impl.source.html.HtmlDocumentImpl
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
@@ -79,6 +77,7 @@ import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.*
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
@@ -88,7 +87,7 @@ import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
 
-class GtsLanguage : Language(TS,"Gts") {
+class GtsLanguage : Language(TS, "Gts") {
 
     companion object {
         val INSTANCE = GtsLanguage()
@@ -104,6 +103,7 @@ class GtsFile(viewProvider: FileViewProvider?) : JSFileImpl(viewProvider!!, GtsL
         return "GTS File"
     }
 }
+
 
 
 class GtsFileElementType(language: Language?) : JSFileElementType(language) {
@@ -127,28 +127,9 @@ class GtsElementTypes {
         val HTML_TOKEN = JSElementType("HTML_TOKEN")
         val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_EMBEDDED_CONTENT", GtsLanguage.INSTANCE)
         val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
-        //val TS_CONTENT_ELEMENT_TYPE = TSTemplate()
-        val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
+        val TS_CONTENT_ELEMENT_TYPE = TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE)
 
-            override fun equals(other: Any?): Boolean {
-                if (other is JSFileElementType) {
-                    return true
-                }
-                return super.equals(other)
-            }
-            override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
-                return TS
-            }
-            override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
-                val r = Regex("=\\s*$")
-                return if (r.containsMatchIn(tokenText)) {
-                    TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "\"\"")
-                } else {
-                    super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
-                }
-            }
-        }
-        val HTML_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_HTML", GtsLanguage.INSTANCE, HTML_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
+        val HTML_CONTENT_ELEMENT_TYPE = object : TemplateDataElementType("GTS_HTML", GtsLanguage.INSTANCE, HTML_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
 
             override fun createBaseLexer(viewProvider: TemplateLanguageFileViewProvider?): Lexer {
                 return GtsLexerAdapter()
@@ -241,7 +222,7 @@ internal object GtsIcons {
     val icon: Icon = IconLoader.getIcon("/com/emberjs/icons/glimmer.svg", GtsIcons::class.java)
 }
 
-class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
+class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean = false) : LookAheadLexer(baseLexer) {
     val hbLexer = HbLexer()
     override fun lookAhead(baseLexer: Lexer) {
         if (baseLexer.tokenType == XmlTokenType.XML_START_TAG_START && baseLexer.bufferSequence.substring(baseLexer.currentPosition.offset, baseLexer.bufferEnd).startsWith("<template")) {

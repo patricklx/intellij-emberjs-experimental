@@ -1,6 +1,7 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
@@ -8,6 +9,8 @@ import com.intellij.execution.process.OSProcessUtil
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.lang.javascript.JavaScriptFileType
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lsp.*
 import com.intellij.lsp.api.LspServerDescriptor
 import com.intellij.lsp.api.LspServerManager
@@ -26,12 +29,12 @@ import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        TODO("Not yet implemented")
+
     }
 }
 
 
-class GlintLanguageServerConnectorStdio(serverDescriptor: LspServerDescriptor, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(serverDescriptor, processHandler, ) {
+class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(server, processHandler) {
 
 
     override fun getFilePath(file: VirtualFile): String {
@@ -61,10 +64,11 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 @Service
 class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
-    fun getProject(): Project = myProject
+    val lspServerManager = LspServerManager.getInstance(project)
 
-    val server get() =
-            LspServerManager.getInstance(project).getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
+    public val server
+        get() =
+           lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
     override fun createCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!
@@ -95,7 +99,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     override fun createServerConnector(lspServer: LspServer): LanguageServerConnector {
         val startingCommandLine = createCommandLine()
         LOG.debug("$this: starting server process using: $startingCommandLine")
-        return GlintLanguageServerConnectorStdio(this, OSProcessHandler(startingCommandLine))
+        return GlintLanguageServerConnectorStdio(this.server!!, OSProcessHandler(startingCommandLine))
     }
 
     override fun createInitializationOptions(): Any {
@@ -111,8 +115,15 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     override fun isSupportedFile(file: VirtualFile): Boolean {
-        TODO("Not yet implemented")
+        return file.fileType is HbFileType ||
+                file.fileType is TypeScriptFileType ||
+                file.fileType is GtsFileType ||
+                file.fileType is JavaScriptFileType
     }
+
+    override val handlePublishDiagnostics = false
+    override val useGenericNavigation = false
+
     override fun dispose() {}
 }
 

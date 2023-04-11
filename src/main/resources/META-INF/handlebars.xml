@@ -4,7 +4,7 @@
         <completion.contributor language="Handlebars" implementationClass="com.emberjs.hbs.HbsCompletionContributor"/>
         <completion.contributor language="HTML" implementationClass="com.emberjs.hbs.HbsCompletionContributor"/>
         <psi.referenceContributor language="Handlebars" implementation="com.emberjs.hbs.HbsReferenceContributor"/>
-        <psi.referenceContributor language="HTML" implementation="com.emberjs.hbs.HbsReferenceContributor"/>
+        <psi.referenceContributor language="HTML" implementation="com.emberjs.hbs.HbsReferenceContributor" order="first"/>
 
         <lang.foldingBuilder language="Handlebars" implementationClass="com.emberjs.translations.EmberIntlFoldingBuilder"/>
         <lang.foldingBuilder language="Handlebars" implementationClass="com.emberjs.translations.EmberI18nFoldingBuilder"/>

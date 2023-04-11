@@ -1,4 +1,3 @@
-
 import com.intellij.javascript.nodejs.util.JSLinterPackage
 import com.intellij.lang.javascript.linter.JSLinterConfiguration
 import com.intellij.lang.javascript.linter.JSLinterInspection

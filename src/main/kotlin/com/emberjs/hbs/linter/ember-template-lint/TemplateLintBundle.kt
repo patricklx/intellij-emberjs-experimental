@@ -1,4 +1,3 @@
-
 import com.intellij.CommonBundle
 import com.intellij.reference.SoftReference
 import org.jetbrains.annotations.NonNls
@@ -9,6 +8,7 @@ import java.util.*
 class TemplateLintBundle {
     companion object {
         private var ourBundle: Reference<ResourceBundle>? = null
+
         @NonNls
         private const val BUNDLE = "com.emberjs.locale.TemplateLintBundle"
 
