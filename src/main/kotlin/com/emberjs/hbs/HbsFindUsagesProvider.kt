@@ -13,7 +13,7 @@ import com.intellij.psi.css.CssFileType
 import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.elementType
 
-class HbsFindUsagesProvider : FindUsagesProvider {
+class HbsFindUsagesProvider: FindUsagesProvider {
 
     override fun getWordsScanner(): WordsScanner {
         val ID = TokenSet.create(HbTokenTypes.ID, HbTokenTypes.PARAM);

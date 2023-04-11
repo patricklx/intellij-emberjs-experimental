@@ -1,17 +1,14 @@
-package com.emberjs
+package com.emberjs.xml
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
-import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
-import com.intellij.codeInsight.completion.CompletionParameters
-import com.intellij.codeInsight.completion.CompletionProcess
-import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
+import com.intellij.psi.impl.source.xml.TagNameReference
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
@@ -19,6 +16,7 @@ import com.intellij.xml.XmlAttributeDescriptor
 import com.intellij.xml.XmlElementDescriptor
 import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
+import com.sun.xml.bind.v2.runtime.unmarshaller.TagName
 
 
 class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem) {

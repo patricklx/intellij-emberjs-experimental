@@ -34,31 +34,31 @@ class EmberCliGenerateTask(project: Project, val workDir: VirtualFile, val templ
         val cli = EmberCli(project, "generate", template, name)
                 .apply { workDirectory = workDir.path }
 
-        LocalHistory.getInstance().startAction(title).use {
-            indicator.log("Running ember generate $template $name ...")
-            val output = try {
-                cli.run()
-            } catch (e: Exception) {
-                return setNotification(e.message?.trim() ?: "Unknown exception occurred", NotificationType.ERROR)
-            }
+                LocalHistory.getInstance().startAction(title).use {
+                    indicator.log("Running ember generate $template $name ...")
+                    val output = try {
+                        cli.run()
+                    } catch (e: Exception) {
+                        return setNotification(e.message?.trim() ?: "Unknown exception occurred", NotificationType.ERROR)
+                    }
 
-            indicator.log("Processing ember-cli output ...")
-            // match "  creates some/file.js" lines
-            val paths = output.lineSequence()
-                    .map { (CREATED_REGEX.find(it) ?: ROUTER_REGEX.matchEntire(it))?.groups?.get(1)?.value }
-                    .map { if (it == "router") "app/router.js" else it }
-                    .filterNotNull()
-                    .toList()
+                    indicator.log("Processing ember-cli output ...")
+                    // match "  creates some/file.js" lines
+                    val paths = output.lineSequence()
+                            .map { (CREATED_REGEX.find(it) ?: ROUTER_REGEX.matchEntire(it))?.groups?.get(1)?.value }
+                            .map { if (it == "router") "app/router.js" else it }
+                            .filterNotNull()
+                            .toList()
 
-            indicator.log("ember-cli modified ${paths.size} files")
-            // find file in virtual file system
-            files.addAll(paths
-                    .map { LocalFileSystem.getInstance().refreshAndFindFileByPath("${workDir.path}/$it") }
-                    .filterNotNull())
+                    indicator.log("ember-cli modified ${paths.size} files")
+                    // find file in virtual file system
+                    files.addAll(paths
+                            .map { LocalFileSystem.getInstance().refreshAndFindFileByPath("${workDir.path}/$it") }
+                            .filterNotNull())
 
-            indicator.log("Refreshing ${files.size} modified files ...")
-            RefreshQueue.getInstance().refresh(false, true, null, *files.toTypedArray())
-        }
+                    indicator.log("Refreshing ${files.size} modified files ...")
+                    RefreshQueue.getInstance().refresh(false, true, null, *files.toTypedArray())
+                }
     }
 
     override fun onSuccess() {

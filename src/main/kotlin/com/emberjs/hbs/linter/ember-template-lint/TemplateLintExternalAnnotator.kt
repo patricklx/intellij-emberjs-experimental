@@ -1,3 +1,4 @@
+
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.icons.EmberIcons
 import com.intellij.lang.annotation.AnnotationHolder

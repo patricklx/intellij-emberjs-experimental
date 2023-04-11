@@ -64,8 +64,9 @@ class EmberRelationshipAnnotator : Annotator {
         val MODEL = "model"
 
         fun extractRelationshipModel(key: String, value: String): EmberName? {
-            val (modelName) = BELONGS_TO_RE.matchEntire(value)?.destructured
-                    ?: HAS_MANY_RE.matchEntire(value)?.destructured ?: return null
+            val (modelName) = BELONGS_TO_RE.matchEntire(value)?.destructured ?:
+                    HAS_MANY_RE.matchEntire(value)?.destructured ?:
+                    return null
 
             val name = when {
                 modelName.isNotEmpty() -> modelName

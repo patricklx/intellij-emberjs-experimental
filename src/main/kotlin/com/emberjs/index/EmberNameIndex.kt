@@ -19,9 +19,11 @@ import com.intellij.util.indexing.*
 import com.intellij.util.io.BooleanDataDescriptor
 
 
+
+
 class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
-    class IndexModificationTracker(val project: Project) : ModificationTracker {
+    class IndexModificationTracker(val project: Project): ModificationTracker {
         override fun getModificationCount(): Long {
             return index.getIndexModificationStamp(NAME, project)
         }
@@ -48,13 +50,13 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
         private fun getAllPairs(project: Project): Collection<Pair<EmberName, VirtualFile>> {
             return SlowOperations.allowSlowOperations<Collection<Pair<EmberName, VirtualFile>>, Throwable> {
-                CachedValuesManager.getManager(project).getCachedValue(project) {
+                 CachedValuesManager.getManager(project).getCachedValue(project) {
                     val results = mutableListOf<Pair<EmberName, VirtualFile>>()
                     for (file in index.getContainingFiles(NAME, true, GlobalSearchScope.projectScope(project))) {
                         ProgressManager.checkCanceled()
                         results.addIfNotNull(EmberName.from(file)?.let { it to file })
                     }
-                    CachedValueProvider.Result.create(results, IndexModificationTracker(project))
+                     CachedValueProvider.Result.create(results, IndexModificationTracker(project))
                 }
             }
         }

@@ -15,6 +15,7 @@ import com.intellij.psi.util.parentsWithSelf
 import com.intellij.util.ProcessingContext
 
 
+
 class HbsBuiltinHelperCompletionProvider(val helpers: List<String>) : CompletionProvider<CompletionParameters>() {
     val lookupElements = helpers
 

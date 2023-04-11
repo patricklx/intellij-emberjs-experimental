@@ -1,3 +1,4 @@
+
 import TemplateLintUtil.Companion.isTemplateLintConfigFile
 import com.intellij.lang.javascript.linter.JSLinterConfigChangeTracker
 import com.intellij.lang.javascript.linter.JSLinterConfiguration

@@ -106,13 +106,13 @@ class GlintStatusBarWidget(project: Project) : EditorBasedStatusBarPopup(project
     }
 
     private val service: GlintTypeScriptService?
-        get() {
-            val s = GlintLanguageServiceProvider(this.project).allServices.firstOrNull()
-            if (s?.showStatusBar() == true) {
-                return s
-            }
-            return null
+    get() {
+        val s = GlintLanguageServiceProvider(this.project).allServices.firstOrNull()
+        if (s?.showStatusBar() == true) {
+            return s
         }
+        return null
+    }
 
     companion object {
         val ID = "GlintInfo"
@@ -125,7 +125,6 @@ open class GlintRestartServiceAction : AnAction("Restart Glint", "Restarts the g
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.EDT
     }
-
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project
         if (project != null) {

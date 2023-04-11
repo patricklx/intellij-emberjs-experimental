@@ -15,11 +15,11 @@ import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
 
 
-abstract class HbReference(element: PsiElement) : PsiReferenceBase<PsiElement>(element) {
+abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
     override fun isReferenceTo(other: PsiElement): Boolean {
         var res = resolve()
         if (res is EmberNamedElement) {
-            res = res.target
+           res = res.target
         }
         return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }
@@ -28,7 +28,6 @@ abstract class HbReference(element: PsiElement) : PsiReferenceBase<PsiElement>(e
 
 class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
     private var targetRef: PsiReference? = null
-
     constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
         this.targetRef = targetRef
     }
@@ -83,6 +82,7 @@ class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range
         return super.handleElementRename(newElementName)
     }
 }
+
 
 
 class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {

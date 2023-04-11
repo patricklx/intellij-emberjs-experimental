@@ -42,8 +42,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<RangedReference> {
         val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
         var path = element.text.substring(1, element.text.lastIndex)
-        var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent
-                ?: element.originalElement.containingFile.originalFile.parent
+        var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent ?: element.originalElement.containingFile.originalFile.parent
         val parts = path.split("/")
 
         if (element.originalVirtualFile == null) {
@@ -82,10 +81,12 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         val files = parts.mapIndexed { i, s ->
             if (s == "." || s == "~") {
                 // do nothing
-            } else if (i == 0 && s == name) {
+            }
+            else if (i == 0 && s == name) {
                 val parent = element.originalVirtualFile!!.emberRoot
                 resolvedFile = parent?.let { psiManager.findDirectory(it) }
-            } else if (s == "..") {
+            }
+            else if (s == "..") {
                 resolvedFile = resolvedFile?.parent
             } else {
                 if (resolvedFile is PsiDirectory) {
@@ -109,7 +110,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
         if (resolvedFile is PsiDirectory) {
             resolvedFile = (resolvedFile as PsiDirectory).findFile("index.ts")
-                    ?: (resolvedFile as PsiDirectory).findFile("index.d.ts")
+                            ?: (resolvedFile as PsiDirectory).findFile("index.d.ts")
                             ?: (resolvedFile as PsiDirectory).findFile("index.hbs")
                             ?: (resolvedFile as PsiDirectory).findFile("component.ts")
                             ?: (resolvedFile as PsiDirectory).findFile("component.d.ts")
@@ -125,11 +126,10 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                     // Filter out files that are not related to this pr
                     .map { psiManager.findFile(it) }
                     .firstOrNull()
-            file = file
-                    ?: EmberNameIndex.getFilteredFiles(scope) { it.type == "template" && it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
-                            // Filter out files that are not related to this pr
-                            .map { psiManager.findFile(it) }
-                            .firstOrNull()
+            file = file ?: EmberNameIndex.getFilteredFiles(scope) { it.type == "template" && it.importPath.isNotBlank() && resolvedPath.endsWith(it.importPath) }
+                    // Filter out files that are not related to this pr
+                    .map { psiManager.findFile(it) }
+                    .firstOrNull()
         } else {
             file = resolvedFile as PsiFile?
         }
@@ -210,8 +210,8 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                             val subdir = it.findSubdirectory(named[index])
                             if (subdir != null) {
                                 subdir.files.find { it.name.split(".").first() == "component" }
-                                        ?: subdir.files.find { it.name.split(".").first() == "template" }
-                            } else {
+                                ?: subdir.files.find { it.name.split(".").first() == "template" }
+                            } else{
                                 it.files.find { it.name.split(".").first() == named[index] }
                                         ?: it.files.find { it.name.split(".").first() == "component" }
                                         ?: it.files.find { it.name.split(".").first() == "template" }
@@ -221,7 +221,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                             it
                         }
                     }
-                    .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) } }
+                    .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) }  }
                     .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
@@ -230,8 +230,8 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
             return named
                     .mapNotNull { name ->
                         PsiTreeUtil.collectElements(fileRef) { (it as? JSElementBase)?.isExported == true }
-                                .map { it as JSElementBase }
-                                .find { it.name == name }
+                        .map { it as JSElementBase }
+                        .find { it.name == name }
                     }
                     .mapIndexed { index, it ->
                         it

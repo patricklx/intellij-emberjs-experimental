@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.xml.EmberAttrDec
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
@@ -21,6 +22,7 @@ import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
@@ -139,8 +141,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val manager = InjectedLanguageManager.getInstance(element.project)
                 val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile
-                            ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null
@@ -180,7 +181,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                                 return@mapNotNull ib
                             }
                         }
-                        it.importSpecifiers.forEach { iss ->
+                        it.importSpecifiers.forEach {iss ->
                             val name = iss.alias?.name ?: iss.name ?: ""
                             if (name == parts.first()) {
                                 return@mapNotNull iss.alias ?: iss
@@ -206,24 +207,20 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             if (any is PsiFile) {
                 val styleSheetLanguages = arrayOf("sass", "scss", "less")
                 if (styleSheetLanguages.contains(any.language.id.lowercase())) {
-                    PsiTreeUtil.collectElements(any) { it is CssRulesetList }.first().children.forEach {
-                        (it as? CssRulesetImpl)?.selectors?.forEach {
-                            if (it.text == "." + path.first()) {
-                                return it
-                            }
+                    PsiTreeUtil.collectElements(any) { it is CssRulesetList }.first().children.forEach { (it as? CssRulesetImpl)?.selectors?.forEach {
+                        if (it.text == "." + path.first()) {
+                            return it
                         }
-                    }
+                    }}
                 }
             }
 
             if (any is CssSelector && any.ruleset?.block != null) {
-                any.ruleset!!.block!!.children.mapNotNull { it as? CssRulesetImpl }.forEach {
-                    it.selectors.forEach {
-                        if (it.text == "." + path.first()) {
-                            return it
-                        }
+                any.ruleset!!.block!!.children.mapNotNull { it as? CssRulesetImpl }.forEach{ it.selectors.forEach {
+                    if (it.text == "." + path.first()) {
+                        return it
                     }
-                }
+                }}
             }
 
             if (any is PsiElement) {
@@ -259,8 +256,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                         if (res != null && res.children[2].children.firstOrNull() is HbMustacheName) {
                             val mustacheImpl = res.children[2].children.first()
                             val lastId = mustacheImpl.children[0].children.findLast { it.elementType == HbTokenTypes.ID }
-                            return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
-                                    ?: res
+                            return resolveToJs(lastId, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1) ?: res
                         }
                         val ref = PsiTreeUtil.collectElements(res, { it.references.find { it is HbReference } != null }).firstOrNull()
                         if (ref != null) {
@@ -343,7 +339,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             // as html tag
             val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
             val angleBracketBlocks = PsiTreeUtil.collectElements(htmlView, { it is XmlAttribute && it.text.startsWith("|") })
-                    .filter { (it.parent as HtmlTag).attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|")) }
+                    .filter{ (it.parent as HtmlTag).attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|")) }
                     .map { it.parent }
 
             // validate if the element is a child of the tag
@@ -357,7 +353,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
             if (blockRef != null || blockVal != null || validBlock != null) {
                 if (validBlock != null) {
-                    val tag = validBlock as HtmlTagImpl
+                    val tag  = validBlock as HtmlTagImpl
                     val index = tag.attributes.indexOfFirst { it.text == "as" }
                     val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
                     val r = blockParams.find { it.text.matches(Regex("^\\|*\\b$name\\b\\|*$")) }
@@ -370,6 +366,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
 
         fun createReference(element: PsiElement): PsiReference? {
             val ref = this.findReference(element)
+            if (ref?.resolve() == null ) {
+                return null
+            }
             return ref
         }
 
@@ -396,16 +395,14 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val yieldRef = (ref as? HbsLocalReference)?.resolveYield()
                 if (yieldRef != null) {
                     val res = resolveToJs(yieldRef, listOf(element.text))
-                    return HbsLocalReference(element, res
-                            ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
+                    return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
                 if (ref != null && resolveToJs(ref.resolve(), listOf(element.text)) != null) {
                     return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
                 val res = resolveToJs(ref2?.resolve(), listOf(element.text))
-                return HbsLocalReference(element, res
-                        ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
+                return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
             }
 
             if (element.parent is HbData) {

@@ -14,6 +14,7 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
+import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
@@ -24,8 +25,11 @@ import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
+import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.search.ProjectScope
@@ -36,7 +40,7 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 
-class ResolvedReference(element: PsiElement, private val resolved: PsiElement) : PsiReferenceBase<PsiElement>(element) {
+class ResolvedReference(element: PsiElement, private val resolved: PsiElement): PsiReferenceBase<PsiElement>(element) {
     override fun resolve(): PsiElement? {
         return resolved
     }
@@ -77,7 +81,7 @@ class TagReference(val element: XmlTag, val fullName: String, val range: TextRan
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
             return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
-        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset - 1)) }
+        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
     }
 
     override fun isReferenceTo(element: PsiElement): Boolean {
@@ -117,9 +121,6 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
             val range = TextRange(offset, offset + s.length)
             val ref = TagReference(tag, fullName, range)
-            if (ref.resolve() == null && (tag.name.first().isUpperCase() || tag.name.first() == ':' || tag.attributes.any { it.name.startsWith("@") || it.name.startsWith("|") })) {
-                return@mapIndexed ref
-            }
             ref.resolve()?.let { ref }
         }
         return references.filterNotNull().toTypedArray()
@@ -136,8 +137,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 val manager = InjectedLanguageManager.getInstance(element.project)
                 val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile
-                            ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null
@@ -177,7 +177,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                                 return@mapNotNull ib
                             }
                         }
-                        it.importSpecifiers.forEach { iss ->
+                        it.importSpecifiers.forEach {iss ->
                             val name = iss.alias?.name ?: iss.name ?: ""
                             if (name == parts.first()) {
                                 return@mapNotNull iss.alias ?: iss
@@ -188,7 +188,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 }.firstOrNull()
             }
 
-            parts.subList(1, parts.size).forEach { part ->
+            parts.subList(1, parts.size).forEach {part ->
                 current = (current as? JSTypeOwner)?.jsType?.asRecordType()?.properties?.find { it.memberName == part }?.jsType?.sourceElement
             }
 
@@ -210,7 +210,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                     .map { it.yieldBlock }
                     .filterNotNull()
                     .find {
-                        it.children.find { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name } != null
+                        it.children.find { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name} != null
                     }
         }
 
@@ -244,7 +244,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                         block.textRange.contains(tag.textRange)
                     }
 
-            val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name }
+            val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name}
             blockParamIdx = hbBlockRef?.children?.firstOrNull()?.children?.indexOf(param) ?: blockParamIdx
             val parts = fullName.split(".")
             var ref = param ?: refPsi
@@ -312,14 +312,12 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val components = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.js first, then component.js
-            val component = components.find { !it.name.startsWith("component.") }
-                    ?: components.find { it.name.startsWith("component.") }
+            val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
 
             if (component != null) return EmberUtils.resolveToEmber(component)
 
             // find name.hbs first, then template.hbs
-            val componentTemplate = templates.find { !it.name.startsWith("template.") }
-                    ?: templates.find { it.name.startsWith("template.") }
+            val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
 
             if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
 
