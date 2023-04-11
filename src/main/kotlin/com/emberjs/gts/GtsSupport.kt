@@ -5,14 +5,19 @@ import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.icons.EmberIcons
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
 import com.intellij.embedding.EmbeddingElementType
-import com.intellij.framework.detection.impl.FrameworkDetectionManager
+import com.intellij.formatting.Alignment
+import com.intellij.formatting.FormattingContext
+import com.intellij.formatting.FormattingModel
+import com.intellij.formatting.Wrap
+import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
+import com.intellij.formatting.templateLanguages.TemplateLanguageBlock
+import com.intellij.formatting.templateLanguages.TemplateLanguageFormattingModelBuilder
 import com.intellij.lang.*
 import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
@@ -24,22 +29,29 @@ import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.config.JSImportResolveContext
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
+import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
 import com.intellij.lang.javascript.modules.JSImportCandidateDescriptor
 import com.intellij.lang.javascript.modules.JSImportPlaceInfo
-import com.intellij.lang.javascript.modules.imports.*
+import com.intellij.lang.javascript.modules.imports.JSImportCandidatesBase
+import com.intellij.lang.javascript.modules.imports.JSImportDescriptor
+import com.intellij.lang.javascript.modules.imports.JSModuleDescriptor
+import com.intellij.lang.javascript.modules.imports.JSSimpleImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
+import com.intellij.lang.javascript.types.JSFileElementType
 import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
 import com.intellij.lang.typescript.tsconfig.*
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
+import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -50,7 +62,9 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
+import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.impl.source.PsiFileImpl
+import com.intellij.psi.impl.source.codeStyle.CodeEditUtil
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
@@ -62,8 +76,8 @@ import com.intellij.psi.templateLanguages.TemplateDataModifications
 import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
 import com.intellij.psi.tree.*
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.PsiUtilCore
 import com.intellij.psi.xml.XmlTokenType
+import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import java.util.function.Predicate
 import javax.swing.Icon
@@ -87,7 +101,9 @@ class GtsFile(viewProvider: FileViewProvider?) : JSFileImpl(viewProvider!!, GtsL
     }
 }
 
-class TSTemplate(val ts: TypeScriptEmbeddedContentElementType = TypeScriptEmbeddedContentElementType(TS, "GTS_")):
+
+
+class TSTemplate2(val ts: TypeScriptEmbeddedContentElementType = TypeScriptEmbeddedContentElementType(TS, "GTS_")):
         EmbeddingElementType by ts,
         ICustomParsingType by ts,
         ILazyParseableElementTypeBase by ts,
@@ -96,8 +112,55 @@ class TSTemplate(val ts: TypeScriptEmbeddedContentElementType = TypeScriptEmbedd
         TemplateDataElementType.TemplateAwareElementType by ts,
         TemplateDataElementType("GTS_TS", TS, GtsElementTypes.JS_TOKEN, GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) {
 
+    override fun createTemplateFakeFileType(language: Language?): LanguageFileType {
+        return TypeScriptFileType.INSTANCE
+    }
+
             override fun parseContents(node: ASTNode): ASTNode? {
-                return super.parseContents(node)
+        return super.parseContents(node)
+    }
+    override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
+        return TS
+    }
+    override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
+        val r = Regex("=\\s*$")
+        return if (r.containsMatchIn(tokenText)) {
+            TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "\"\"")
+        } else {
+            super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
+        }
+    }
+}
+
+class GtsFileElementType(language: Language?) : JSFileElementType(language) {
+    override fun parseContents(chameleon: ASTNode): ASTNode? {
+        return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
+    }
+
+    override fun getExternalId(): String {
+        return GtsLanguage.INSTANCE.toString() + ":" + this
+    }
+
+    companion object {
+        val INSTANCE = GtsFileElementType(TS)
+    }
+}
+
+class GtsElementTypes {
+    companion object {
+        val HB_TOKEN = JSElementType("HB_TOKEN")
+        val JS_TOKEN = JSElementType("JS_TOKEN")
+        val HTML_TOKEN = JSElementType("HTML_TOKEN")
+        val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_EMBEDDED_CONTENT", GtsLanguage.INSTANCE)
+        val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
+        //val TS_CONTENT_ELEMENT_TYPE = TSTemplate()
+        val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
+
+            override fun equals(other: Any?): Boolean {
+                if (other is JSFileElementType) {
+                    return true
+                }
+                return super.equals(other)
             }
             override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
                 return TS
@@ -110,29 +173,7 @@ class TSTemplate(val ts: TypeScriptEmbeddedContentElementType = TypeScriptEmbedd
                     super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
                 }
             }
-}
-
-class GtsElementTypes {
-    companion object {
-        val HB_TOKEN = JSElementType("HB_TOKEN")
-        val JS_TOKEN = JSElementType("JS_TOKEN")
-        val HTML_TOKEN = JSElementType("HTML_TOKEN")
-        val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_EMBEDDED_CONTENT", GtsLanguage.INSTANCE)
-        val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
-        val TS_CONTENT_ELEMENT_TYPE = TSTemplate()
-//        val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
-//            override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
-//                return TS
-//            }
-//            override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
-//                val r = Regex("=\\s*$")
-//                return if (r.containsMatchIn(tokenText)) {
-//                    TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "\"\"")
-//                } else {
-//                    super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
-//                }
-//            }
-//        }
+        }
         val HTML_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_HTML", GtsLanguage.INSTANCE, HTML_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
 
             override fun createBaseLexer(viewProvider: TemplateLanguageFileViewProvider?): Lexer {
@@ -351,7 +392,7 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
         }
         if (lang.id == TS.id) {
             val f = TypeScriptParserDefinition().createFile(this)
-            (f as PsiFileImpl).contentElementType = GtsElementTypes.TS_CONTENT_ELEMENT_TYPE
+            (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
             return f
         }
         if (lang.id == HTMLLanguage.INSTANCE.id) {
@@ -574,4 +615,15 @@ class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponent
 
 class GtsIndexedFileTypeProvider : IndexedFileTypeProvider {
     override fun getFileTypesToIndex(): Array<FileType> = arrayOf(GtsFileType.INSTANCE)
+}
+
+class GtsFormattingModelBuilder : JavascriptFormattingModelBuilder() {
+    override fun createModel(formattingContext: FormattingContext): FormattingModel {
+        if (formattingContext.psiElement is PsiFile) {
+            return super.createModel(formattingContext.withPsiElement(formattingContext.containingFile.viewProvider.getPsi(TS)))
+        }
+        val elem = formattingContext.psiElement.containingFile.findElementAt(formattingContext.psiElement.startOffset)
+        return super.createModel(formattingContext.withPsiElement(elem!!))
+    }
+
 }

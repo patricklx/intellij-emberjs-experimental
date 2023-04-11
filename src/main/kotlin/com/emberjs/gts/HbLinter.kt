@@ -7,6 +7,9 @@ import com.dmarcotte.handlebars.psi.HbData
 import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintTypeScriptService
+import com.emberjs.hbs.HbReference
+import com.emberjs.index.EmberNameIndex
+import com.emberjs.resolver.EmberName
 import com.emberjs.utils.ifTrue
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.lang.annotation.AnnotationHolder
@@ -19,18 +22,32 @@ import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.completion.JSImportCompletionUtil
 import com.intellij.lang.javascript.modules.JSImportModuleFix
 import com.intellij.lang.javascript.modules.JSImportPlaceInfo
+import com.intellij.lang.javascript.modules.JSPlaceTail
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
+import com.intellij.lang.javascript.modules.imports.JSImportDescriptor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
+import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiParserFacade
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTag
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.util.containers.ContainerUtil
+import com.intellij.util.containers.addIfNotNull
 import java.util.function.Predicate
 
 class InitialInfo {
@@ -46,6 +63,13 @@ class AnnotationResult {
     var initialInfo: InitialInfo? = null
 }
 
+class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, tail: JSPlaceTail?, needHint: Boolean) : JSImportModuleFix(node, descriptor, tail, needHint) {
+    override fun invokeAction(element: PsiElement, editor: Editor?) {
+        super.invokeAction(element, editor)
+        (element as XmlTag).name = element.name.split("::").last()
+    }
+}
+
 class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResult>() {
 
     override fun collectInformation(file: PsiFile): InitialInfo? {
@@ -57,31 +81,15 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
 
         val html = file.viewProvider.getPsi(HTMLLanguage.INSTANCE)
         val hbs = file.viewProvider.getPsi(HbLanguage.INSTANCE)
-        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         val emberTags = PsiTreeUtil.collectElements(html) {
             it is XmlTag && it.reference?.resolve() == null
         }.map { it as XmlTag }
         val hbIds = PsiTreeUtil.collectElements(hbs) {
-            it is HbPsiElement && it.elementType == HbTokenTypes.ID && it.reference?.resolve() == null && it.parent !is HbData
+            it is HbPsiElement && it.elementType == HbTokenTypes.ID && (it.reference?.resolve() == null && it.references.find { it is HbReference }?.resolve() == null)
         }.map { it as HbPsiElement }
-        val map = emberTags.groupBy { it.name }.mapValues { mutableListOf<JSImportCandidate>() }.toMutableMap()
+        val map = emberTags.groupBy { it.name.split("::").last() }.mapValues { mutableListOf<JSImportCandidate>() }.toMutableMap()
 
-        if (tsFile != null) {
-            val info = JSImportPlaceInfo(tsFile)
-            val keyFilter = Predicate { name: String? -> name != null && (emberTags.find { name == it.name } != null || hbIds.find { name == it.text } != null )}
-            val providers = JSImportCandidatesProvider.getProviders(info)
-            hbIds.groupBy { it.name }.mapValuesTo(map) { mutableListOf() }
-            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                val candidate = if (elements.size == 1) ContainerUtil.getFirstItem(elements) else null
-                if (candidate == null) {
-                    return@processExportedElements true
-                }
-                map.entries.filter { candidate.name.startsWith(it.key) }.forEach {
-                    it.value.add(candidate)
-                }
-                return@processExportedElements true
-            }
-        }
+        hbIds.filter { it.parent !is HbData }.groupBy { it.name }.mapValuesTo(map) { mutableListOf() }
 
         hbIds.toCollection(initialInfo.hbIds)
         emberTags.toCollection(initialInfo.emberTags)
@@ -101,6 +109,24 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                     ?.map { it as GlintAnnotationError }
                     ?.toCollection(result.annotationErrors)
         }
+        val file = collectedInfo.file!!
+        val tsFile = collectedInfo.file!!.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+        val emberTags = collectedInfo.emberTags
+        val map = collectedInfo.map
+        if (tsFile != null) {
+            ApplicationManager.getApplication().runReadAction {
+                val hbIds = collectedInfo.hbIds.filter { it.parent !is HbData }
+                val keyFilter = Predicate { name: String? -> name != null && (emberTags.find { name == it.name.split("::").last() } != null || hbIds.find { name == it.text } != null )}
+                val info = JSImportPlaceInfo(tsFile)
+                val providers = JSImportCandidatesProvider.getProviders(info)
+                JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
+                    map.entries.filter { name == it.key }.forEach {
+                        it.value.addAll(elements.filterNotNull())
+                    }
+                    return@processExportedElements true
+                }
+            }
+        }
 
         result.initialInfo = collectedInfo
         return result
@@ -111,6 +137,21 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
         val document = documentManager.getDocument(file)!!
         val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         annotationResult?.let { result ->
+            result.initialInfo!!.hbIds.forEach {
+                val name = it.text
+                val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
+                val candidates = result.initialInfo!!.map.get(it.name) ?: emptyList()
+                val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
+                        .range(it.textRange)
+                        .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                        .tooltip(message)
+                candidates.forEach { c ->
+                    val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
+                    val fix = GtsImportFix(it, icwe, null, true)
+                    annotation.withFix(fix)
+                }
+                annotation.create()
+            }
             result.initialInfo!!.emberTags.forEach {
                 val nameElement = it.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return@forEach
                 val closeNameElement = it.children.findLast { it.elementType == XmlTokenType.XML_NAME }
@@ -131,7 +172,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = JSImportModuleFix(it, icwe, null, true)
+                    val fix = GtsImportFix(it, icwe, null, true)
                     annotation.withFix(fix)
                 }
                 annotation.create()
