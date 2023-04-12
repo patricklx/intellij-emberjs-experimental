@@ -40,7 +40,6 @@ import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidates
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.lang.javascript.types.JEEmbeddedBlockElementType
 import com.intellij.lang.javascript.types.JSFileElementType
 import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
 import com.intellij.lang.typescript.tsconfig.*

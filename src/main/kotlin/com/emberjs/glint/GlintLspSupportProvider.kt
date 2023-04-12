@@ -1,43 +1,48 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.emberjs.gts.GtsFileType
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.lang.javascript.JavaScriptFileType
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lsp.*
+import com.intellij.lsp.api.LspServerDescriptor
+import com.intellij.lsp.api.LspServerManager
+import com.intellij.lsp.api.LspServerSupportProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.services.LanguageClient
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.function.Consumer
 
 class GlintLspSupportProvider : LspServerSupportProvider {
-    override fun getServerDescriptor(project: Project, p1: VirtualFile): LspServerDescriptor {
-        val workingDir = project.guessProjectDir()!!
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-        if (glintPkg == null) {
-            return LspServerDescriptor.emptyDescriptor()
-        }
-        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-        if (file == null) {
-            return LspServerDescriptor.emptyDescriptor()
-        }
-        return project.getService(GlintLspServerDescriptor::class.java)
+    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
+        getGlintDescriptor(project)?.let { serverStarter.ensureServerStarted(it) }
     }
 }
 
 
-class GlintLanguageServerConnectorStdio(serverDescriptor: LspServerDescriptor, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(serverDescriptor, processHandler, ) {
+class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(server, processHandler) {
 
 
     override fun getFilePath(file: VirtualFile): String {
@@ -65,21 +70,15 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 
 @Service
-class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(), Disposable {
+class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
-    override fun getProject(): Project = myProject
+    val lspServerManager = LspServerManager.getInstance(project)
 
-    override fun diagnosticReceived(file: VirtualFile?) {
-        ApplicationManager.getApplication().runReadAction {
-            val psiFile = file?.let { psiManager.findFile(it) }
-            if (file?.fileType == HbFileType.INSTANCE && psiFile != null) {
-                project.getService(GlintTypeScriptService::class.java).highlight(psiFile)
-            }
-        }
-        super.diagnosticReceived(file)
-    }
+    public val server
+        get() =
+           lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
-    override fun createStdioServerStartingCommandLine(): GeneralCommandLine {
+    override fun createCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         val commandLine = GeneralCommandLine()
@@ -105,15 +104,10 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return commandLine
     }
 
-    override fun createServerConnector(): LanguageServerConnector {
-        val socketModeDescriptor = this.socketModeDescriptor
-        return if (socketModeDescriptor != null) {
-            LanguageServerConnectorSocket(this, socketModeDescriptor)
-        } else {
-            val startingCommandLine = createStdioServerStartingCommandLine()
-            LOG.debug("$this: starting server process using: $startingCommandLine")
-            GlintLanguageServerConnectorStdio(this, OSProcessHandler(startingCommandLine))
-        }
+    override fun createServerConnector(lspServer: LspServer): LanguageServerConnector {
+        val startingCommandLine = createCommandLine()
+        LOG.debug("$this: starting server process using: $startingCommandLine")
+        return GlintLanguageServerConnectorStdio(this.server!!, OSProcessHandler(startingCommandLine))
     }
 
     override fun createInitializationOptions(): Any {
@@ -128,15 +122,16 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return super.getLanguageId(file)
     }
 
-    override fun getRoot(): VirtualFile = project.guessProjectDir()!!
+    override fun isSupportedFile(file: VirtualFile): Boolean {
+        return file.fileType is HbFileType ||
+                file.fileType is TypeScriptFileType ||
+                file.fileType is GtsFileType ||
+                file.fileType is JavaScriptFileType
+    }
 
-    override fun getSocketModeDescriptor(): SocketModeDescriptor? = null
+    override val handlePublishDiagnostics = true
+    override val useGenericNavigation = false
 
-    override fun useGenericCompletion() = false
-
-    override fun useGenericHighlighting() = false
-
-    override fun useGenericNavigation() = true
     override fun dispose() {}
 }
 

@@ -13,8 +13,8 @@ class GlintDocumentListener: DocumentListener {
         projects.forEach {project ->
             GlintLanguageServiceProvider(project).allServices.forEach {
                 val lspServer = it.getDescriptor()?.server
-                if (lspServer != null && it.isAcceptable(file)&& lspServer.isFileOpened(file)) {
-                    val didChangeMethod = DidChangeMethod.createFull(lspServer, event, file)
+                if (lspServer != null && it.isAcceptable(file) && lspServer.isFileOpened(file)) {
+                    val didChangeMethod = DidChangeMethod.createFull(lspServer, event.document, file)
                     lspServer.invoke(didChangeMethod)
                 }
             }

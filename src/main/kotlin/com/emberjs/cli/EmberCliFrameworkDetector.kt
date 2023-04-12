@@ -1,6 +1,7 @@
 package com.emberjs.cli
 
 
+import com.emberjs.glint.GlintLspSupportProvider
 import com.emberjs.glint.getGlintDescriptor
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.findMainPackageJson
@@ -36,7 +37,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     override fun createSuitableFilePattern(): ElementPattern<FileContent> {
         return FileContentPattern.fileContent()
                 .with(object : PatternCondition<FileContent>("emberKey") {
-                    override fun accepts(fileContent:FileContent, context: ProcessingContext): Boolean {
+                    override fun accepts(fileContent: FileContent, context: ProcessingContext): Boolean {
                         if (fileContent.fileName != "package.json") {
                             return false
                         }
@@ -116,7 +117,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
-            getGlintDescriptor(context.project!!).server.start()
+            getGlintDescriptor(context.project!!).server
         }
         return mutableListOf()
     }
@@ -146,18 +147,18 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
             listenNodeModules(root, modulesProvider)
             modulesProvider.modules
-                .filter { ModuleRootManager.getInstance(it).contentRoots.contains(root) }
-                .forEach { module ->
-                    val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                    val entry = MarkRootActionBase.findContentEntry(model, root)
-                    if (entry != null) {
-                        EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
-                        getGlintDescriptor(model.project).server.start()
-                        modifiableModelsProvider.commitModuleModifiableModel(model)
-                    } else {
-                        modifiableModelsProvider.disposeModuleModifiableModel(model)
+                    .filter { ModuleRootManager.getInstance(it).contentRoots.contains(root) }
+                    .forEach { module ->
+                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                        val entry = MarkRootActionBase.findContentEntry(model, root)
+                        if (entry != null) {
+                            EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
+                            getGlintDescriptor(model.project).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(model.project))
+                            modifiableModelsProvider.commitModuleModifiableModel(model)
+                        } else {
+                            modifiableModelsProvider.disposeModuleModifiableModel(model)
+                        }
                     }
-                }
         }
     }
 }

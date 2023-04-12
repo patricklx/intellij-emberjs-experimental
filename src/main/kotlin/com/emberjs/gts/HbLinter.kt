@@ -63,10 +63,15 @@ class AnnotationResult {
     var initialInfo: InitialInfo? = null
 }
 
-class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, tail: JSPlaceTail?, needHint: Boolean) : JSImportModuleFix(node, descriptor, tail, needHint) {
-    override fun invokeAction(element: PsiElement, editor: Editor?) {
-        super.invokeAction(element, editor)
-        (element as XmlTag).name = element.name.split("::").last()
+class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, hintMode: HintMode) : JSImportModuleFix(node, descriptor, hintMode) {
+    override fun invoke(project: Project, file: PsiFile, startElement: PsiElement, endElement: PsiElement) {
+        super.invoke(project, file, startElement, endElement)
+        (startElement as XmlTag).name = startElement.name.split("::").last()
+    }
+
+    override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+        super.invoke(project, editor, file)
+        (startElement as XmlTag).name = (startElement as XmlTag).name.split("::").last()
     }
 }
 
@@ -125,7 +130,6 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                 return@processExportedElements true
             }
         }
-
         result.initialInfo = collectedInfo
         return result
     }
@@ -145,7 +149,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, null, true)
+                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.MULTI)
                     annotation.withFix(fix)
                 }
                 annotation.create()
@@ -170,7 +174,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, null, true)
+                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.MULTI)
                     annotation.withFix(fix)
                 }
                 annotation.create()

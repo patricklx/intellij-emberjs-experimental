@@ -1,4 +1,3 @@
-
 Features
 ===============================================================================
 
@@ -6,7 +5,7 @@ Features
 Project Discovery
 -------------------------------------------------------------------------------
 
-Ember.js projects are automatically discovered when imported via 
+Ember.js projects are automatically discovered when imported via
 `File → New → Project from Existing Sources...`. The importer will look for an
 `.ember-cli` file and will flag the project as an Ember.js project if the file
 exists.
@@ -41,7 +40,7 @@ The plugin is indexing all typical components in the `app` folder and is
 providing them for quick access via the `Navigate → Class...` action. Currently
 supported are:
 
-- Adapters 
+- Adapters
 - Components
 - Controllers
 - Helpers
@@ -58,7 +57,6 @@ Example: `app/routes/pets/index.js` will be indexed as `PetsIndexRoute`
 
 ![Navigate → Class...](goto-class.png)
 
-
 ### `Navigate → Related Symbol...`
 
 The plugin provides an implementation for the `Navigate → Related Symbol...`
@@ -66,17 +64,16 @@ quick navigation.
 
 Example: Invoking the action inside of `/app/routes/crate/index.js` will
 switch to the `/app/controllers/crate/index.js` file if it exists.
- 
+
 The following groups of files can be cycled like this:
- 
+
 - `controllers`, `routes`, `templates`
 - `components`, `templates`
 - `adapters`, `models`, `serializers`
 
 The same functionality can also be used to cycle between tests and the tested
-components (i.e. `/app/routes/crate/index.js` and 
+components (i.e. `/app/routes/crate/index.js` and
 `/tests/unit/routes/crate/index.js`)
-
 
 ### Navigating via references
 
@@ -87,15 +84,14 @@ for cases like `DS.belongsTo('user')`, where <kbd>ctrl</kbd>-clicking the
 
 ![Reference Resolving](references.png)
 
-The same functionality also provides basic code completion via 
+The same functionality also provides basic code completion via
 <kbd>ctrl</kbd> + <kbd>space</kbd>:
 
 ![Completion](completion.png)
 
-Have a look at the 
-[`EmberReferenceContributor`](../src/main/kotlin/com/emberjs/psi/EmberReferenceContributor.kt) 
+Have a look at the
+[`EmberReferenceContributor`](../src/main/kotlin/com/emberjs/psi/EmberReferenceContributor.kt)
 class to check for which methods this functionality is available.
-
 
 #### References and Completion in Handlebars
 
@@ -120,19 +116,17 @@ then choosing `Static Web` and either `Ember CLI App` or `Ember CLI Addon`.
 
 ![Project Generator](project-generator.png)
 
-
 ### Generating files
 
 The Ember.js plugin can be used to quickly generate files using the `generate`
-command of `ember-cli`. This functionality is available as 
+command of `ember-cli`. This functionality is available as
 `File → New → Ember.js Code`.
 
 ![Blueprints Dialog](blueprints-dialog.png)
 
-
 ### Running the ember server
 
-The plugin adds a `Ember Serve` 
+The plugin adds a `Ember Serve`
 [run configuration](https://www.jetbrains.com/help/idea/creating-and-editing-run-debug-configurations.html)
 that allows you to launch a
 [development server](https://guides.emberjs.com/v2.16.0/tutorial/ember-cli/#toc_the-development-server).
@@ -174,5 +168,5 @@ The following live templates are available:
 
 -------------------------------------------------------------------------------
 
-Most screenshots in this document are taking from an import of the 
+Most screenshots in this document are taking from an import of the
 [crates.io](https://github.com/rust-lang/crates.io) project.

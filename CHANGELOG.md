@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.0
+- feature: Support intellij 2023.1
+
 ## 2022.4.4
 - feature: support GTS formatting
 
