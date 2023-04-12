@@ -110,21 +110,19 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                     ?.toCollection(result.annotationErrors)
         }
         val file = collectedInfo.file!!
-        val tsFile = collectedInfo.file!!.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         val emberTags = collectedInfo.emberTags
         val map = collectedInfo.map
-        if (tsFile != null) {
-            ApplicationManager.getApplication().runReadAction {
-                val hbIds = collectedInfo.hbIds.filter { it.parent !is HbData }
-                val keyFilter = Predicate { name: String? -> name != null && (emberTags.find { name == it.name.split("::").last() } != null || hbIds.find { name == it.text } != null )}
-                val info = JSImportPlaceInfo(tsFile)
-                val providers = JSImportCandidatesProvider.getProviders(info)
-                JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                    map.entries.filter { name == it.key }.forEach {
-                        it.value.addAll(elements.filterNotNull())
-                    }
-                    return@processExportedElements true
+        ApplicationManager.getApplication().runReadAction {
+            val tsFile = collectedInfo.file!!.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
+            val hbIds = collectedInfo.hbIds.filter { it.parent !is HbData }
+            val keyFilter = Predicate { name: String? -> name != null && (emberTags.find { name == it.name.split("::").last() } != null || hbIds.find { name == it.text } != null )}
+            val info = JSImportPlaceInfo(tsFile)
+            val providers = JSImportCandidatesProvider.getProviders(info)
+            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
+                map.entries.filter { name == it.key }.forEach {
+                    it.value.addAll(elements.filterNotNull())
                 }
+                return@processExportedElements true
             }
         }
 
@@ -156,8 +154,8 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                 val nameElement = it.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return@forEach
                 val closeNameElement = it.children.findLast { it.elementType == XmlTokenType.XML_NAME }
                 val message = (((it.name.startsWith(":") || file.viewProvider is HbFileViewProvider)
-                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '<${it.name}>'" }
-                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for <${it.name}>")))
+                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${it.name}'" }
+                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${it.name}'")))
                 if (closeNameElement != null && closeNameElement.textRange.endOffset == it.endOffset - 1) {
                     holder.newSilentAnnotation(HighlightSeverity.ERROR)
                             .range(closeNameElement.textRange)
