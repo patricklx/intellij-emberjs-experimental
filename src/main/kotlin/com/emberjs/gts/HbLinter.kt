@@ -158,8 +158,8 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                 val nameElement = it.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return@forEach
                 val closeNameElement = it.children.findLast { it.elementType == XmlTokenType.XML_NAME }
                 val message = (((it.name.startsWith(":") || file.viewProvider is HbFileViewProvider)
-                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '<${it.name}>'" }
-                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for <${it.name}>")))
+                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${it.name}'" }
+                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${it.name}'")))
                 if (closeNameElement != null && closeNameElement.textRange.endOffset == it.endOffset - 1) {
                     holder.newSilentAnnotation(HighlightSeverity.ERROR)
                             .range(closeNameElement.textRange)
