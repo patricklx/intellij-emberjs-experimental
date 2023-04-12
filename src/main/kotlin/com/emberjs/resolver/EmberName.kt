@@ -117,6 +117,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
             val file = parts.getOrNull(3)?.let { LocalFileSystem.getInstance().findFileByPath(it) }
             return when {
                 parts.count() >= 3 && file != null -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
+                parts.count() == 2 -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
                 else -> null
             }
         }

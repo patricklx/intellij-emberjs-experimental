@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.4.4
+- feature: support GTS formatting
+
 ## 2022.4.3
 - feature: Support GTS imports and GTS exports resolution
 
