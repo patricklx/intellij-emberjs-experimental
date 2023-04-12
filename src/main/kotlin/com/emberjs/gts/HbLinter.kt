@@ -130,7 +130,6 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                 return@processExportedElements true
             }
         }
-
         result.initialInfo = collectedInfo
         return result
     }
@@ -150,7 +149,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.SINGLE)
+                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.MULTI)
                     annotation.withFix(fix)
                 }
                 annotation.create()
@@ -175,7 +174,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.SINGLE)
+                    val fix = GtsImportFix(it, icwe, JSImportModuleFix.HintMode.MULTI)
                     annotation.withFix(fix)
                 }
                 annotation.create()
