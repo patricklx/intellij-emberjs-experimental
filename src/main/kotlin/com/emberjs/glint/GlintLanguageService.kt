@@ -261,9 +261,9 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             file.fileType is JavaScriptFileType
 
     override fun isAcceptable(file: VirtualFile) = file.fileType is HbFileType ||
-            file.fileType is TypeScriptFileType ||
-            file.fileType is GtsFileType ||
-            file.fileType is JavaScriptFileType
+                                                   file.fileType is TypeScriptFileType ||
+                                                   file.fileType is GtsFileType ||
+                                                   file.fileType is JavaScriptFileType
 
     override fun dispose() {
         return
