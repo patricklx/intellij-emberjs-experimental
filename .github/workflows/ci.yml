@@ -35,6 +35,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - run: chmod +x ./gradlew
       - run: ./gradlew assemble
       - run: ./gradlew check
   upload:
