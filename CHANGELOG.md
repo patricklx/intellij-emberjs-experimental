@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2022.4.5
+- fix: fix GTS Handlebars ID imports
+
 ## 2022.4.4
 - feature: support GTS formatting
 

@@ -1,22 +1,20 @@
 package com.emberjs.gts
 
-import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.dmarcotte.handlebars.psi.HbData
 import com.dmarcotte.handlebars.psi.HbPsiElement
+import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.hbs.HbReference
-import com.emberjs.index.EmberNameIndex
-import com.emberjs.resolver.EmberName
 import com.emberjs.utils.ifTrue
 import com.intellij.codeInspection.ProblemHighlightType
+import com.intellij.lang.Language
 import com.intellij.lang.annotation.AnnotationHolder
+import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.ExternalAnnotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.ecmascript6.actions.ES6AddImportExecutor
-import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.javascript.JavaScriptBundle
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.completion.JSImportCompletionUtil
@@ -25,29 +23,17 @@ import com.intellij.lang.javascript.modules.JSImportPlaceInfo
 import com.intellij.lang.javascript.modules.JSPlaceTail
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
-import com.intellij.lang.javascript.modules.imports.JSImportDescriptor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
-import com.intellij.openapi.application.Application
+import com.intellij.lang.typescript.intentions.TypeScriptAddImportStatementFix
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiParserFacade
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.*
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTag
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
-import com.intellij.util.containers.ContainerUtil
-import com.intellij.util.containers.addIfNotNull
 import java.util.function.Predicate
 
 class InitialInfo {
@@ -63,37 +49,56 @@ class AnnotationResult {
     var initialInfo: InitialInfo? = null
 }
 
-class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, tail: JSPlaceTail?, needHint: Boolean) : JSImportModuleFix(node, descriptor, tail, needHint) {
-    override fun invokeAction(element: PsiElement, editor: Editor?) {
-        super.invokeAction(element, editor)
-        (element as XmlTag).name = element.name.split("::").last()
+
+class FakeJsElement(val element: PsiElement): PsiElement by element {
+    override fun getLanguage(): Language {
+        return JavaScriptSupportLoader.TYPESCRIPT
+    }
+
+    override fun getContainingFile(): PsiFile {
+        return element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+    }
+
+    override fun getReference(): PsiReference {
+        return object : PsiReferenceBase<PsiElement>(element) {
+            override fun getRangeInElement(): TextRange {
+                return TextRange(0, element.textLength)
+            }
+            override fun resolve(): PsiElement? {
+                return null
+            }
+        }
+    }
+}
+
+class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, tail: JSPlaceTail?, needHint: Boolean) : TypeScriptAddImportStatementFix(descriptor.name, FakeJsElement(node)) {
+
+    override fun invoke(project: Project, file: PsiFile, startElement: PsiElement, endElement: PsiElement) {
+        super.invoke(project, file, startElement, endElement)
+        if (startElement is XmlTag) {
+            startElement.name = startElement.name.split("::").last()
+        }
+    }
+
+    override fun invoke(project: Project, editor: Editor?, file: PsiFile?) {
+        super.invoke(project, editor, file)
+        val startElement = this.startElement
+        if (startElement is XmlTag) {
+            startElement.name = startElement.name.split("::").last()
+        }
     }
 }
 
 class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResult>() {
-
     override fun collectInformation(file: PsiFile): InitialInfo? {
+        if (file is HbPsiFile && file.viewProvider is GtsFileViewProvider) {
+            return null
+        }
         if (file.viewProvider !is GtsFileViewProvider && file.viewProvider !is HbFileViewProvider) {
             return null
         }
         val initialInfo = InitialInfo()
         initialInfo.file = file
-
-        val html = file.viewProvider.getPsi(HTMLLanguage.INSTANCE)
-        val hbs = file.viewProvider.getPsi(HbLanguage.INSTANCE)
-        val emberTags = PsiTreeUtil.collectElements(html) {
-            it is XmlTag && it.reference?.resolve() == null
-        }.map { it as XmlTag }
-        val hbIds = PsiTreeUtil.collectElements(hbs) {
-            it is HbPsiElement && it.elementType == HbTokenTypes.ID && (it.reference?.resolve() == null && it.references.find { it is HbReference }?.resolve() == null)
-        }.map { it as HbPsiElement }
-        val map = emberTags.groupBy { it.name.split("::").last() }.mapValues { mutableListOf<JSImportCandidate>() }.toMutableMap()
-
-        hbIds.filter { it.parent !is HbData }.groupBy { it.name }.mapValuesTo(map) { mutableListOf() }
-
-        hbIds.toCollection(initialInfo.hbIds)
-        emberTags.toCollection(initialInfo.emberTags)
-        map.toMap(initialInfo.map)
         return initialInfo
     }
 
@@ -109,91 +114,97 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
                     ?.map { it as GlintAnnotationError }
                     ?.toCollection(result.annotationErrors)
         }
-        val file = collectedInfo.file!!
-        val emberTags = collectedInfo.emberTags
-        val map = collectedInfo.map
-        ApplicationManager.getApplication().runReadAction {
-            val tsFile = collectedInfo.file!!.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
-            val hbIds = collectedInfo.hbIds.filter { it.parent !is HbData }
-            val keyFilter = Predicate { name: String? -> name != null && (emberTags.find { name == it.name.split("::").last() } != null || hbIds.find { name == it.text } != null )}
-            val info = JSImportPlaceInfo(tsFile)
-            val providers = JSImportCandidatesProvider.getProviders(info)
-            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                map.entries.filter { name == it.key }.forEach {
-                    it.value.addAll(elements.filterNotNull())
-                }
-                return@processExportedElements true
-            }
-        }
-
         result.initialInfo = collectedInfo
         return result
     }
 
-    override fun apply(file: PsiFile, annotationResult: AnnotationResult?, holder: AnnotationHolder) {
+    override fun apply(file: PsiFile, result: AnnotationResult?, holder: AnnotationHolder) {
         val documentManager = PsiDocumentManager.getInstance(file.project)
         val document = documentManager.getDocument(file)!!
-        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-        annotationResult?.let { result ->
-            result.initialInfo!!.hbIds.forEach {
-                val name = it.text
-                val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
-                val candidates = result.initialInfo!!.map.get(it.name) ?: emptyList()
-                val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
-                        .range(it.textRange)
-                        .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
-                        .tooltip(message)
-                candidates.forEach { c ->
-                    val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, null, true)
-                    annotation.withFix(fix)
-                }
-                annotation.create()
+        result?.annotationErrors?.forEach {
+            val startLineNumber = it.line
+            val endLineNumber = it.endLine
+            val rangeStart = it.column
+            val rangeEnd = it.endColumn
+            val startOffset: Int = document.getLineStartOffset(startLineNumber) + rangeStart
+            val endLineLength: Int = document.getLineEndOffset(endLineNumber) - document.getLineStartOffset(endLineNumber)
+            val endOffset: Int = document.getLineStartOffset(endLineNumber) + Math.min(rangeEnd, endLineLength)
+            val annotation = holder.newAnnotation(it.severity, it.description).range(TextRange(startOffset, endOffset))
+            if (it.tooltipText != null) {
+                annotation.tooltip(it.tooltipText!!)
+            } else {
+                annotation.tooltip(it.description)
             }
-            result.initialInfo!!.emberTags.forEach {
-                val nameElement = it.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return@forEach
-                val closeNameElement = it.children.findLast { it.elementType == XmlTokenType.XML_NAME }
-                val message = (((it.name.startsWith(":") || file.viewProvider is HbFileViewProvider)
-                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${it.name}'" }
-                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${it.name}'")))
-                if (closeNameElement != null && closeNameElement.textRange.endOffset == it.endOffset - 1) {
+            annotation.create()
+        }
+    }
+}
+
+class HbLintAnnotator : Annotator {
+
+    fun getCandidates(file: PsiFile, name: String): MutableList<JSImportCandidate> {
+        val candidates = mutableListOf<JSImportCandidate>()
+        ApplicationManager.getApplication().runReadAction {
+            val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
+            val keyFilter = Predicate { n: String? -> n == name }
+            val info = JSImportPlaceInfo(tsFile)
+            val providers = JSImportCandidatesProvider.getProviders(info)
+            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
+                candidates.addAll(elements.filterNotNull())
+            }
+        }
+        return candidates
+    }
+
+    override fun annotate(element: PsiElement, holder: AnnotationHolder) {
+        val file = element.containingFile
+        if (file.viewProvider !is GtsFileViewProvider && file.viewProvider !is HbFileViewProvider) {
+            return
+        }
+        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+        if (tsFile != null) {
+            if (element is XmlTag && element.reference?.resolve() == null) {
+                val candidates = getCandidates(file, element.name)
+                val nameElement = element.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return
+                val closeNameElement = element.children.findLast { it.elementType == XmlTokenType.XML_NAME }
+                val message = (((element.name.startsWith(":") || file.viewProvider is HbFileViewProvider)
+                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${element.name}'" }
+                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${element.name}'")))
+                if (closeNameElement != null && closeNameElement.textRange.endOffset == element.endOffset - 1) {
                     holder.newSilentAnnotation(HighlightSeverity.ERROR)
                             .range(closeNameElement.textRange)
                             .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
                             .tooltip(message)
                             .create()
                 }
-                val candidates = result.initialInfo!!.map.get(it.name) ?: emptyList()
                 val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
                         .range(nameElement.textRange)
                         .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
                         .tooltip(message)
                 candidates.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(it, icwe, null, true)
+                    val fix = GtsImportFix(element, icwe, null, true)
                     annotation.withFix(fix)
                 }
+                annotation.needsUpdateOnTyping()
                 annotation.create()
             }
-            result.annotationErrors.forEach {
-                val startLineNumber = it.line
-                val endLineNumber = it.endLine
-                val rangeStart = it.column
-                val rangeEnd = it.endColumn
-                val startOffset: Int = document.getLineStartOffset(startLineNumber) + rangeStart
-                val endLineLength: Int = document.getLineEndOffset(endLineNumber) - document.getLineStartOffset(endLineNumber)
-                val endOffset: Int = document.getLineStartOffset(endLineNumber) + Math.min(rangeEnd, endLineLength)
-                val annotation = holder.newAnnotation(it.severity, it.description).range(TextRange(startOffset, endOffset))
-                if (it.tooltipText != null) {
-                    annotation.tooltip(it.tooltipText!!)
-                } else {
-                    annotation.tooltip(it.description)
+            if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && element.references.find { it is HbReference }?.resolve() == null)) {
+                val name = element.text
+                val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
+                val candidates = getCandidates(element.containingFile, name)
+                val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
+                        .range(element.textRange)
+                        .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                        .tooltip(message)
+                candidates.forEach { c ->
+                    val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
+                    val fix = GtsImportFix(element, icwe, null, true)
+                    annotation.withFix(fix)
                 }
+                annotation.needsUpdateOnTyping()
                 annotation.create()
             }
-
         }
     }
-
-
 }

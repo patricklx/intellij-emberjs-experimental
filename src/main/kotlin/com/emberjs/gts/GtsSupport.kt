@@ -642,7 +642,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
     }
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
         val element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset)!!
-        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0 || element.language is JavascriptLanguage) {
+        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0 || element.language is JSLanguageDialect) {
             return JavascriptFormattingModelBuilder().createModel(formattingContext.withPsiElement(formattingContext.containingFile.viewProvider.getPsi(TS)))
         }
         val file: PsiFile = element.containingFile
