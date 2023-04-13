@@ -19,6 +19,7 @@ jobs:
         with:
           java-version: '17'
 
+      - run: chmod +x ./gradlew
       - run: ./gradlew check
       - run: ./gradlew buildPlugin
       - run: ./gradlew publishPlugin
