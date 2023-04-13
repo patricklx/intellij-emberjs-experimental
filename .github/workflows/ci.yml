@@ -35,6 +35,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - run: chmod +x ./gradlew 
       - run: ./gradlew assemble
       - run: ./gradlew check
   upload:
@@ -56,6 +57,7 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+      - run: chmod +x ./gradlew 
       - run: ./gradlew buildPlugin && ls ./build/distributions
       - uses: actions/upload-artifact@v2
         with:
