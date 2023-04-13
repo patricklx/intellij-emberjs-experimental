@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.1
+- fix: add imports suggestions for Handlebars IDs
+
 ## 2023.1.0
 - feature: Support intellij 2023.1
 
