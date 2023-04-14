@@ -37,7 +37,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
             val psiManager = PsiManager.getInstance(element.project)
             f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
         }
-        NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+        NodeModuleManager.getInstance(element.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-hbs-imports" }
     }
     private val useImports by lazy { hasHbsImports != null }
 
@@ -83,7 +83,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
         // Collect all components from the index
         return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == moduleType }
                 // Convert search results for LookupElements
-                .map { EmberLookupElementBuilder.create(it, dots = false, useImports) }
+                .map { EmberLookupElementBuilder.create(it, this.element.containingFile, dots = false, useImports) }
                 .toTypedArray()
     }
 }

@@ -26,10 +26,10 @@ class HbsBuiltinHelperCompletionProvider(val helpers: List<String>) : Completion
         if (virtualFile is VirtualFileWindow) {
             f = psiManager.findFile((virtualFile as VirtualFileWindow).delegate)?.virtualFile
         }
-        val hasHbsImports = NodeModuleManager.getInstance(parameters.position.project).collectVisibleNodeModules(f).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
+        val hasHbsImports = NodeModuleManager.getInstance(parameters.position.project).collectVisibleNodeModules(f).find { it.name == "ember-hbs-imports" }
         val useImports = hasHbsImports != null
         val path = parameters.position.parentsWithSelf.toList().find { it is HbPathImpl }
         if (path != null && path.text.contains(".")) return
-        result.addAllElements(lookupElements.map { EmberLookupInternalElementBuilder.create(it, useImports) })
+        result.addAllElements(lookupElements.map { EmberLookupInternalElementBuilder.create(parameters.originalFile, it, useImports) })
     }
 }

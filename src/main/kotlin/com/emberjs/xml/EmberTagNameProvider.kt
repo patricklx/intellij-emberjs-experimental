@@ -260,38 +260,35 @@ class EmberTagNameProvider : XmlTagNameProvider {
     }
 
     fun forGtsFiles(tag: XmlTag, lookupElements: MutableList<LookupElement>) {
-        val info = JSImportPlaceInfo(tag)
+        val info = JSImportPlaceInfo(tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT))
         val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
-        val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.startsWith(tagName) }
+        val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.contains(tagName) }
         val providers = JSImportCandidatesProvider.getProviders(info)
-        JSImportCompletionUtil.processExportedElements(tag, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-            val candidate = if (elements.size == 1) ContainerUtil.getFirstItem(elements) else null
-            if (candidate == null) {
-                return@processExportedElements true
-            }
-            val element = candidate.element
-            val lookupElement = LookupElementBuilder.create(element ?: candidate.name, candidate.name)
-                    .withTailText(" from ${candidate.descriptor?.moduleName ?: "unknown"}")
-                    .withTypeText("component")
-                    .withIcon(EmberIconProvider.getIcon("component"))
-                    .withCaseSensitivity(true)
-                    .withInsertHandler(object : InsertHandler<LookupElement> {
-                        override fun handleInsert(context: InsertionContext, item: LookupElement) {
-                            val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-                            val action = JSImportAction(context.editor, tag, name!!)
-                            val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
-                            if (candidateWithExecutors.size == 1) {
-                                action.executeFor((candidateWithExecutors[0] as JSImportCandidateWithExecutor), null)
-                            } else {
-                                action.executeForAllVariants(null)
+        JSImportCompletionUtil.processExportedElements(tag, providers, keyFilter) { candidates: Collection<JSImportCandidate?>, name: String? ->
+            candidates.filterNotNull().filter { it.descriptor != null }.forEach { candidate ->
+                val lookupElement = LookupElementBuilder.create(candidate.element ?: candidate.name, candidate.name)
+                        .withTailText(" from ${candidate.descriptor!!.moduleName }")
+                        .withTypeText("component")
+                        .withIcon(EmberIconProvider.getIcon("component"))
+                        .withCaseSensitivity(true)
+                        .withInsertHandler(object : InsertHandler<LookupElement> {
+                            override fun handleInsert(context: InsertionContext, item: LookupElement) {
+                                val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+                                val action = JSImportAction(context.editor, tag, name!!)
+                                val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
+                                if (candidateWithExecutors.size == 1) {
+                                    action.executeFor((candidateWithExecutors[0] as JSImportCandidateWithExecutor), null)
+                                } else {
+                                    action.executeForAllVariants(null)
+                                }
+                                PsiDocumentManager.getInstance(context.project).doPostponedOperationsAndUnblockDocument(context.document)
+                                XmlTagInsertHandler.INSTANCE.handleInsert(context, item)
+                                context.commitDocument()
                             }
-                            PsiDocumentManager.getInstance(context.project).doPostponedOperationsAndUnblockDocument(context.document)
-                            XmlTagInsertHandler.INSTANCE.handleInsert(context, item)
-                            context.commitDocument()
-                        }
 
-                    })
-            lookupElements.add(lookupElement)
+                        })
+                lookupElements.add(lookupElement)
+            }
             true
         }
     }
@@ -306,6 +303,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
         }
         if (tag.containingFile.viewProvider is GtsFileViewProvider) {
             forGtsFiles(tag, elements)
+            elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "Textarea", false))
+            elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "Input", false))
+            elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "LinkTo", false))
             return
         }
 
@@ -320,9 +320,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
         val hasHbsImports = NodeModuleManager.getInstance(tag.project).collectVisibleNodeModules(virtualFile).find { it.name == "ember-hbs-imports" || it.name == "ember-template-imports" }
         val useImports = hasHbsImports != null
 
-        elements.add(EmberLookupInternalElementBuilder.create("Textarea", useImports))
-        elements.add(EmberLookupInternalElementBuilder.create("Input", useImports))
-        elements.add(EmberLookupInternalElementBuilder.create("LinkTo", useImports))
+        elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "Textarea", useImports))
+        elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "Input", useImports))
+        elements.add(EmberLookupInternalElementBuilder.create(tag.containingFile, "LinkTo", useImports))
 
         val componentMap = hashMapOf<String, LookupElement>()
 
@@ -350,9 +350,11 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
 class PathKeyClass : Key<String>("PATH")
 class FullPathKeyClass : Key<String>("FULLPATH")
+class CandidateKeyKeyClass : Key<JSImportCandidate>("CANDIDATE")
 class InsideKeyClass : Key<String>("INSIDE")
 val PathKey = PathKeyClass()
 val FullPathKey = FullPathKeyClass()
+val CandidateKey = CandidateKeyKeyClass()
 val InsideKey = InsideKeyClass()
 
 

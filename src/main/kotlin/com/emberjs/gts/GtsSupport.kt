@@ -10,11 +10,7 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
-import com.intellij.embedding.EmbeddingElementType
 import com.intellij.formatting.*
-import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
-import com.intellij.formatting.templateLanguages.TemplateLanguageBlock
-import com.intellij.formatting.templateLanguages.TemplateLanguageFormattingModelBuilder
 import com.intellij.lang.*
 import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
@@ -41,15 +37,12 @@ import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.types.JSFileElementType
-import com.intellij.lang.javascript.types.TypeScriptEmbeddedContentElementType
 import com.intellij.lang.typescript.tsconfig.*
 import com.intellij.lang.xml.XMLLanguage
 import com.intellij.lang.xml.XmlFormattingModel
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
-import com.intellij.openapi.application.Application
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -61,27 +54,30 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
-import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.DocumentBasedFormattingModel
 import com.intellij.psi.formatter.FormattingDocumentModelImpl
-import com.intellij.psi.formatter.xml.*
+import com.intellij.psi.formatter.xml.AnotherLanguageBlockWrapper
+import com.intellij.psi.formatter.xml.HtmlPolicy
+import com.intellij.psi.formatter.xml.XmlBlock
+import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.SourceTreeToPsiMap
-import com.intellij.psi.impl.source.codeStyle.CodeEditUtil
 import com.intellij.psi.impl.source.html.HtmlDocumentImpl
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
-import com.intellij.psi.templateLanguages.*
-import com.intellij.psi.tree.*
+import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
+import com.intellij.psi.templateLanguages.TemplateDataElementType
+import com.intellij.psi.templateLanguages.TemplateDataModifications
+import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
+import com.intellij.psi.tree.IElementType
+import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlTokenType
-import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
-import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
 import java.util.function.Predicate
 import javax.swing.Icon
 
@@ -622,7 +618,7 @@ class RootBlockWrapper(block: XmlTagBlock, val policy: HtmlPolicy, indent: Inden
     }
 }
 
-class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
+class GtsFormattingModelBuilder : FormattingModelBuilder {
 
     fun findTemplateRootBlock(block: Block, element: PsiElement): Block? {
         if (block is XmlTagBlock && block.node is HtmlTag && (block.node as HtmlTag).parent is HtmlDocumentImpl && block.textRange.contains(element.textRange)) {
@@ -640,8 +636,8 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         return null
     }
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
-        val element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset)!!
-        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0 || element.language is JavascriptLanguage) {
+        val element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
+        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0 || element.language is JSLanguageDialect) {
             return JavascriptFormattingModelBuilder().createModel(formattingContext.withPsiElement(formattingContext.containingFile.viewProvider.getPsi(TS)))
         }
         val file: PsiFile = element.containingFile
@@ -667,27 +663,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
                     documentModel)
             return DocumentBasedFormattingModel(model.rootBlock, element.project, formattingContext.codeStyleSettings, file.fileType, file)
         }
-        var language = element.language
-        if (language == JavascriptLanguage.INSTANCE) {
-            language = TS
-        }
-        return super.createModel(formattingContext)
+        val language = element.language
+        return LanguageFormatting.INSTANCE.forLanguage(language).createModel(formattingContext.withPsiElement(element))
     }
-
-    override fun isTemplateFile(file: PsiFile?): Boolean {
-        return file is GtsFile
-    }
-
-    override fun isOuterLanguageElement(element: PsiElement?): Boolean {
-        return element is OuterLanguageElement
-    }
-
-    override fun isMarkupLanguageElement(element: PsiElement?): Boolean {
-        return false
-    }
-
-    override fun createTemplateLanguageBlock(node: ASTNode?, settings: CodeStyleSettings?, xmlFormattingPolicy: XmlFormattingPolicy?, indent: Indent?, alignment: Alignment?, wrap: Wrap?): Block {
-        return LanguageFormatting.INSTANCE.forLanguage(node!!.psi.language).createModel(FormattingContext.create(node.psi, settings!!)).rootBlock
-    }
-
 }

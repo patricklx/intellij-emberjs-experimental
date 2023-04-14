@@ -8,7 +8,6 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
-import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSLiteralExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptModule
@@ -20,7 +19,6 @@ import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
-import com.intellij.psi.xml.XmlTag
 import com.intellij.util.ProcessingContext
 
 fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference? {
@@ -161,22 +159,6 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             }
             RangedReference(element, it, range)
         }.toTypedArray()
-    }
-}
-
-class ContentReferencesProvider : PsiReferenceProvider() {
-    var currentlyRefing = false
-    override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
-        if (currentlyRefing) return emptyArray()
-        currentlyRefing = true
-        val range = element.textRange
-        val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
-        val tags = PsiTreeUtil.collectElements(htmlView) { it is XmlTag && range.contains(it.textRange) }
-        val res = tags.map { it as XmlTag }.filter { it.references.find { it is HbReference } != null }.map {
-            RangedReference(element, it.references.find { it is HbReference }!!, TextRange(it.textOffset + 1, it.textOffset + 1 + it.name.length))
-        }
-        currentlyRefing = false
-        return res.toTypedArray()
     }
 }
 

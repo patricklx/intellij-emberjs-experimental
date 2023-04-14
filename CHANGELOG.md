@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.3
+- feature: improve completions and imports for gts files
+- fix: setup libraries instead of content roots
+
 ## 2023.1.1
 - fix: add imports suggestions for Handlebars IDs
 

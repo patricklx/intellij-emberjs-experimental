@@ -23,14 +23,11 @@ import com.intellij.lang.javascript.modules.JSImportPlaceInfo
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
-import com.intellij.lang.javascript.modules.showImportHint
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
+import com.intellij.psi.*
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTag
 import com.intellij.psi.xml.XmlTokenType
@@ -52,12 +49,27 @@ class AnnotationResult {
 
 
 class FakeJsElement(val element: PsiElement): PsiElement by element {
+    val proj = element.project
+    override fun getProject(): Project {
+        return proj
+    }
     override fun getLanguage(): Language {
         return JavaScriptSupportLoader.TYPESCRIPT
     }
 
     override fun getContainingFile(): PsiFile {
         return element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+    }
+
+    override fun getReference(): PsiReference {
+        return object : PsiReferenceBase<PsiElement>(element) {
+            override fun getRangeInElement(): TextRange {
+                return TextRange(0, element.textLength)
+            }
+            override fun resolve(): PsiElement? {
+                return null
+            }
+        }
     }
 }
 
@@ -187,10 +199,14 @@ class HbLintAnnotator() : Annotator {
                         .range(element.textRange)
                         .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
                         .tooltip(message)
-                candidates.forEach { c ->
-                    val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                    val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
-                    annotation.withFix(fix)
+                val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
+                        element.prevSibling.elementType == HbTokenTypes.SEP
+                if (!prevSiblingIsSep) {
+                    candidates.forEach { c ->
+                        val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
+                        val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
+                        annotation.withFix(fix)
+                    }
                 }
                 annotation.needsUpdateOnTyping()
                 annotation.create()

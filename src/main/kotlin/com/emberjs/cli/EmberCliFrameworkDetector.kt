@@ -15,6 +15,7 @@ import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
 import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
 import com.intellij.json.JsonFileType
+import com.intellij.lang.javascript.library.JSLibraryManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.module.ModuleUtilCore
@@ -22,6 +23,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableModelsProvider
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.OrderRootType
+import com.intellij.openapi.roots.impl.libraries.LibraryImpl
 import com.intellij.openapi.roots.ui.configuration.DefaultModulesProvider
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
 import com.intellij.openapi.vfs.VirtualFile
@@ -29,6 +32,7 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PatternCondition
 import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
+import com.intellij.webcore.libraries.ScriptingLibraryModel
 
 class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     /** Use package json keys to detect ember */
@@ -57,44 +61,20 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                 .filter { ModuleRootManager.getInstance(it).contentRoots.contains(rootDir) }
                 .forEach { module ->
                     val p = modifiableModelsProvider.getModuleModifiableModel(module).project
-                    p.messageBus.connect().subscribe(PackageJsonFileManager.TOPIC, PackageJsonFileManager.PackageJsonChangeListener {
+                    p.messageBus.connect().subscribe(PackageJsonFileManager.CHANGES_TOPIC, PackageJsonFileManager.PackageJsonChangesListener {
                         ApplicationManager.getApplication().invokeLater {
                             ApplicationManager.getApplication().runWriteAction()
                             {
                                 val model = modifiableModelsProvider.getModuleModifiableModel(module)
                                 val entry = MarkRootActionBase.findContentEntry(model, rootDir)
                                 if (entry != null) {
-                                    val e = MarkRootActionBase.findContentEntry(model, rootDir)!!
-                                    val pkg = findMainPackageJson(rootDir)
-                                    val allDependencies = pkg?.getAllDependencyEntries() ?: mapOf()
+                                    EmberCliProjectConfigurator.setupEmber(model.project, entry, rootDir)
+                                    val moduleLibraryTable = JSLibraryManager.getInstance(model.project)
+                                    val libraries = moduleLibraryTable.getLibraries(ScriptingLibraryModel.LibraryLevel.PROJECT)
 
-                                    val addedEntries = mutableSetOf<String>()
-
-                                    allDependencies.values.forEach {
-                                        val f = rootDir.findChild("node_modules")?.findFileByRelativePath(it.name)
-                                        if (f != null) {
-                                            addedEntries.add(f.url)
-                                            (e.rootModel as ModifiableRootModel).addContentEntry(f.url)
-                                        }
-                                    }
-
-                                    rootDir.findChild("node_modules")?.children?.forEach {
-                                        if (it.name.contains("ember")) {
-                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                            addedEntries.add(it.url)
-                                        }
-                                        if (it.name.contains("@types")) {
-                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                            addedEntries.add(it.url)
-                                        }
-                                        if (it.name.contains("glimmer")) {
-                                            (e.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                                            addedEntries.add(it.url)
-                                        }
-                                    }
-                                    (e.rootModel as ModifiableRootModel).contentEntries.toList().forEach { ce ->
-                                        if (ce.file == null) {
-                                            (e.rootModel as ModifiableRootModel).removeContentEntry(ce)
+                                    libraries.toList().forEach { ce ->
+                                        if (ce.sourceFiles.size == 0 && ce.originalLibrary != null) {
+                                            moduleLibraryTable.removeLibrary(ce)
                                         }
                                     }
                                     modifiableModelsProvider.commitModuleModifiableModel(model)
@@ -111,13 +91,18 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         newFiles.removeIf { !it.path.endsWith("package.json") || it.parent != it.emberRoot || !it.parent.isEmber }
         val rootDir = newFiles.firstOrNull()?.parent
 
-        if (rootDir != null && context.project != null) {
+        if (rootDir != null && context.project != null && !isConfigured(newFiles, context.project)) {
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
         } else if (rootDir != null) {
             // setup reconfigure on package.json change.
             val modulesProvider = DefaultModulesProvider.createForProject(context.project)
             listenNodeModules(rootDir, modulesProvider)
-            getGlintDescriptor(context.project!!).server
+            context.project?.let {
+                ApplicationManager.getApplication().invokeLaterOnWriteThread {
+                    getGlintDescriptor(it).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(it))
+                }
+            }
+            return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
         }
         return mutableListOf()
     }

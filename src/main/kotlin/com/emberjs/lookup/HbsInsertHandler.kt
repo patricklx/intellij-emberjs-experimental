@@ -1,17 +1,22 @@
 package com.emberjs.lookup
 
+import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.hbs.HbsLocalReference
+import com.emberjs.utils.ifElse
+import com.emberjs.xml.CandidateKey
 import com.emberjs.xml.FullPathKey
 import com.emberjs.xml.InsideKey
 import com.emberjs.xml.PathKey
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.utils.ifElse
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.completion.XmlTagInsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.lang.ecmascript6.actions.ES6AddImportExecutor
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -24,12 +29,22 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         }
         var path = item.getUserData(PathKey)
         val fullPath = item.getUserData(FullPathKey)
+        val candidate = item.getUserData(CandidateKey)
         val inside = (item.getUserData(InsideKey) ?: "false").toBoolean()
         if (path == null || fullPath == null) {
             return
         }
         if (!fullPath.endsWith("/component") && !fullPath.endsWith("/index")) {
             path = fullPath
+        }
+
+        if (context.file.viewProvider is GtsFileViewProvider) {
+            val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+            if (candidate != null) {
+                context.commitDocument()
+                JSImportCandidateWithExecutor(candidate, ES6AddImportExecutor(tsFile)).execute()
+            }
+            return
         }
 
         val isGtxFile = context.file.virtualFile.name.endsWith(".gjs") || context.file.virtualFile.name.endsWith(".gts")
@@ -39,8 +54,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
             if (context.file.virtualFile is VirtualFileWindow) {
                 f = psiManager.findFile((context.file.virtualFile as VirtualFileWindow).delegate)!!
             }
-            val hasHbsTag = NodeModuleManager.getInstance(context.project).collectVisibleNodeModules(f.virtualFile).find { it.name == "ember-template-imports" } != null
-            val hasTemplateImports = isGtxFile || hasHbsTag
+            val hasTemplateImports = isGtxFile
             if (!hasTemplateImports) {
                 return
             }

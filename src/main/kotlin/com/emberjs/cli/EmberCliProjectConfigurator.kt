@@ -11,15 +11,20 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.RootsChangeRescanningInfo
+import com.intellij.openapi.project.RootsChangeRescanningInfo.TOTAL_RESCAN
 import com.intellij.openapi.roots.ContentEntry
 import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.impl.libraries.LibraryEx
+import com.intellij.openapi.roots.impl.libraries.LibraryImpl
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.DirectoryProjectConfigurator
 import com.intellij.util.PlatformUtils
 import com.intellij.webcore.ScriptingFrameworkDescriptor
 import com.intellij.webcore.libraries.ScriptingLibraryModel.LibraryLevel.PROJECT
+import com.intellij.workspaceModel.ide.impl.legacyBridge.library.LibraryBridgeImpl
 import org.jetbrains.jps.model.JpsElement
 import org.jetbrains.jps.model.java.JavaResourceRootType.RESOURCE
 import org.jetbrains.jps.model.java.JavaSourceRootType.SOURCE
@@ -61,6 +66,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             // Mark source and exclude directories
             setupModule(entry, root)
+            setupLibraries(project, entry, root)
         }
 
         private fun setES6LanguageLevel(project: Project) {
@@ -69,9 +75,24 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             }
         }
 
-        private fun setupLibraries(project: Project, root: VirtualFile) {
-            setupLibrary("node_modules", project, root, !EmberApplicationOptions.excludeNodeModules)
-            setupLibrary("bower_components", project, root, !EmberApplicationOptions.excludeBowerComponents)
+        private fun setupLibraries(project: Project, entry: ContentEntry, root: VirtualFile) {
+            val pkg = findMainPackageJson(root)
+            val allDependencies = pkg?.allDependencyEntries ?: mapOf()
+            val nodeModules = root.findChild("node_modules")
+            nodeModules?.children?.forEach {
+                if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
+                    setupLibrary(it.name, project, nodeModules, true)
+                }
+                if (it.name.contains("ember")) {
+                    setupLibrary(it.name, project, nodeModules, true)
+                }
+                if (it.name.contains("@types")) {
+                    setupLibrary(it.name, project, nodeModules, true)
+                }
+                if (it.name.contains("glimmer")) {
+                    setupLibrary(it.name, project, nodeModules, true)
+                }
+            }
         }
 
         private fun setupLibrary(name: String, project: Project, root: VirtualFile, create: Boolean) {
@@ -89,7 +110,9 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
                             frameworkDescriptor = ScriptingFrameworkDescriptor(name, null)
                         }
                     }
+
                 }
+
                 if (!create && library != null) {
                     removeLibrary(library)
                 }
@@ -97,11 +120,12 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
                 if (create) {
                     System.out.println("lib associateWithProject: " + libName)
                     libraryMappings.associateWithProject(libName)
+                    (getLibraryByName(libName)?.originalLibrary as? LibraryBridgeImpl).modifiableModel.addExcludedRoot("node_modules")
                 }
                 else
                     libraryMappings.disassociateWithProject(libName)
 
-                commitChanges()
+                this.commitChanges(TOTAL_RESCAN)
             }
         }
 
@@ -134,29 +158,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
             inRepoAddons(baseDir).forEach { entry.addSourceFolder("${it.url}/app", SOURCE) }
 
-            if (EmberApplicationOptions.excludeNodeModules)
-                entry.addExcludeFolder("$rootUrl/node_modules")
-
-            if (EmberApplicationOptions.excludeBowerComponents)
-                entry.addExcludeFolder("$rootUrl/bower_components")
-
-            val pkg = findMainPackageJson(baseDir)
-            val allDependencies = pkg?.allDependencyEntries ?: mapOf()
-
-            baseDir.findChild("node_modules")?.children?.forEach {
-                if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
-                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                }
-                if (it.name.contains("ember")) {
-                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                }
-                if (it.name.contains("@types")) {
-                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                }
-                if (it.name.contains("glimmer")) {
-                    (entry.rootModel as ModifiableRootModel).addContentEntry(it.url)
-                }
-            }
+            entry.addExcludeFolder("$rootUrl/node_modules")
         }
 
         private val RESOURCE_IF_AVAILABLE: JpsModuleSourceRootType<out JpsElement> = when {
