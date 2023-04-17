@@ -4,9 +4,7 @@ package com.emberjs.cli
 import com.emberjs.glint.GlintLspSupportProvider
 import com.emberjs.glint.getGlintDescriptor
 import com.emberjs.utils.emberRoot
-import com.emberjs.utils.findMainPackageJson
 import com.emberjs.utils.isEmber
-import com.emberjs.utils.parentEmberModule
 import com.intellij.framework.FrameworkType
 import com.intellij.framework.detection.DetectedFrameworkDescription
 import com.intellij.framework.detection.FileContentPattern
@@ -21,11 +19,7 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModifiableModelsProvider
-import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.OrderRootType
-import com.intellij.openapi.roots.impl.libraries.LibraryImpl
-import com.intellij.openapi.roots.ui.configuration.DefaultModulesProvider
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.ElementPattern
@@ -94,9 +88,6 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         if (rootDir != null && context.project != null && !isConfigured(newFiles, context.project)) {
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
         } else if (rootDir != null) {
-            // setup reconfigure on package.json change.
-            val modulesProvider = DefaultModulesProvider.createForProject(context.project)
-            listenNodeModules(rootDir, modulesProvider)
             context.project?.let {
                 ApplicationManager.getApplication().invokeLaterOnWriteThread {
                     getGlintDescriptor(it).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(it))
@@ -130,7 +121,6 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         }
 
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
-            listenNodeModules(root, modulesProvider)
             modulesProvider.modules
                     .filter { ModuleRootManager.getInstance(it).contentRoots.contains(root) }
                     .forEach { module ->

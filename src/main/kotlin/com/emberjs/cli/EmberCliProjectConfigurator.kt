@@ -6,6 +6,7 @@ import com.intellij.ide.projectView.actions.MarkRootActionBase
 import com.intellij.javascript.nodejs.PackageJsonDependency
 import com.intellij.lang.javascript.dialects.JSLanguageLevel
 import com.intellij.lang.javascript.library.JSLibraryManager
+import com.intellij.lang.javascript.modules.NodeJSModulesSearcher
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
@@ -18,11 +19,13 @@ import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.impl.libraries.LibraryEx
 import com.intellij.openapi.roots.impl.libraries.LibraryImpl
+import com.intellij.openapi.roots.libraries.LibraryDetectionManager
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.DirectoryProjectConfigurator
 import com.intellij.util.PlatformUtils
 import com.intellij.webcore.ScriptingFrameworkDescriptor
+import com.intellij.webcore.libraries.ScriptingLibraryModel
 import com.intellij.webcore.libraries.ScriptingLibraryModel.LibraryLevel.PROJECT
 import com.intellij.workspaceModel.ide.impl.legacyBridge.library.LibraryBridgeImpl
 import org.jetbrains.jps.model.JpsElement
@@ -79,54 +82,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             val pkg = findMainPackageJson(root)
             val allDependencies = pkg?.allDependencyEntries ?: mapOf()
             val nodeModules = root.findChild("node_modules")
-            nodeModules?.children?.forEach {
-                if (allDependencies.contains(it.name) && allDependencies[it.name]?.dependencyType == PackageJsonDependency.dependencies) {
-                    setupLibrary(it.name, project, nodeModules, true)
-                }
-                if (it.name.contains("ember")) {
-                    setupLibrary(it.name, project, nodeModules, true)
-                }
-                if (it.name.contains("@types")) {
-                    setupLibrary(it.name, project, nodeModules, true)
-                }
-                if (it.name.contains("glimmer")) {
-                    setupLibrary(it.name, project, nodeModules, true)
-                }
-            }
-        }
-
-        private fun setupLibrary(name: String, project: Project, root: VirtualFile, create: Boolean) {
-            System.out.println("setupLibrary: $name $create ${root.findChild(name)}")
-            val folder = root.findChild(name) ?: return
-
-            JSLibraryManager.getInstance(project).apply {
-                val libName = "$name ${root.name}"
-                System.out.println("checking: $libName $create")
-
-                val library = getLibraryByName(libName)
-                if (create && library == null) {
-                    createLibrary(libName, arrayOf(folder), emptyArray(), emptyArray(), PROJECT, true).apply {
-                        if (name == "node_modules") {
-                            frameworkDescriptor = ScriptingFrameworkDescriptor(name, null)
-                        }
-                    }
-
-                }
-
-                if (!create && library != null) {
-                    removeLibrary(library)
-                }
-
-                if (create) {
-                    System.out.println("lib associateWithProject: " + libName)
-                    libraryMappings.associateWithProject(libName)
-                    (getLibraryByName(libName)?.originalLibrary as? LibraryBridgeImpl).modifiableModel.addExcludedRoot("node_modules")
-                }
-                else
-                    libraryMappings.disassociateWithProject(libName)
-
-                this.commitChanges(TOTAL_RESCAN)
-            }
+            val libraryManager = JSLibraryManager.getInstance(project)
         }
 
         fun inRepoAddons(baseDir: VirtualFile): List<VirtualFile> {
@@ -157,8 +113,6 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             entry.addExcludeFolder("$rootUrl/.node_modules.ember-try")
 
             inRepoAddons(baseDir).forEach { entry.addSourceFolder("${it.url}/app", SOURCE) }
-
-            entry.addExcludeFolder("$rootUrl/node_modules")
         }
 
         private val RESOURCE_IF_AVAILABLE: JpsModuleSourceRootType<out JpsElement> = when {
