@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.4
+- fix: remove node_modules setup, already done by intellij idea
+
 ## 2023.1.3
 - feature: improve completions and imports for gts files
 - fix: setup libraries instead of content roots
