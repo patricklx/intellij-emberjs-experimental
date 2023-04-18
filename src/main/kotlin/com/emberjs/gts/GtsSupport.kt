@@ -33,8 +33,8 @@ import com.intellij.lang.javascript.modules.imports.JSModuleDescriptor
 import com.intellij.lang.javascript.modules.imports.JSSimpleImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
-import com.intellij.lang.javascript.psi.JSElementBase
-import com.intellij.lang.javascript.psi.JSFile
+import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.types.JSFileElementType
 import com.intellij.lang.typescript.tsconfig.*
@@ -54,30 +54,30 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
+import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.DocumentBasedFormattingModel
 import com.intellij.psi.formatter.FormattingDocumentModelImpl
+import com.intellij.psi.formatter.common.AbstractBlock
 import com.intellij.psi.formatter.xml.AnotherLanguageBlockWrapper
 import com.intellij.psi.formatter.xml.HtmlPolicy
-import com.intellij.psi.formatter.xml.XmlBlock
+import com.intellij.psi.formatter.xml.XmlFormattingPolicy
 import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
-import com.intellij.psi.impl.source.SourceTreeToPsiMap
 import com.intellij.psi.impl.source.html.HtmlDocumentImpl
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
-import com.intellij.psi.templateLanguages.OuterLanguageElementImpl
-import com.intellij.psi.templateLanguages.TemplateDataElementType
-import com.intellij.psi.templateLanguages.TemplateDataModifications
-import com.intellij.psi.templateLanguages.TemplateLanguageFileViewProvider
+import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlTokenType
+import com.intellij.refactoring.suggested.endOffset
 import com.intellij.util.Processor
+import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
 import java.util.function.Predicate
 import javax.swing.Icon
 
@@ -102,6 +102,7 @@ class GtsFile(viewProvider: FileViewProvider?) : JSFileImpl(viewProvider!!, GtsL
 
 
 class GtsFileElementType(language: Language?) : JSFileElementType(language) {
+
     override fun parseContents(chameleon: ASTNode): ASTNode? {
         return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
     }
@@ -134,6 +135,8 @@ class GtsElementTypes {
             override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
                 return TS
             }
+
+
             override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
                 val r = Regex("=\\s*$")
                 return if (r.containsMatchIn(tokenText)) {
@@ -588,37 +591,147 @@ class GtsIndexedFileTypeProvider : IndexedFileTypeProvider {
     override fun getFileTypesToIndex(): Array<FileType> = arrayOf(GtsFileType.INSTANCE)
 }
 
-class RootBlockWrapper(block: XmlTagBlock, val policy: HtmlPolicy, indent: Indent): XmlTagBlock(block.node, block.wrap, block.alignment, policy, indent) {
+val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
+
+
+// wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
+open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?): Block by block {
+
+    val astnode by lazy {
+        return@lazy (block as? ASTBlock)?.node
+    }
 
     override fun getTextRange(): TextRange {
-        if (indent!!.type == Indent.Type.NONE) {
-            return super.getTextRange()
+        if (this.subBlocks.isEmpty()) {
+            return block.textRange
         }
-        val range = super.getTextRange()
-        var start = range.startOffset - 1
-        val text = node.psi.containingFile.text
-        while (start > 0 && text[start] != '\n') {
-            if (text[start] != ' ') {
-                break
+        return TextRange(this.subBlocks.first().textRange.startOffset, this.subBlocks.last().textRange.endOffset)
+    }
+
+    private fun nexOuterLanguageBlock(block: Block): RootBlockWrapper? {
+        val i = this.block.subBlocks.indexOf(block)
+        if (this.block.subBlocks.getOrNull(i+1) is RootBlockWrapper) {
+            return this.block.subBlocks.getOrNull(i+1) as RootBlockWrapper
+        }
+        return null
+    }
+
+    fun mapToWrapper(block: Block): JsBlockWrapper {
+        if (block is ASTBlock) {
+            return JSAstBlockWrapper(block, this)
+        }
+        return JsBlockWrapper(block, this)
+    }
+
+    override fun getSubBlocks(): MutableList<JsBlockWrapper> {
+        val blocks = block.subBlocks.map { mapToWrapper(it) }.toMutableList()
+        blocks.toTypedArray().forEach {
+            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
+            if (it.block is RootBlockWrapper && !it.block.patched) {
+                it.block.parent = this
             }
-            start--
         }
-        return TextRange(start, range.endOffset)
-    }
-    override fun getChildIndent(): Indent? {
-        return Indent.getNormalIndent()
-    }
-
-    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
-        return ChildAttributes(Indent.getNormalIndent(), null)
-    }
-
-    override fun getChildrenIndent(): Indent {
-        return Indent.getNormalIndent()
+        val psiElement = this.astnode?.psi
+        if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
+            val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
+            if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
+                val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
+                if (outerLanguageBlock != null) {
+                    blocks.add(JSAstBlockWrapper(outerLanguageBlock, this))
+                    outerLanguageBlock.patched = true
+                    outerLanguageBlock.parent = this
+                }
+            }
+        }
+        return blocks
     }
 }
 
-class GtsFormattingModelBuilder : FormattingModelBuilder {
+class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?): JsBlockWrapper(block, parent), ASTBlock {
+    override fun getNode(): ASTNode? {
+       return super.astnode
+    }
+}
+
+class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy, val rootIndent: Indent): XmlTagBlock(block.node, NoWrap, block.alignment, policy, rootIndent) {
+
+    var patched = false
+    var parent: Block? = null
+
+    override fun chooseWrap(child: ASTNode?, tagBeginWrap: Wrap?, attrWrap: Wrap?, textWrap: Wrap?): Wrap {
+        return NoWrap
+    }
+
+    class SynteticBlockWrapper(val subblock: Block, val parentBlock: RootBlockWrapper, val blockIndent: Indent): Block by subblock {
+
+        override fun getWrap(): Wrap? {
+            return NoWrap
+        }
+
+        override fun getIndent(): Indent {
+            return blockIndent
+        }
+    }
+
+    override fun getSubBlocks(): MutableList<Block> {
+        val subblocks = super.getSubBlocks()
+        return subblocks.mapIndexed { index, it ->
+            var indent = Indent.getNormalIndent()
+            if (index == 0) {
+                indent = Indent.getNoneIndent()
+            }
+            if (index == subblocks.lastIndex) {
+                indent = Indent.getNoneIndent()
+            }
+            SynteticBlockWrapper(it, this, indent)
+        }.toMutableList()
+    }
+
+    override fun getChildIndent(): Indent? {
+        return Indent.getNoneIndent()
+    }
+
+    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+        val file = this.node.psi.containingFile
+        val project = this.node.psi.project
+        val document = PsiDocumentManager.getInstance(project).getDocument(file)!!
+        val INDENT_SIZE = this.policy.settings.getIndentOptionsByDocument(project, document).INDENT_SIZE
+        if (this.parent != null) {
+            val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
+            val psiRef = blockRef.node!!.psi.parent
+
+            val startOffset = psiRef.textRange.startOffset
+            val line = document.getLineNumber(startOffset)
+            val lineOffset = document.getLineStartOffset(line)
+            val offset = startOffset - lineOffset + ((blockRef.node!!.psi is JSClass).ifTrue { INDENT_SIZE } ?: 0)
+
+
+            return ChildAttributes(Indent.getSpaceIndent(offset + INDENT_SIZE), null)
+        }
+
+        return ChildAttributes(Indent.getNormalIndent(true), null)
+    }
+
+    override fun getChildrenIndent(): Indent {
+        return Indent.getNoneIndent()
+    }
+}
+
+class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
+    val jsModelBuilder = JavascriptFormattingModelBuilder()
+
+    fun findRootBlock(block: JsBlockWrapper, element: PsiElement): Block? {
+        if (block.block is RootBlockWrapper && block.textRange.contains(element.textRange)) {
+            return block
+        }
+        block.subBlocks.forEach {
+            val b = findRootBlock(it, element)
+            if (b != null) {
+                return b
+            }
+        }
+        return null
+    }
 
     fun findTemplateRootBlock(block: Block, element: PsiElement): Block? {
         if (block is XmlTagBlock && block.node is HtmlTag && (block.node as HtmlTag).parent is HtmlDocumentImpl && block.textRange.contains(element.textRange)) {
@@ -636,18 +749,68 @@ class GtsFormattingModelBuilder : FormattingModelBuilder {
         return null
     }
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
-        val element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
-        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0 || element.language is JSLanguageDialect) {
-            return JavascriptFormattingModelBuilder().createModel(formattingContext.withPsiElement(formattingContext.containingFile.viewProvider.getPsi(TS)))
+
+        if (formattingContext.node is OuterLanguageElement) {
+            return DocumentBasedFormattingModel(object : AbstractBlock(formattingContext.node, NoWrap, Alignment.createAlignment()) {
+                override fun buildChildren(): List<Block> {
+                    return emptyList()
+                }
+
+                override fun getSpacing(child1: Block?, child2: Block): Spacing? {
+                    return Spacing.getReadOnlySpacing()
+                }
+
+                override fun isLeaf(): Boolean {
+                    return true
+                }
+            }, (formattingContext.node as OuterLanguageElement).project, formattingContext.getCodeStyleSettings(), formattingContext.containingFile.fileType, formattingContext.containingFile)
         }
-        val file: PsiFile = element.containingFile
-        if (element.language == XMLLanguage.INSTANCE || element.language == HTMLLanguage.INSTANCE) {
+
+        var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset)!!
+        if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0) {
+            element = formattingContext.containingFile.viewProvider.getPsi(TS)
+        }
+        val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS)
+        val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
+        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null))
+        if (element.language is JSLanguageDialect) {
+            return jsModel
+        }
+        if (element.language == XMLLanguage.INSTANCE || element.language == HTMLLanguage.INSTANCE || element.language == HbLanguage.INSTANCE) {
+            val block = findRootBlock(jsModel.rootBlock as JsBlockWrapper, element)
             val psiFile = element.containingFile
             val documentModel = FormattingDocumentModelImpl.createOn(psiFile)
-            val documentBlock = XmlBlock(SourceTreeToPsiMap.psiElementToTree(psiFile),
-                    null, null, HtmlPolicy(formattingContext.codeStyleSettings, documentModel), null,
-                    null, false)
-            val block = findTemplateRootBlock(documentBlock, element) as? XmlTagBlock ?: return super.createModel(formattingContext)
+            val model = XmlFormattingModel(
+                    psiFile,
+                    block,
+                    documentModel)
+            return DocumentBasedFormattingModel(model.rootBlock, element.project, formattingContext.codeStyleSettings, psiFile.fileType, psiFile)
+        }
+        return jsModel
+    }
+
+    override fun isTemplateFile(file: PsiFile?): Boolean {
+        return file is GtsFile
+    }
+
+    override fun isOuterLanguageElement(element: PsiElement?): Boolean {
+        return element is OuterLanguageElement
+    }
+
+    override fun isMarkupLanguageElement(element: PsiElement?): Boolean {
+        return false
+    }
+
+    override fun createTemplateLanguageBlock(node: ASTNode, settings: CodeStyleSettings, xmlFormattingPolicy: XmlFormattingPolicy?, indent: Indent?, alignment: Alignment?, wrap: Wrap?): Block? {
+        val element = node.psi.containingFile.viewProvider.findElementAt(node.startOffset) ?: node.psi
+        val file: PsiFile = element.containingFile
+
+        if (element.language == XMLLanguage.INSTANCE || element.language == HTMLLanguage.INSTANCE || element.language == HbLanguage.INSTANCE) {
+            val psiFile = element.containingFile
+            val hbSModel = LanguageFormatting.INSTANCE.forLanguage(element.language).createModel(FormattingContext.create(element, settings))
+            val hbsRootBlock = hbSModel.rootBlock
+            val documentModel = FormattingDocumentModelImpl.createOn(psiFile)
+            val block = findTemplateRootBlock(hbsRootBlock, element) as? XmlTagBlock ?: return createModel(FormattingContext.create(node.psi, settings)).rootBlock
             var start = block.textRange.startOffset - 1
             var indent = Indent.getNormalIndent()
             while (start > 0 && psiFile.text[start] != '\n') {
@@ -656,14 +819,18 @@ class GtsFormattingModelBuilder : FormattingModelBuilder {
                 }
                 start--
             }
-            val rootBlock = RootBlockWrapper(block, HtmlPolicy(formattingContext.codeStyleSettings, documentModel), indent)
+            val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel), indent)
             val model = XmlFormattingModel(
                     psiFile,
                     rootBlock,
                     documentModel)
-            return DocumentBasedFormattingModel(model.rootBlock, element.project, formattingContext.codeStyleSettings, file.fileType, file)
+            return DocumentBasedFormattingModel(model.rootBlock, element.project, settings, file.fileType, file).rootBlock
         }
-        val language = element.language
-        return LanguageFormatting.INSTANCE.forLanguage(language).createModel(formattingContext.withPsiElement(element))
+        var language = element.language
+        if (language == JavascriptLanguage.INSTANCE) {
+            language = TS
+        }
+        return createModel(FormattingContext.create(node.psi, settings)).rootBlock
     }
+
 }

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.5
+- fix: fix gts formatting
+
 ## 2023.1.4
 - fix: remove node_modules setup, already done by intellij idea
 
