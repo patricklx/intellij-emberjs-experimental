@@ -202,7 +202,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             return HbsLocalReference(element, current)
         }
 
-        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false, recursionCounter: Int = 0): PsiElement? {
+        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false, recursionCounter: Int = 0): Any? {
 
             if (recursionCounter > 10) {
                 throw Error("resolveToJs reached recursion limit")
@@ -294,7 +294,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             }
 
             if (path.isEmpty()) {
-                return any as PsiElement?
+                return any
             }
 
             var jsType: JSType? = null
