@@ -480,23 +480,28 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
                 .toMutableList()
 
         val scope = ProjectScope.getAllScope(project)
+        val emberNames = mutableListOf<EmberName>()
 
         // Collect all components from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "component" }
-                .mapNotNull { getComponentTemplateInfo(it) }
-                .toCollection(list)
+                .toCollection(emberNames)
 
         // Collect all component templates from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.isComponentTemplate }
-                .mapNotNull { getComponentTemplateInfo(it) }
-                .toCollection(list)
+                .filter { !emberNames.contains(it) }
+                .toCollection(emberNames)
+
+        EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "helper" }
+                .toCollection(emberNames)
+
+        emberNames.mapNotNull { getComponentTemplateInfo(it) }.toCollection(list)
 
         return@lazy list.groupBy { it.name }
     }
 
     fun getComponentTemplateInfo(name: EmberName): Info? {
         val file = name.virtualFile ?: return null
-        return Info("default", name.tagName, EmberIcons.COMPONENT_16, file)
+        return Info("default", name.camelCaseName, EmberIcons.COMPONENT_16, file)
     }
 
 

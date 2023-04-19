@@ -37,7 +37,7 @@ object EmberLookupElementBuilder {
     fun create(it: EmberName, file: PsiFile? = null, dots: Boolean = true, useImports: Boolean = false): LookupElement {
         val name = if (useImports) it.camelCaseName else it.name
         val element = LookupElementBuilder
-                .create(it, if (dots) name.replace("/", ".") else name)
+                .create(it.importPath, if (dots) name.replace("/", ".") else name)
                 .withTypeText(it.type)
                 .withTailText(" from ${it.importPath}")
                 .withIcon(EmberIconProvider.getIcon(it.type) ?: EmberIcons.EMPTY_16)
@@ -81,7 +81,7 @@ object EmberLookupInternalElementBuilder {
     fun create(file: PsiFile, name: String, useImports: Boolean): LookupElement {
         val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         val match = mapping.getOrDefault(name, null) ?: return LookupElementBuilder.create(name)
-        val candidate = getCandidate(tsFile, name)
+        val candidate = tsFile?.let { getCandidate(tsFile, name) }
         if (!useImports || tsFile == null) {
             return LookupElementBuilder.create(name)
                     .withTypeText(match[1])

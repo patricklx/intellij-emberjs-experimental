@@ -4,9 +4,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
-import com.emberjs.xml.EmberAttrDec
 import com.emberjs.glint.GlintLanguageServiceProvider
-import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
@@ -14,6 +12,7 @@ import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.parents
+import com.emberjs.xml.EmberAttrDec
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
@@ -22,7 +21,6 @@ import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
-import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
@@ -141,7 +139,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 val manager = InjectedLanguageManager.getInstance(element.project)
                 val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset)?.containingFile ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.7
+- fix: correctly resolve ember imports
+
 ## 2023.1.6
 - fix: bring back tag references 
 

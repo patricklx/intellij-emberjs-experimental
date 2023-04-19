@@ -233,7 +233,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             val manager = InjectedLanguageManager.getInstance(element.project)
             val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
             tpl = templates.find {
-                val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset)?.containingFile ?: return@find false
                 val virtualFile = injected.virtualFile
                 return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
             } ?: return

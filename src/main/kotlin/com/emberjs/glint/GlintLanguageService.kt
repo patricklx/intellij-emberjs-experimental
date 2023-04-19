@@ -158,7 +158,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
-        var element = sourceElement.getContainingFile().getOriginalFile().findElementAt(sourceElement.textOffset + 1)!!
+        var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
         if (currentlyChecking == null && element.containingFile is HbPsiFile) {
             currentlyChecking = sourceElement
             if (element is LeafPsiElement) {
@@ -170,7 +170,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             }
             currentlyChecking = null
         }
-        if (sourceElement.getContainingFile().fileType == GtsFileType.INSTANCE) {
+        if (sourceElement.containingFile.fileType == GtsFileType.INSTANCE) {
             element = sourceElement
         }
         class DelegateElement(val element: PsiElement, val origElement: PsiElement, val documentWindow: DocumentWindow) : PsiElement by element {

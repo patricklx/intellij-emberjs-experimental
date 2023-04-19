@@ -7,9 +7,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
-import com.emberjs.glint.GlintCompletionEntry
 import com.emberjs.glint.GlintLanguageServiceProvider
-import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -17,13 +15,17 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.lookup.LookupElement
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.ide.highlighter.HtmlFileType
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
@@ -36,18 +38,10 @@ import com.intellij.psi.css.impl.CssRulesetImpl
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
-import com.intellij.psi.xml.XmlAttribute
-import com.intellij.util.ProcessingContext
-import com.intellij.codeInsight.lookup.LookupElementBuilder
-import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.javascript.hierarchy.JSHierarchyUtils
-import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
-import com.intellij.lang.javascript.psi.impl.JSPsiImplUtils
-import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
-import com.intellij.lang.javascript.psi.resolve.JSResolveUtil
-import com.intellij.lang.javascript.psi.util.JSUtils
 import com.intellij.psi.util.isAncestor
+import com.intellij.psi.xml.XmlAttribute
 import com.intellij.refactoring.suggested.startOffset
+import com.intellij.util.ProcessingContext
 
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
@@ -248,7 +242,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val manager = InjectedLanguageManager.getInstance(element.project)
         val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
         val tpl = templates.find {
-            val injected = manager.findInjectedElementAt(f, it.startOffset + 1)?.containingFile ?: return@find false
+            val injected = manager.findInjectedElementAt(f, it.startOffset)?.containingFile ?: return@find false
             val virtualFile = injected.virtualFile
             return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
         } ?: return

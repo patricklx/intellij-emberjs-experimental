@@ -2,38 +2,31 @@ package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.gts.GtsFileType
-import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
-import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
-import com.intellij.lsp.*
+import com.intellij.lsp.LanguageServerConnector
+import com.intellij.lsp.LanguageServerConnectorStdio
+import com.intellij.lsp.LspServer
 import com.intellij.lsp.api.LspServerDescriptor
 import com.intellij.lsp.api.LspServerManager
 import com.intellij.lsp.api.LspServerSupportProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.services.LanguageClient
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.function.Consumer
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
@@ -131,6 +124,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     override val handlePublishDiagnostics = true
     override val useGenericNavigation = false
+    override val lspCompletionSupport = null
 
     override fun dispose() {}
 }

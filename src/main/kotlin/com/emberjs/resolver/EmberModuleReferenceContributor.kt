@@ -1,22 +1,15 @@
 package com.emberjs.resolver
 
-import com.dmarcotte.handlebars.file.HbFileType
-import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.emberjs.cli.EmberCliProjectConfigurator
 import com.emberjs.utils.*
-import com.intellij.ide.highlighter.HtmlFileType
-import com.intellij.lang.javascript.DialectDetector
-import com.intellij.lang.javascript.frameworks.amd.JSModuleReference
+import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
-import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.*
-import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
-import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
-import org.jetbrains.annotations.NotNull
-import org.jetbrains.annotations.Nullable
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiReference
+import com.intellij.psi.PsiReferenceProvider
 import java.util.regex.Pattern
 
 open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePaths: List<String>, val extensions: Array<out String>?) : JSExactFileReference(context, range, filePaths, extensions) {
@@ -50,31 +43,26 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
 
         // e.g. `my-app/controllers/foo` -> `controllers/foo`
         var importPath = refText.removePrefix("$packageName/")
+        if (packageName.startsWith("@")) {
+            val parts = importPath.split("/").toMutableList()
+            val first = parts.removeAt(0)
+            importPath = parts.joinToString("/")
+            packageName += "/$first"
+        }
 
         // find root package folder of current file (ignoring package.json in in-repo-addons)
         val hostPackageRoot = host.containingFile.originalVirtualFile?.parents
                 ?.find { it.findChild("package.json") != null && !it.isInRepoAddon }
                 ?: return emptyArray()
 
+        val nodeModules = NodeModuleManager.getInstance(host.project).collectVisibleNodeModules(host.originalVirtualFile)
         val modules = if (getAppName(hostPackageRoot) == packageName) {
             // local import from this app/addon
             listOf(hostPackageRoot) + EmberCliProjectConfigurator.inRepoAddons(hostPackageRoot)
         } else {
             // check node_modules
-            if (packageName.startsWith("@")) {
-                val subPackage = importPath.split("/").first()
-                val first = host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName)
-                listOfNotNull(first?.findChild(subPackage))
-            } else {
-                listOfNotNull(host.project.projectFile?.parentEmberModule?.findChild("node_modules")?.findChild(packageName))
-            }
-        }
-
-        if (packageName.startsWith("@")) {
-            val parts = importPath.split("/").toMutableList()
-            val first = parts.removeAt(0)
-            importPath = parts.joinToString("/")
-            packageName += "/$first"
+            val first = nodeModules.find { it.name == packageName }
+            listOfNotNull(first?.virtualFile)
         }
 
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */

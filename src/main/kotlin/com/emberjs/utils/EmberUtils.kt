@@ -229,7 +229,7 @@ class EmberUtils {
                 val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
                 val psiManager = PsiManager.getInstance(element.project)
                 val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
-                val inJs = f.findElementAt(offset + 1)
+                val inJs = f.findElementAt(offset)
                 cls = PsiTreeUtil.findFirstParent(inJs, { it is JSClass }) as JSElement?
             }
             val file = dir?.findFile("$fileName.ts")
@@ -693,7 +693,7 @@ class EmberUtils {
             }
             if (jsTemplate is JSStringTemplateExpression) {
                 val manager = InjectedLanguageManager.getInstance(jsTemplate.project)
-                val injected = manager.findInjectedElementAt(jsTemplate.containingFile, jsTemplate.startOffset + 1)?.containingFile
+                val injected = manager.findInjectedElementAt(jsTemplate.containingFile, jsTemplate.startOffset)?.containingFile
                 jsTemplate = injected?.containingFile?.viewProvider?.getPsi(Language.findLanguageByID("Handlebars")!!)?.containingFile
             }
             if (jsTemplate is JSLiteralExpression) {
