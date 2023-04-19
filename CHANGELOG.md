@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.6
+- fix: bring back tag references 
+
 ## 2023.1.5
 - fix: fix gts formatting
 
