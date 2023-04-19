@@ -308,7 +308,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
                 jsType = jsType.asRecordType()
                 if (jsType is JSRecordTypeImpl) {
-                    val elem = jsType.findPropertySignature(path.first())?.memberSource?.singleElement
+                    val elem = jsType.findPropertySignature(path.first())
                     return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
                 }
                 if (any is JSVariableImpl<*, *> && any.doGetExplicitlyDeclaredType() != null) {

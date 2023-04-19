@@ -313,7 +313,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val result: MutableList<LookupElement> = mutableListOf()
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
-        if (helperElement != null) {
+        if (helperElement != null && parameters.position.parent.prevSibling.elementType != HbTokenTypes.SEP) {
             addHelperCompletions(helperElement, result)
             val r = EmberUtils.handleEmberHelpers(helperElement.parent)
             if (r != null) {
