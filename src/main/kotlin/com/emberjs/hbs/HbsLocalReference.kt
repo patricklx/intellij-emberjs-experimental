@@ -71,12 +71,23 @@ class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<Ps
 }
 
 
-class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {
+class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbReference(leaf) {
     private var namedXml: EmberNamedAttribute? = null
     private var named: EmberNamedElement?
 
+    val target: PsiElement? by lazy {
+      if (resolved is PsiElement) {
+          return@lazy resolved
+      }
+      if (resolved is JSRecordType.PropertySignature) {
+        return@lazy resolved.memberSource.singleElement
+      }
+      return@lazy null
+    }
+
     init {
         this.named = target?.let { EmberNamedElement(it) }
+        val target = this.target
         if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
             this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl) }
         }
@@ -192,7 +203,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             return HbsLocalReference(element, current)
         }
 
-        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false, recursionCounter: Int = 0): PsiElement? {
+        fun resolveToJs(any: Any?, path: List<String>, resolveIncomplete: Boolean = false, recursionCounter: Int = 0): Any? {
 
             if (recursionCounter > 10) {
                 throw Error("resolveToJs reached recursion limit")
@@ -284,7 +295,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
             }
 
             if (path.isEmpty()) {
-                return any as PsiElement?
+                return any
             }
 
             var jsType: JSType? = null
@@ -308,7 +319,7 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                 }
                 jsType = jsType.asRecordType()
                 if (jsType is JSRecordTypeImpl) {
-                    val elem = jsType.findPropertySignature(path.first())?.memberSource?.singleElement
+                    val elem = jsType.findPropertySignature(path.first())
                     return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
                 }
                 if (any is JSVariableImpl<*, *> && any.doGetExplicitlyDeclaredType() != null) {
@@ -395,8 +406,9 @@ class HbsLocalReference(private val leaf: PsiElement, val target: PsiElement?) :
                     val res = resolveToJs(yieldRef, listOf(element.text))
                     return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
-                if (ref != null && resolveToJs(ref.resolve(), listOf(element.text)) != null) {
-                    return HbsLocalReference(element, resolveToJs(ref.resolve(), listOf(element.text)))
+                val sig = (ref as? HbsLocalReference)?.resolved as? JSRecordType.PropertySignature
+                if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
+                    return HbsLocalReference(element, resolveToJs(sig ?: ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
                 val res = resolveToJs(ref2?.resolve(), listOf(element.text))

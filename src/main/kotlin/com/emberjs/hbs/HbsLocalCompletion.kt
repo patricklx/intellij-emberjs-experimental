@@ -22,6 +22,7 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
@@ -60,9 +61,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    fun resolve(anything: PsiElement?, result: MutableList<LookupElement>) {
-        var refElement: Any? = anything
-        if (anything == null) {
+    fun resolve(any: Any?, result: MutableList<LookupElement>) {
+        val anything = any as? PsiElement
+        var refElement: Any? = any
+        if (any == null) {
             return
         }
 
@@ -82,7 +84,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }}
         }
 
-        if (anything.references.isNotEmpty() && anything.references[0] is HbsLocalRenameReference && anything.references[0].resolve() != anything) {
+        if (anything is PsiElement && anything.references.isNotEmpty() && anything.references[0] is HbsLocalRenameReference && anything.references[0].resolve() != anything) {
             resolve(anything.references[0].resolve(), result)
             return
         }
@@ -92,12 +94,13 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
-        if (anything.references.find { it is HbsLocalReference } != null) {
+        if (anything is PsiElement && anything.references.find { it is HbsLocalReference } != null) {
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
+            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolved as? PropertySignature, result)
             resolve(anything.references.find { it is HbReference }!!.resolve(), result)
         }
 
-        if (anything.reference is HbsLocalReference) {
+        if (anything is PsiElement && anything.reference is HbsLocalReference) {
             resolve((anything.reference as HbsLocalReference?)?.resolveYield(), result)
             resolve(anything.reference?.resolve(), result)
         }
@@ -313,7 +316,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val result: MutableList<LookupElement> = mutableListOf()
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
-        if (helperElement != null) {
+        if (helperElement != null && parameters.position.parent.prevSibling.elementType != HbTokenTypes.SEP) {
             addHelperCompletions(helperElement, result)
             val r = EmberUtils.handleEmberHelpers(helperElement.parent)
             if (r != null) {
