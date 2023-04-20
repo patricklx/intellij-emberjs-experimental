@@ -77,16 +77,17 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
     val target: PsiElement? by lazy {
       if (resolved is PsiElement) {
-          return resolved
+          return@lazy resolved
       }
-      if (resolved is PropertySignature) {
-        return resolved.memberSource.element
+      if (resolved is JSRecordType.PropertySignature) {
+        return@lazy resolved.memberSource.singleElement
       }
-      return null
+      return@lazy null
     }
 
     init {
         this.named = target?.let { EmberNamedElement(it) }
+        val target = this.target
         if (target is XmlAttribute && target.descriptor?.declaration is EmberAttrDec) {
             this.namedXml = target.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl) }
         }
@@ -98,7 +99,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
         if (res is XmlAttributeDecl) {
             val tag = res.context as XmlTag
             val index = tag.attributes.indexOfFirst { it.text == "as" }
-            val blockarams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
+            val blockParams = tag.attributes.toList().subList(index + 1, tag.attributes.size)
             val r = blockParams.find { it.text.matches(Regex("^\\|*\\b$name\\b\\|*$")) }
             val idx = blockParams.indexOf(r)
             var ref = tag.attributes[index] as PsiElement?
@@ -405,7 +406,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                     val res = resolveToJs(yieldRef, listOf(element.text))
                     return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
                 }
-                val sig = (ref as? HbsLocalReference)?.resolved as? PropertySignature
+                val sig = (ref as? HbsLocalReference)?.resolved as? JSRecordType.PropertySignature
                 if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
                     return HbsLocalReference(element, resolveToJs(sig ?: ref.resolve(), listOf(element.text)))
                 }
