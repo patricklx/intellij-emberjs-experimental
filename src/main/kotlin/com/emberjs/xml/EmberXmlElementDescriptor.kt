@@ -44,7 +44,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     companion object {
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
-            val res: EmberNamedElement? = tag.references.lastOrNull()?.resolve() as? EmberNamedElement?
+            val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement?
             if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase()) {
                 return null
             }
