@@ -2,6 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2023.1.9
+- fix: some gts html tag references were not resolving
+
+## 2023.1.8
+- fix: some completions for js fields where not working
+
 ## 2023.1.7
 - fix: correctly resolve ember imports
 
