@@ -43,7 +43,10 @@ class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSPro
         if (!path.startsWith("/")) {
             path = "/$path"
         }
-        return URLEncoder.encode(path, "utf-8").replace("%2F", "/")
+        return URLEncoder.encode(path, "utf-8")
+                .replace("%2F", "/")
+                .replace("%253A", ":")
+                .replace("%3A", ":")
     }
 
     override fun initializeServer() {
@@ -84,7 +87,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     ?: throw RuntimeException("glint is not installed")
             val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
                     ?: throw RuntimeException("glint lsp was not found")
-//            commandLine.addParameter("--inspect")
+            commandLine.addParameter("--inspect")
             commandLine.addParameter(file.path)
             commandLine.addParameter("--stdio")
             commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
@@ -122,7 +125,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 file.fileType is JavaScriptFileType
     }
 
-    override val handlePublishDiagnostics = true
+    override val handlePublishDiagnostics = false
     override val useGenericNavigation = false
     override val lspCompletionSupport = null
 

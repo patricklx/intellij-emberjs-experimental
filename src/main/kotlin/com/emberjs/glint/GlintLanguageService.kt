@@ -18,7 +18,6 @@ import com.intellij.lang.javascript.completion.JSInsertHandler
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
-import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
@@ -33,8 +32,6 @@ import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
@@ -233,26 +230,10 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
         val server = getDescriptor()?.server ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
-        val changedUnsaved = collectChangedUnsavedFiles()
-        if (changedUnsaved.isNotEmpty()) {
-            JSLanguageService.saveChangedFilesAndRestartHighlighting(file, changedUnsaved)
-            return null
-        }
 
         return completedFuture(server.getDiagnostics(virtualFile)?.map {
             GlintAnnotationError(it, virtualFile.canonicalPath)
         })
-    }
-
-    private fun collectChangedUnsavedFiles(): Collection<VirtualFile> {
-        val manager = FileDocumentManager.getInstance()
-        val openFiles = setOf(*FileEditorManager.getInstance(project).openFiles)
-        val unsavedDocuments = manager.unsavedDocuments
-        if (unsavedDocuments.isEmpty()) return emptyList()
-
-        return unsavedDocuments
-                .mapNotNull { manager.getFile(it) }
-                .filter { vFile -> !openFiles.contains(vFile) && isAcceptable(vFile) }
     }
 
     override fun canHighlight(file: PsiFile) = file.fileType is HbFileType ||

@@ -239,8 +239,8 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 }
 
                 val refYield = EmberUtils.findTagYieldAttribute(any)
-                if (refYield != null && refYield.descriptor?.declaration != null) {
-                    return resolveToJs(refYield.descriptor?.declaration, path, resolveIncomplete, recursionCounter + 1)
+                if (refYield != null && refYield.declaration != null) {
+                    return resolveToJs(refYield.declaration, path, resolveIncomplete, recursionCounter + 1)
                 }
             }
 

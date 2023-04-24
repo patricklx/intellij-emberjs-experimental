@@ -4,6 +4,7 @@ import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.TagReferencesProvider
 import com.intellij.lang.ASTNode
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.impl.source.xml.TagNameReference
@@ -13,11 +14,23 @@ import com.intellij.psi.xml.XmlTokenType.XML_NAME
 import com.intellij.xml.DefaultXmlExtension
 
 
-class EmberTagNameReference(nameElement: ASTNode?, startTagFlag: Boolean) : TagNameReference(nameElement, startTagFlag) {
+class EmberTagNameReference(nameElement: ASTNode, startTagFlag: Boolean) : TagNameReference(nameElement, startTagFlag) {
+
+    val tag = nameElement.psi.parent as XmlTag
+
+    override fun getRangeInElement(): TextRange {
+        if (tag.name.contains(".")) {
+            val part = tag.name.split(".").last()
+            val start = tag.name.length - part.length + 1
+            return TextRange(start, start + part.length)
+        }
+        return super.getRangeInElement()
+    }
+
     override fun resolve(): PsiElement? {
-        val element = TagReferencesProvider.forTag(nameElement.psi.parent as XmlTag, nameElement.psi.text)
+        val element = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve()
         if (element != null) {
-            return element
+            return null
         }
         if (nameElement.text.startsWith(":") || nameElement.text.firstOrNull()?.isUpperCase() == true) {
             return null
@@ -32,7 +45,12 @@ class HbXmlExtension: DefaultXmlExtension() {
     }
     override fun createTagNameReference(nameElement: ASTNode?, startTagFlag: Boolean): TagNameReference? {
         if (nameElement?.psi is XmlToken && nameElement.elementType == XML_NAME) {
-            return EmberTagNameReference(nameElement, startTagFlag)
+            val tag = nameElement.psi.parent as XmlTag
+            val res = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve()
+            if (res != null) {
+                return null
+            }
+            return null
         }
         return super.createTagNameReference(nameElement, startTagFlag)
     }

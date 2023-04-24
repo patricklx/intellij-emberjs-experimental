@@ -2,13 +2,15 @@ package com.emberjs.xml
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.psi.EmberNamedElement
-import com.emberjs.utils.*
+import com.emberjs.utils.ComponentReferenceData
+import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
 import com.intellij.psi.*
+import com.intellij.psi.impl.FakePsiElement
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
-import com.intellij.psi.impl.source.xml.TagNameReference
 import com.intellij.psi.impl.source.xml.XmlDescriptorUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
@@ -16,7 +18,6 @@ import com.intellij.xml.XmlAttributeDescriptor
 import com.intellij.xml.XmlElementDescriptor
 import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
-import com.sun.xml.bind.v2.runtime.unmarshaller.TagName
 
 
 class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem) {
@@ -44,11 +45,11 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     companion object {
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
-            val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement?
-            if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase()) {
+            val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement
+            if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase() || res is FakePsiElement) {
                 return null
             }
-            return EmberXmlElementDescriptor(tag, res)
+            return EmberXmlElementDescriptor(tag, res as PsiElement?)
         }
     }
 

@@ -32,6 +32,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.impl.source.xml.TagNameReference
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.*
 import com.intellij.psi.xml.XmlAttribute
@@ -76,21 +77,16 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
 
 class TagReference(val element: XmlTag, val fullName: String, val range: TextRange) : HbReference(element) {
 
+    init {
+        rangeInElement = range
+    }
+
     override fun resolve(): PsiElement? {
         val t = TagReferencesProvider.forTag(element, fullName)
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
             return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
         }
         return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
-    }
-
-    override fun isReferenceTo(element: PsiElement): Boolean {
-        val r = resolve() as EmberNamedElement?
-        return getElement().manager.areElementsEquivalent(r?.target, element)
-    }
-
-    override fun getRangeInElement(): TextRange {
-        return range
     }
 
     override fun handleElementRename(newElementName: String): PsiElement {
@@ -104,29 +100,33 @@ class TagReference(val element: XmlTag, val fullName: String, val range: TextRan
 class TagReferencesProvider : PsiReferenceProvider() {
 
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<TagReference> {
-        val tag = element as XmlTag
-        val parts = tag.name.split(".")
-        val references = parts.mapIndexed { index, s ->
-            val p = parts.subList(0, index).joinToString(".")
-            val fullName = parts.subList(0, index + 1).joinToString(".")
-
-            val offset: Int
-            if (p.length == 0) {
-                // <
-                offset = 1
-            } else {
-                // < and .
-                offset = p.length + 2
-            }
-
-            val range = TextRange(offset, offset + s.length)
-            val ref = TagReference(tag, fullName, range)
-            ref.resolve()?.let { ref }
-        }
-        return references.filterNotNull().toTypedArray()
+        return Companion.getReferencesByElement(element)
     }
 
     companion object {
+
+        fun getReferencesByElement(element: PsiElement): Array<TagReference> {
+            val tag = element as XmlTag
+            val parts = tag.name.split(".")
+            val references = parts.mapIndexed { index, s ->
+                val p = parts.subList(0, index).joinToString(".")
+                val fullName = parts.subList(0, index + 1).joinToString(".")
+
+                val offset: Int
+                if (p.length == 0) {
+                    // <
+                    offset = 1
+                } else {
+                    // < and .
+                    offset = p.length + 2
+                }
+
+                val range = TextRange(offset, offset + s.length)
+                val ref = TagReference(tag, fullName, range)
+                ref.resolve()?.let { ref }
+            }
+            return references.filterNotNull().toTypedArray()
+        }
 
         fun resolveToLocalJs(element: XmlTag): PsiElement? {
             var tpl: Any? = null
