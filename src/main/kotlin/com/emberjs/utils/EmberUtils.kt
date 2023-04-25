@@ -558,11 +558,11 @@ class EmberUtils {
         fun findTagYieldAttribute(element: PsiElement?): XmlAttributeDescriptor? {
             if (element is EmberAttrDec && element.name != "as") {
                 val tag = element.parent
-                return tag.descriptor?.getAttributeDescriptor("as", tag)
+                return tag.attributes.find { it.name == "as" }?.descriptor
             }
             if (element is XmlAttribute && element.name != "as") {
                 val tag = element.parent
-                return tag.descriptor?.getAttributeDescriptor("as", tag)
+                return tag.attributes.find { it.name == "as" }?.descriptor
             }
             return null
         }

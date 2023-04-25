@@ -44,8 +44,8 @@ class HbXmlExtension: DefaultXmlExtension() {
         return file?.viewProvider is GtsFileViewProvider || file?.viewProvider is HbFileViewProvider
     }
     override fun createTagNameReference(nameElement: ASTNode?, startTagFlag: Boolean): TagNameReference? {
-        if (nameElement?.psi is XmlToken && nameElement.elementType == XML_NAME) {
-            val tag = nameElement.psi.parent as XmlTag
+        if (nameElement?.psi is XmlToken && nameElement.elementType == XML_NAME && nameElement.psi.parent is XmlTag) {
+            val tag = nameElement.psi.parent
             val res = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve()
             if (res != null) {
                 return null

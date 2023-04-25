@@ -64,6 +64,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
         if (baseName.firstOrNull() == null) {
             return@lazy ""
         }
+        baseName = baseName.replace(indexSuffix, "")
         baseName = baseName.first().uppercase() + baseName.subSequence(1, baseName.lastIndex+1)
 
         baseName.replace(SIMPLE_DASHERIZE_REGEXP) {
@@ -76,7 +77,7 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
             }
 
             if (it.value == "-") "" else it.value.lowercase()
-        }.replace(indexSuffix, "")
+        }
     }
 
     val camelCaseName by lazy {
