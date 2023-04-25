@@ -30,7 +30,7 @@ class EmberTagNameReference(nameElement: ASTNode, startTagFlag: Boolean) : TagNa
     override fun resolve(): PsiElement? {
         val element = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve()
         if (element != null) {
-            return null
+            return element
         }
         if (nameElement.text.startsWith(":") || nameElement.text.firstOrNull()?.isUpperCase() == true) {
             return null
@@ -45,12 +45,7 @@ class HbXmlExtension: DefaultXmlExtension() {
     }
     override fun createTagNameReference(nameElement: ASTNode?, startTagFlag: Boolean): TagNameReference? {
         if (nameElement?.psi is XmlToken && nameElement.elementType == XML_NAME && nameElement.psi.parent is XmlTag) {
-            val tag = nameElement.psi.parent
-            val res = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve()
-            if (res != null) {
-                return null
-            }
-            return null
+            return EmberTagNameReference(nameElement, startTagFlag)
         }
         return super.createTagNameReference(nameElement, startTagFlag)
     }

@@ -1,15 +1,13 @@
 package com.emberjs.utils
 
+
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsFileViewProvider
-import com.emberjs.hbs.HbReference
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.HbsModuleReference
-import com.emberjs.hbs.ImportNameReferences
+import com.emberjs.hbs.*
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
@@ -265,18 +263,20 @@ class EmberUtils {
             if (element == null && reference is HbsModuleReference) {
                 element = reference.multiResolve(false).firstOrNull()?.element
             }
-            if (reference is ImportNameReferences) {
+            if (reference is ImportNameReference) {
                 var name = path
-                val hasAs = reference.element.text.contains(" as ")
-                if (hasAs) {
-                    val nameAs = reference.element.text.split(",").find { it.split(" as ").first() == path }
-                    name = nameAs?.split(" as ")?.last()
+                val intRange = IntRange(reference.rangeInElement.startOffset, reference.rangeInElement.endOffset-1)
+                element = if (reference.element.references.size == 1 || reference.element.text.substring(intRange) == name) {
+                    reference.resolve()
+                } else {
+                    null
                 }
-                val resolutions = reference.multiResolve(false)
-                element = resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.ts") }?.element
-                        ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.js") }?.element
-                                ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
             }
+
+            if (element?.references?.firstOrNull() is ImportNameReference) {
+                element = element.references.firstNotNullOfOrNull { resolveReference(it, reference?.element?.text) }
+            }
+
             return element
         }
 
@@ -362,7 +362,7 @@ class EmberUtils {
         }
 
         fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
-            val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
+            val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
             var func = followReferences(psi)
             if ((func == null || func == psi) && psi.children.isNotEmpty()) {
                 func = followReferences(psi.children[0])

@@ -1,15 +1,22 @@
 package com.emberjs.resolver
 
 import com.emberjs.cli.EmberCliProjectConfigurator
+import com.emberjs.hbs.RangedReference
+import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.utils.*
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.lang.Language
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiReference
-import com.intellij.psi.PsiReferenceProvider
+import com.intellij.openapi.vfs.VirtualFileSystem
+import com.intellij.psi.*
+import com.intellij.psi.impl.source.PsiFileImpl
+import com.intellij.psi.search.ProjectAwareVirtualFile
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.regex.Pattern
 
 open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePaths: List<String>, val extensions: Array<out String>?) : JSExactFileReference(context, range, filePaths, extensions) {
@@ -20,6 +27,39 @@ open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePat
         return false
     }
 }
+
+open class EmberInternalJSModuleReference(context: PsiElement, range: TextRange, val internalFile: PsiFile?) : EmberJSModuleReference(context, range, emptyList(), emptyArray()) {
+    override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
+        return PsiElementResolveResult.createResults(internalFile)
+    }
+}
+
+
+class ProjectAwareVirtualFile(val virtualFile: VirtualFile): VirtualFile(), ProjectAwareVirtualFile {
+    override fun getName() = virtualFile.name
+    override fun getFileSystem() = virtualFile.fileSystem
+    override fun getPath() = virtualFile.path
+    override fun isWritable() = virtualFile.isWritable
+    override fun isDirectory() = virtualFile.isDirectory
+    override fun isValid() = virtualFile.isValid
+    override fun getParent() = virtualFile.parent
+    override fun getChildren() = virtualFile.children
+    override fun getOutputStream(requestor: Any?, newModificationStamp: Long, newTimeStamp: Long) = virtualFile.getOutputStream(requestor, newModificationStamp, newTimeStamp)
+    override fun contentsToByteArray() = virtualFile.contentsToByteArray()
+    override fun getTimeStamp() = virtualFile.timeStamp
+    override fun getLength() = virtualFile.length
+    override fun refresh(asynchronous: Boolean, recursive: Boolean, postRunnable: Runnable?) = virtualFile.refresh(asynchronous, recursive, postRunnable)
+    override fun getInputStream() = virtualFile.inputStream
+    override fun isInProject(project: Project) = true
+}
+
+
+class ProjectFile(val psiFile: PsiFile): PsiFile by psiFile {
+    override fun getVirtualFile(): VirtualFile {
+        return ProjectAwareVirtualFile(psiFile.virtualFile)
+    }
+}
+
 /**
  * Resolves absolute imports from the ember application root, e.g.
  * ```
@@ -37,6 +77,25 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         }
 
         val refText = unquotedRefText;
+
+        if (refText == "@ember/helper") {
+            val project = host.project
+            val helpers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-helpers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val file = ProjectFile(helpers!!)
+            return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
+        }
+        if (refText == "@ember/modifier") {
+            val project = host.project
+            val modifiers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-modifiers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val file = ProjectFile(modifiers!!)
+            return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
+        }
+        if (refText == "@ember/component") {
+            val project = host.project
+            val internalComponentsFile = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val file = ProjectFile(internalComponentsFile!!)
+            return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
+        }
 
         // e.g. `my-app/controllers/foo` -> `my-app`
         var packageName = refText.substringBefore('/')

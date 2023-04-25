@@ -42,34 +42,6 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
 import kotlin.math.max
 
-class ImportNameReferences(element: PsiElement) : PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
-    override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
-        val names = element.text.split(",")
-        val named = names.map {
-            if (it.contains(" as ")) {
-                it.split(" as ").first()
-            } else {
-                it
-            }
-        }
-        val mustache = element.parents.find { it is HbMustache }!!
-        val path = mustache.children.findLast { it is HbParam }
-        val fileRef = path?.references?.firstOrNull()?.resolve()
-        if (fileRef is PsiDirectory) {
-            return named
-                    .map { fileRef.findFile(it) ?: fileRef.findSubdirectory(it) }
-                    .filterNotNull()
-                    .map { PsiElementResolveResult(it) }
-                    .toTypedArray()
-        }
-        if (fileRef == null) {
-            return emptyArray()
-        }
-        val ref = EmberUtils.resolveToEmber(fileRef)
-        return ref?.let { arrayOf(PsiElementResolveResult(it)) } ?: arrayOf()
-    }
-}
-
 
 class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbReference(leaf) {
     private var namedXml: EmberNamedAttribute? = null
@@ -387,6 +359,13 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             val service = GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
 
             val name = element.text.replace("IntellijIdeaRulezzz", "")
+
+            val closeMustache = PsiTreeUtil.collectParents(element, HbCloseBlockMustache::class.java, false) { it is HbBlockWrapper }.firstOrNull()
+            if (closeMustache != null) {
+                val blockWrapper = closeMustache.parent
+                val openId = PsiTreeUtil.collectElements(blockWrapper) { HbsPatterns.BLOCK_MUSTACHE_NAME_ID.accepts(it) }.firstOrNull()
+                return openId?.reference ?: openId?.references?.firstOrNull()
+            }
 
             val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)
             if (name == "this" && sibling == null) {

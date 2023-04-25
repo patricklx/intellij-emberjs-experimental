@@ -25,7 +25,7 @@ abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(el
     }
 }
 
-class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
+open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
     private var targetRef: PsiReference? = null
     constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
         this.targetRef = targetRef
@@ -82,6 +82,8 @@ class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range
     }
 }
 
+
+class ImportNameReference(element: PsiElement, psiElement: PsiElement?, textRange: TextRange): RangedReference(element, psiElement, textRange)
 
 
 class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {

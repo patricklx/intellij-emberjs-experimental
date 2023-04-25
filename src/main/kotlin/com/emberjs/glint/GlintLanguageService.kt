@@ -1,6 +1,7 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.HbReference
@@ -41,6 +42,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.elementType
+import com.intellij.psi.xml.XmlElement
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -154,7 +157,14 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
     }
 
-    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
+    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
+        var sourceElement: PsiElement = elem
+        if (sourceElement is LeafPsiElement) {
+            sourceElement = sourceElement.parent
+        }
+        if (sourceElement is XmlElement || sourceElement is HbPsiElement) {
+            return null
+        }
         var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
         if (currentlyChecking == null && element.containingFile is HbPsiFile) {
             currentlyChecking = sourceElement
