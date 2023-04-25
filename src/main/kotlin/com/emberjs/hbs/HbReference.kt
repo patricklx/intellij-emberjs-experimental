@@ -1,10 +1,10 @@
 package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
-import com.emberjs.xml.EmberAttrDec
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
+import com.emberjs.xml.EmberAttrDec
 import com.intellij.lang.Language
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
@@ -19,14 +19,13 @@ abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(el
     override fun isReferenceTo(other: PsiElement): Boolean {
         var res = resolve()
         if (res is EmberNamedElement) {
-           res = res.target
+            res = res.target
         }
         return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }
 }
 
-
-class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
+open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
     private var targetRef: PsiReference? = null
     constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
         this.targetRef = targetRef
@@ -83,6 +82,8 @@ class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range
     }
 }
 
+
+class ImportNameReference(element: PsiElement, psiElement: PsiElement?, textRange: TextRange): RangedReference(element, psiElement, textRange)
 
 
 class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {

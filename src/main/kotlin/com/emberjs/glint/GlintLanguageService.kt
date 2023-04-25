@@ -1,6 +1,7 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.HbReference
@@ -18,7 +19,6 @@ import com.intellij.lang.javascript.completion.JSInsertHandler
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFunctionType
-import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
@@ -33,8 +33,6 @@ import com.intellij.lsp.methods.HoverMethod
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
-import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
@@ -44,6 +42,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
+import com.intellij.psi.util.elementType
+import com.intellij.psi.xml.XmlElement
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -157,7 +157,14 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
     }
 
-    override fun getNavigationFor(document: Document, sourceElement: PsiElement): Array<PsiElement>? {
+    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
+        var sourceElement: PsiElement = elem
+        if (sourceElement is LeafPsiElement) {
+            sourceElement = sourceElement.parent
+        }
+        if (sourceElement is XmlElement || sourceElement is HbPsiElement) {
+            return null
+        }
         var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
         if (currentlyChecking == null && element.containingFile is HbPsiFile) {
             currentlyChecking = sourceElement
@@ -233,26 +240,10 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
         val server = getDescriptor()?.server ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
-        val changedUnsaved = collectChangedUnsavedFiles()
-        if (changedUnsaved.isNotEmpty()) {
-            JSLanguageService.saveChangedFilesAndRestartHighlighting(file, changedUnsaved)
-            return null
-        }
 
         return completedFuture(server.getDiagnostics(virtualFile)?.map {
             GlintAnnotationError(it, virtualFile.canonicalPath)
         })
-    }
-
-    private fun collectChangedUnsavedFiles(): Collection<VirtualFile> {
-        val manager = FileDocumentManager.getInstance()
-        val openFiles = setOf(*FileEditorManager.getInstance(project).openFiles)
-        val unsavedDocuments = manager.unsavedDocuments
-        if (unsavedDocuments.isEmpty()) return emptyList()
-
-        return unsavedDocuments
-                .mapNotNull { manager.getFile(it) }
-                .filter { vFile -> !openFiles.contains(vFile) && isAcceptable(vFile) }
     }
 
     override fun canHighlight(file: PsiFile) = file.fileType is HbFileType ||

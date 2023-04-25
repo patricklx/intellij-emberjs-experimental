@@ -771,7 +771,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
             }, (formattingContext.node as OuterLanguageElement).project, formattingContext.getCodeStyleSettings(), formattingContext.containingFile.fileType, formattingContext.containingFile)
         }
 
-        var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset)!!
+        var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
         if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0) {
             element = formattingContext.containingFile.viewProvider.getPsi(TS)
         }

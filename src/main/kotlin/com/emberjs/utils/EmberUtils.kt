@@ -1,15 +1,13 @@
 package com.emberjs.utils
 
+
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsFileViewProvider
-import com.emberjs.hbs.HbReference
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.HbsModuleReference
-import com.emberjs.hbs.ImportNameReferences
+import com.emberjs.hbs.*
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
@@ -19,7 +17,6 @@ import com.emberjs.xml.EmberAttrDec
 import com.emberjs.xml.EmberXmlElementDescriptor
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
-import com.intellij.javascript.JSModuleBaseReference
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
@@ -32,7 +29,10 @@ import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
-import com.intellij.lang.javascript.psi.types.*
+import com.intellij.lang.javascript.psi.types.JSArrayType
+import com.intellij.lang.javascript.psi.types.JSGenericTypeImpl
+import com.intellij.lang.javascript.psi.types.JSTupleType
+import com.intellij.lang.javascript.psi.types.JSTypeImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.*
@@ -47,6 +47,7 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
+import com.intellij.xml.XmlAttributeDescriptor
 
 class ArgData(
         var value: String = "",
@@ -262,18 +263,20 @@ class EmberUtils {
             if (element == null && reference is HbsModuleReference) {
                 element = reference.multiResolve(false).firstOrNull()?.element
             }
-            if (reference is ImportNameReferences) {
+            if (reference is ImportNameReference) {
                 var name = path
-                val hasAs = reference.element.text.contains(" as ")
-                if (hasAs) {
-                    val nameAs = reference.element.text.split(",").find { it.split(" as ").first() == path }
-                    name = nameAs?.split(" as ")?.last()
+                val intRange = IntRange(reference.rangeInElement.startOffset, reference.rangeInElement.endOffset-1)
+                element = if (reference.element.references.size == 1 || reference.element.text.substring(intRange) == name) {
+                    reference.resolve()
+                } else {
+                    null
                 }
-                val resolutions = reference.multiResolve(false)
-                element = resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.ts") }?.element
-                        ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name.js") }?.element
-                                ?: resolutions.find { (it.element as PsiFileSystemItem).virtualFile.path.endsWith("/$name") }?.element
             }
+
+            if (element?.references?.firstOrNull() is ImportNameReference) {
+                element = element.references.firstNotNullOfOrNull { resolveReference(it, reference?.element?.text) }
+            }
+
             return element
         }
 
@@ -308,11 +311,11 @@ class EmberUtils {
                 return element.children.getOrNull(0)?.children?.getOrNull(0)?.children?.getOrNull(0)?.let { followReferences(it) } ?: element
             }
 
-            val resYield: XmlAttribute? = findTagYieldAttribute(element)
-            if (resYield != null && resYield.reference != null && element != null && resYield.reference!!.resolve() != null) {
+            val resYield: XmlAttributeDescriptor? = findTagYieldAttribute(element)
+            if (resYield != null && resYield.declaration != null && element != null) {
                 val name = element.text.replace("|", "")
-                val yieldParams = resYield.reference!!.resolve()!!.children.filter { it is HbParam }
-                val angleBracketBlock = resYield.parent
+                val yieldParams = resYield.declaration!!.children.filter { it is HbParam }
+                val angleBracketBlock = element.parent as XmlTag
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
                 val endIdx = angleBracketBlock.attributes.size
                 val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
@@ -359,7 +362,7 @@ class EmberUtils {
         }
 
         fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
-            val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
+            val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
             var func = followReferences(psi)
             if ((func == null || func == psi) && psi.children.isNotEmpty()) {
                 func = followReferences(psi.children[0])
@@ -552,14 +555,14 @@ class EmberUtils {
             return null
         }
 
-        fun findTagYieldAttribute(element: PsiElement?): XmlAttribute? {
+        fun findTagYieldAttribute(element: PsiElement?): XmlAttributeDescriptor? {
             if (element is EmberAttrDec && element.name != "as") {
                 val tag = element.parent
-                return tag.attributes.find { it.name == "as" }
+                return tag.attributes.find { it.name == "as" }?.descriptor
             }
             if (element is XmlAttribute && element.name != "as") {
                 val tag = element.parent
-                return tag.attributes.find { it.name == "as" }
+                return tag.attributes.find { it.name == "as" }?.descriptor
             }
             return null
         }

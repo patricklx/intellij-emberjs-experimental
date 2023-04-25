@@ -8,6 +8,10 @@ const modifiers = {
   on
 }
 
+export {
+  on
+}
+
 export default modifiers;
 
 

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.10
+- fix some references
+
 ## 2023.1.9
 - fix: some gts html tag references were not resolving
 

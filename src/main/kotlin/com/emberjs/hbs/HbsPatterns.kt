@@ -19,7 +19,7 @@ object HbsPatterns {
 
     val SIMPLE_MUSTACHE_NAME_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
             .withTextLengthLongerThan(0)
-            .withSuperParent(3, SIMPLE_MUSTACHE_NAME)
+            .withAncestor(3, SIMPLE_MUSTACHE_NAME)
 
     val BLOCK_MUSTACHE_NAME: Capture<PsiElement> = psiElement(HbTokenTypes.MUSTACHE_NAME)
             .withTextLengthLongerThan(0)
@@ -28,7 +28,7 @@ object HbsPatterns {
 
     val BLOCK_MUSTACHE_NAME_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
             .withTextLengthLongerThan(0)
-            .withSuperParent(3, BLOCK_MUSTACHE_NAME)
+            .withAncestor(3, BLOCK_MUSTACHE_NAME)
 
     val BLOCK_MUSTACHE_PARAM: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
             .withTextLengthLongerThan(0)
@@ -42,7 +42,7 @@ object HbsPatterns {
                     .afterLeaf(psiElement(HbTokenTypes.OPEN_SEXPR)))
 
     val SUB_EXPR_NAME_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
-            .withSuperParent(3, SUB_EXPR_NAME)
+            .withAncestor(3, SUB_EXPR_NAME)
 
     val MUSTACHE_ID: Capture<PsiElement> = psiElement(HbTokenTypes.ID)
     val IMPORT_PATH_AUTOCOMPLETE: Capture<PsiElement> = psiElement(HbTokenTypes.STRING).withSuperParent(3, (psiElement(HbTokenTypes.PARAM).afterSiblingSkipping(psiElement(HbTokenTypes.WHITE_SPACE), psiElement(HbTokenTypes.PARAM).withText("from"))))

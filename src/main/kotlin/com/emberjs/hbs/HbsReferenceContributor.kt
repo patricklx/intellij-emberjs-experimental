@@ -8,12 +8,16 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
+import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSLiteralExpression
+import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
+import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptModule
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.patterns.XmlTagPattern
 import com.intellij.psi.*
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -40,7 +44,8 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         val psiManager: PsiManager by lazy { PsiManager.getInstance(element.project) }
         var path = element.text.substring(1, element.text.lastIndex)
         var resolvedFile: PsiFileSystemItem? = element.originalElement.containingFile.parent ?: element.originalElement.containingFile.originalFile.parent
-        val parts = path.split("/")
+        val parts = path.split("/").toMutableList()
+        val references = mutableListOf<RangedReference>()
 
         if (element.originalVirtualFile == null) {
             return arrayOf()
@@ -48,6 +53,22 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
 
         if (element.originalVirtualFile?.parentEmberModule == null) {
             return arrayOf()
+        }
+
+        if (path == "@ember/helper") {
+            val project = element.project
+            val helpers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-helpers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            return arrayOf(RangedReference(element, EmberUtils.resolveDefaultExport(helpers), TextRange(0, element.textLength - 1)))
+        }
+        if (path == "@ember/modifier") {
+            val project = element.project
+            val modifiers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-modifiers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            return arrayOf(RangedReference(element, EmberUtils.resolveDefaultExport(modifiers), TextRange(0, element.textLength - 1)))
+        }
+        if (path == "@ember/component") {
+            val project = element.project
+            val internalComponentsFile = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            return arrayOf(RangedReference(element, EmberUtils.resolveDefaultExport(internalComponentsFile), TextRange(0, element.textLength - 1)))
         }
 
         val name = findMainProjectName(element.originalVirtualFile!!)
@@ -69,10 +90,29 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             resolvedFile = psiManager.findDirectory(element.originalVirtualFile!!.parentEmberModule!!)
         }
 
+        var typesDir: PsiDirectory?
         if (!path.startsWith("~") && !path.startsWith(".")) {
             val parent = element.originalVirtualFile!!.emberRoot
             resolvedFile = parent?.let { psiManager.findDirectory(it) }
             resolvedFile = resolvedFile?.findSubdirectory("node_modules")
+            typesDir = resolvedFile?.findSubdirectory("@types")
+            if (path.startsWith("@")) {
+                val subDir = parts.subList(0, 2).joinToString("__").removePrefix("@")
+                typesDir = typesDir?.findSubdirectory(subDir)
+            } else {
+                typesDir = typesDir?.findSubdirectory(parts.first())
+            }
+            if (typesDir != null) {
+                val removed = mutableListOf<String>()
+                removed.add(parts.removeFirst())
+                if (path.startsWith("@")) {
+                    removed.add(parts.removeFirst())
+                }
+                resolvedFile = typesDir
+                if (parts.isNotEmpty()) {
+                    references.add(RangedReference(element, typesDir, TextRange(0, removed.joinToString("/").length)))
+                }
+            }
         }
 
         val files = parts.mapIndexed { i, s ->
@@ -130,7 +170,11 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
         } else {
             file = resolvedFile as PsiFile?
         }
-        files[files.lastIndex] = file ?: files.last()
+        if (files.isEmpty()) {
+            references.add(RangedReference(element, file, TextRange(0, element.textLength - 1)))
+            return references.toTypedArray()
+        }
+        files[files.lastIndex] = file ?: files.lastOrNull()
         fun glintRes(it: PsiElement?): PsiElement? {
             val psiFile = PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!)
             val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
@@ -144,7 +188,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                 it.containingFile ?: it
             } ?: it
         }
-        return files.mapIndexed() { index, it ->
+        files.mapIndexed() { index, it ->
             val p = parts.subList(0, index).joinToString("/")
             val offset: Int
             if (p.isEmpty()) {
@@ -157,12 +201,13 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
                 return@mapIndexed RangedReference(element, glintRes(it), range)
             }
             RangedReference(element, it, range)
-        }.toTypedArray()
+        }.toCollection(references)
+        return references.toTypedArray()
     }
 }
 
 class ImportNameReferencesProvider : PsiReferenceProvider() {
-    override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
+    override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<ImportNameReference> {
         val lookInFile = element.text.contains("{") || element.text.contains("}")
         val names = element.text
                 .replace("'", "")
@@ -182,6 +227,15 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
         var fileRef = path?.children?.get(0)?.children?.get(0)?.references?.lastOrNull()?.resolve()
         if (fileRef is EmberNamedElement) {
             fileRef = fileRef.target
+        }
+        if (fileRef is JSObjectLiteralExpression) {
+            return named
+                    .map { fileRef.findProperty(it)?.jsType?.sourceElement as JSReferenceExpression }
+                    .map { it.resolve() }
+                    .mapIndexed{ index, it ->
+                        val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range
+                        ImportNameReference(element, it, TextRange(r.first, r.last + 1))
+                    }.toTypedArray()
         }
         if (fileRef is PsiDirectory) {
             return named
@@ -203,7 +257,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                         }
                     }
                     .map { (it as? PsiFile)?.let { EmberUtils.resolveToEmber(it) }  }
-                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
+                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; ImportNameReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
 
@@ -218,27 +272,28 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                         it
                     }
                     .map { EmberUtils.resolveToEmber(it as? PsiElement) }
-                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; RangedReference(element, it, TextRange(r.first, r.last + 1)) }
+                    .mapIndexed { index, it -> val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range; ImportNameReference(element, it, TextRange(r.first, r.last + 1)) }
                     .toTypedArray()
         }
         if (fileRef == null) {
             return emptyArray()
         }
         val ref = EmberUtils.resolveToEmber(fileRef)
-        return arrayOf(RangedReference(element, ref, TextRange(0, element.textLength)))
+        return arrayOf(ImportNameReference(element, ref, TextRange(0, element.textLength)))
     }
 }
 
 class HbsReferenceContributor : PsiReferenceContributor() {
     override fun registerReferenceProviders(registrar: PsiReferenceRegistrar) {
         with(registrar) {
+            registerReferenceProvider(XmlTagPattern.Capture(), TagReferencesProvider())
             register(PlatformPatterns.psiElement(XmlAttribute::class.java)) { toAttributeReference(it as XmlAttribute) }
-            register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
-            register(HbsPatterns.BLOCK_MUSTACHE_NAME) { filter(it) { HbsComponentReference(it) } }
+            register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsComponentReference(it) } }
+            register(HbsPatterns.BLOCK_MUSTACHE_NAME_ID) { filter(it) { HbsComponentReference(it) } }
             register(HbsPatterns.MUSTACHE_ID) { HbsLocalReference.createReference(it) }
-            register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
-            register(HbsPatterns.SIMPLE_MUSTACHE_NAME) { filter(it) { HbsModuleReference(it, "modifier") } }
-            register(HbsPatterns.SUB_EXPR_NAME) { filter(it) { HbsModuleReference(it, "helper") } }
+            register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsModuleReference(it, "helper") } }
+            register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsModuleReference(it, "modifier") } }
+            register(HbsPatterns.SUB_EXPR_NAME_ID) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.COMPONENT_KEY) { HbsComponentReference(it) }
             register(HbsPatterns.COMPONENT_KEY_IN_SEXPR) { HbsComponentReference(it) }
 //            registerReferenceProvider(HbsPatterns.CONTENT, ContentReferencesProvider())

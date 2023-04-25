@@ -20,9 +20,9 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
 
     val project = element.project
     private val scope = ProjectScope.getAllScope(project)
-    private val internalHelpersFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-helpers.ts").readText())
-    private val internalModifiersFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-modifiers.ts").readText())
-    private val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
+    val internalHelpersFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-helpers.ts").readText())
+    val internalModifiersFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-modifiers.ts").readText())
+    val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, this::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
 
 
     private val internalHelpers = EmberUtils.resolveDefaultExport(internalHelpersFile) as JSObjectLiteralExpression

@@ -588,6 +588,134 @@ function _if(params: [condition: boolean, then: any, otherwise: any]): any {}
  */
 function in_element(params: [destinationElement: Element], hash?: {insertBefore: null}): void {}
 
+
+/**
+ The `unless` helper is the inverse of the `if` helper. It displays if a value
+ is falsey ("not true" or "is false"). Example values that will display with
+ `unless`: `false`, `undefined`, `null`, `""`, `0`, `NaN` or an empty array.
+ ## Inline form
+ The inline `unless` helper conditionally renders a single property or string.
+ This helper acts like a ternary operator. If the first property is falsy,
+ the second argument will be displayed, otherwise, the third argument will be
+ displayed
+ For example, if you pass a falsey `useLongGreeting` to the `Greeting` component:
+ ```app/templates/application.hbs
+ <Greeting @useLongGreeting={{false}} />
+ ```
+ ```app/components/greeting.hbs
+ {{unless @useLongGreeting "Hi" "Hello"}} Ben
+ ```
+ Then it will display:
+ ```html
+ Hi Ben
+ ```
+ ## Block form
+ Like the `if` helper, the `unless` helper also has a block form.
+ The following will not render anything:
+ ```app/templates/application.hbs
+ <Greeting />
+ ```
+ ```app/components/greeting.hbs
+ {{#unless @greeting}}
+ No greeting was found. Why not set one?
+ {{/unless}}
+ ```
+ You can also use an `else` helper with the `unless` block. The
+ `else` will display if the value is truthy.
+ If you have the following component:
+ ```app/components/logged-in.hbs
+ {{#unless @userData}}
+ Please login.
+ {{else}}
+ Welcome back!
+ {{/unless}}
+ ```
+ Calling it with a truthy `userData`:
+ ```app/templates/application.hbs
+ <LoggedIn @userData={{hash username="Zoey"}} />
+ ```
+ Will render:
+ ```html
+ Welcome back!
+ ```
+ and calling it with a falsey `userData`:
+ ```app/templates/application.hbs
+ <LoggedIn @userData={{false}} />
+ ```
+ Will render:
+ ```html
+ Please login.
+ ```
+ @method unless
+ @for Ember.Templates.helpers
+ @public
+ */
+declare function unless(params: [condition: boolean, then: any, otherwise: any]): any;
+
+/**
+ The `{{outlet}}` helper lets you specify where a child route will render in
+ your template. An important use of the `{{outlet}}` helper is in your
+ application's `application.hbs` file:
+ ```app/templates/application.hbs
+ <MyHeader />
+ <div class="my-dynamic-content">
+ <!-- this content will change based on the current route, which depends on the current URL -->
+ {{outlet}}
+ </div>
+ <MyFooter />
+ ```
+ See the [routing guide](https://guides.emberjs.com/release/routing/rendering-a-template/) for more
+ information on how your `route` interacts with the `{{outlet}}` helper.
+ Note: Your content __will not render__ if there isn't an `{{outlet}}` for it.
+ @method outlet
+ @for Ember.Templates.helpers
+ @public
+ */
+declare function outlet(): any;
+
+/**
+ Use the `{{hash}}` helper to create a hash to pass as an option to your
+ components. This is specially useful for contextual components where you can
+ just yield a hash:
+ ```handlebars
+ {{yield (hash
+      name='Sarah'
+      title=office
+   )}}
+ ```
+ Would result in an object such as:
+ ```js
+ { name: 'Sarah', title: this.get('office') }
+ ```
+ Where the `title` is bound to updates of the `office` property.
+ Note that the hash is an empty object with no prototype chain, therefore
+ common methods like `toString` are not available in the resulting hash.
+ If you need to use such a method, you can use the `call` or `apply`
+ approach:
+ ```js
+ function toString(obj) {
+     return Object.prototype.toString.apply(obj);
+   }
+ ```
+ @method hash
+ @for Ember.Templates.helpers
+ @param args
+ @param {Object} hash
+ @return {Object} Hash
+ @since 2.3.0
+ @public
+ */
+declare function hash(args: never, hash: {[x: string]: any}): any
+
+export {
+    fn,
+    component,
+    array,
+    concat,
+    get,
+    hash
+}
+
 const helpers = {
   each,
   'let': _let,
@@ -599,6 +727,8 @@ const helpers = {
   'each-in': eachIn,
   get,
   'if': _if,
+  'unless': unless,
+  'outlet': outlet,
   'in-element': in_element
 }
 

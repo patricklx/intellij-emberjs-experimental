@@ -18,6 +18,7 @@ import com.intellij.lsp.api.LspServerManager
 import com.intellij.lsp.api.LspServerSupportProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ex.ApplicationInfoEx
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
@@ -43,7 +44,10 @@ class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSPro
         if (!path.startsWith("/")) {
             path = "/$path"
         }
-        return URLEncoder.encode(path, "utf-8").replace("%2F", "/")
+        return URLEncoder.encode(path, "utf-8")
+                .replace("%2F", "/")
+                .replace("%253A", ":")
+                .replace("%3A", ":")
     }
 
     override fun initializeServer() {
@@ -84,7 +88,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     ?: throw RuntimeException("glint is not installed")
             val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
                     ?: throw RuntimeException("glint lsp was not found")
-//            commandLine.addParameter("--inspect")
+            commandLine.addParameter("--inspect")
             commandLine.addParameter(file.path)
             commandLine.addParameter("--stdio")
             commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
@@ -122,7 +126,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 file.fileType is JavaScriptFileType
     }
 
-    override val handlePublishDiagnostics = true
+    override val handlePublishDiagnostics = ApplicationInfoEx.getInstanceEx().fullVersion == "2023.1"
     override val useGenericNavigation = false
     override val lspCompletionSupport = null
 

@@ -1,14 +1,14 @@
 class Component<T> {
-  args: T
+    args: T
 }
 
 type LinkToArgs = {
-  route: string
-  disabled?: boolean
-  activeClass?: string
-  'current-when'?: string
-  model?: any,
-  query?: any
+    route: string
+    disabled?: boolean
+    activeClass?: string
+    'current-when'?: string
+    model?: any,
+    query?: any
 }
 
 /**
@@ -201,7 +201,7 @@ class LinkToComponent extends Component<LinkToArgs> {
 }
 
 function hbs(strings: TemplateStringsArray) {
-  return '';
+    return '';
 }
 
 /**
@@ -275,28 +275,29 @@ function hbs(strings: TemplateStringsArray) {
  @public
  */
 class InputComponent extends Component<{
-  /**
-   *  The @value argument installs a two-way binding onto the element. If you wanted a one-way binding, use <input> with the value property and the input event instead.
-   */
-  value?: any
-  /**
-   *  (for checkboxes): like @value, the @checked argument installs a two-way binding onto the element. If you wanted a one-way binding, use <input type="checkbox"> with checked and the input event instead.
-   */
-  checked?: boolean
-  /**
-   *  This argument is used to control which Ember component is used under the hood
-   */
-  type?: 'checkbox'|'button'|'color'|'date'|'datetime-local'|'email'|'file'|'hidden'|'image'|'month'|'number'|'password'|'radio'|'range'|'reset'|'search'|'submit'|'tel'|'text'|'time'|'url'|'week'
-  'enter'?: Function,
-  'insert-newline'?: Function,
-  'escape-press'?: Function,
-  'focus-in'?: Function,
-  'focus-out'?: Function,
-  'key-press'?: Function,
-  'key-down'?: Function,
-  'key-up'?: Function,
+    /**
+     *  The @value argument installs a two-way binding onto the element. If you wanted a one-way binding, use <input> with the value property and the input event instead.
+     */
+    value?: any
+    /**
+     *  (for checkboxes): like @value, the @checked argument installs a two-way binding onto the element. If you wanted a one-way binding, use <input type="checkbox"> with checked and the input event instead.
+     */
+    checked?: boolean
+    /**
+     *  This argument is used to control which Ember component is used under the hood
+     */
+    type?: 'checkbox' | 'button' | 'color' | 'date' | 'datetime-local' | 'email' | 'file' | 'hidden' | 'image' | 'month' | 'number' | 'password' | 'radio' | 'range' | 'reset' | 'search' | 'submit' | 'tel' | 'text' | 'time' | 'url' | 'week'
+    'enter'?: Function,
+    'insert-newline'?: Function,
+    'escape-press'?: Function,
+    'focus-in'?: Function,
+    'focus-out'?: Function,
+    'key-press'?: Function,
+    'key-down'?: Function,
+    'key-up'?: Function,
 }> {
-  layout = hbs`<div ...attributes />`;
+    layout = hbs`
+        <div ...attributes/>`;
 }
 
 /**
@@ -384,39 +385,44 @@ class InputComponent extends Component<{
  @public
  */
 class TextareaComponent extends Component<{
-  rows?: number,
-  cols?: number,
-  name?: string,
-  selectionEnd?: number,
-  selectionStart?: number
-  /**
-   * This attribute indicates whether the value of the control can be automatically completed by the browser. Possible values are:
-   off: The user must explicitly enter a value into this field for every use, or the document provides its own auto-completion method; the browser does not automatically complete the entry.
-   on: The browser can automatically complete the value based on values that the user has entered during previous uses.
-   If the autocomplete attribute is not specified on a <textarea> element, then the browser uses the autocomplete attribute value of the <textarea> element's form owner. The form owner is either the <form> element that this <textarea> element is a descendant of or the form element whose id is specified by the form attribute of the input element. For more information, see the autocomplete attribute in <form>.
-   @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#attr-autocomplete
-   */
-  autocomplete?: boolean
-  wrap?: boolean
-  lang?: string
-  dir?: string
-  value?: any
-  'enter'?: Function,
-  'insert-newline'?: Function,
-  'escape-press'?: Function,
-  'focus-in'?: Function,
-  'focus-out'?: Function,
-  'key-press'?: Function,
+    rows?: number,
+    cols?: number,
+    name?: string,
+    selectionEnd?: number,
+    selectionStart?: number
+    /**
+     * This attribute indicates whether the value of the control can be automatically completed by the browser. Possible values are:
+     off: The user must explicitly enter a value into this field for every use, or the document provides its own auto-completion method; the browser does not automatically complete the entry.
+     on: The browser can automatically complete the value based on values that the user has entered during previous uses.
+     If the autocomplete attribute is not specified on a <textarea> element, then the browser uses the autocomplete attribute value of the <textarea> element's form owner. The form owner is either the <form> element that this <textarea> element is a descendant of or the form element whose id is specified by the form attribute of the input element. For more information, see the autocomplete attribute in <form>.
+     @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#attr-autocomplete
+     */
+    autocomplete?: boolean
+    wrap?: boolean
+    lang?: string
+    dir?: string
+    value?: any
+    'enter'?: Function,
+    'insert-newline'?: Function,
+    'escape-press'?: Function,
+    'focus-in'?: Function,
+    'focus-out'?: Function,
+    'key-press'?: Function,
 }> {
 
 }
 
 const components = {
-   LinkTo: LinkToComponent,
-  Textarea: TextareaComponent,
-   Input: InputComponent
+    LinkTo: LinkToComponent,
+    Textarea: TextareaComponent,
+    Input: InputComponent
 }
 
 export default components;
 
 
+export {
+    InputComponent as Input,
+    LinkToComponent as LinkTo,
+    TextareaComponent as Textarea
+}

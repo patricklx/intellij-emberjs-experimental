@@ -1,6 +1,8 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbParam
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.hints.InlayInfo
 import com.intellij.codeInsight.lookup.LookupElement
@@ -11,6 +13,8 @@ import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.lang.parameterInfo.*
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.elementType
 import com.intellij.refactoring.suggested.startOffset
 
 
@@ -21,7 +25,7 @@ class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
 
     override fun getParametersForLookup(item: LookupElement?, context: ParameterInfoContext?): Array<*>? {
         val psiElement = context?.file?.findElementAt(context.offset)
-        val helper = EmberUtils.findFirstHbsParamFromParam(psiElement)
+        val helper = PsiTreeUtil.collectElements(EmberUtils.findFirstHbsParamFromParam(psiElement)) {  it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull()
 
         val file = helper?.references?.getOrNull(0)?.resolve()?.containingFile
         if (file == null) {
@@ -32,7 +36,7 @@ class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
 
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiElement? {
         val psiElement = context.file.findElementAt(context.offset)
-        val block = EmberUtils.findFirstHbsParamFromParam(psiElement)
+        val block = PsiTreeUtil.collectElements(EmberUtils.findFirstHbsParamFromParam(psiElement)) {  it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull()
         val ref = EmberUtils.followReferences(block)
         if (ref == null || ref !is JSFunction || ref !is TypeScriptCallSignature) {
             return null
