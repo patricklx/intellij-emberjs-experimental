@@ -140,7 +140,7 @@ class GtsElementTypes {
             override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
                 val r = Regex("=\\s*$")
                 return if (r.containsMatchIn(tokenText)) {
-                    TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "\"\"")
+                    TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "''")
                 } else {
                     super.appendCurrentTemplateToken(tokenEndOffset, tokenText)
                 }
@@ -658,7 +658,7 @@ class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?): JsBlockWrappe
     }
 }
 
-class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy, val rootIndent: Indent): XmlTagBlock(block.node, NoWrap, block.alignment, policy, rootIndent) {
+class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBlock(block.node, NoWrap, block.alignment, policy, Indent.getNoneIndent()) {
 
     var patched = false
     var parent: Block? = null
@@ -683,10 +683,10 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy, val rootI
         return subblocks.mapIndexed { index, it ->
             var indent = Indent.getNormalIndent()
             if (index == 0) {
-                indent = Indent.getNoneIndent()
+                indent = getBaseIndent()
             }
             if (index == subblocks.lastIndex) {
-                indent = Indent.getNoneIndent()
+                indent = getBaseIndent()
             }
             SynteticBlockWrapper(it, this, indent)
         }.toMutableList()
@@ -696,7 +696,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy, val rootI
         return Indent.getNoneIndent()
     }
 
-    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+    fun getBaseIndent(forChild: Boolean = false): Indent? {
         val file = this.node.psi.containingFile
         val project = this.node.psi.project
         val document = PsiDocumentManager.getInstance(project).getDocument(file)!!
@@ -705,16 +705,20 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy, val rootI
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
             val psiRef = blockRef.node!!.psi.parent
 
-            val startOffset = psiRef.textRange.startOffset
+            val startOffset = psiRef.textRange?.startOffset ?: return Indent.getNormalIndent(true)
             val line = document.getLineNumber(startOffset)
             val lineOffset = document.getLineStartOffset(line)
             val offset = startOffset - lineOffset + ((blockRef.node!!.psi is JSClass).ifTrue { INDENT_SIZE } ?: 0)
 
 
-            return ChildAttributes(Indent.getSpaceIndent(offset + INDENT_SIZE), null)
+            return Indent.getSpaceIndent(offset + (forChild.ifTrue { INDENT_SIZE } ?: 0))
         }
 
-        return ChildAttributes(Indent.getNormalIndent(true), null)
+        return Indent.getNormalIndent(true)
+    }
+
+    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+        return ChildAttributes(Indent.getNoneIndent(), null)
     }
 
     override fun getChildrenIndent(): Indent {
@@ -817,14 +821,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
             val documentModel = FormattingDocumentModelImpl.createOn(psiFile)
             val block = findTemplateRootBlock(hbsRootBlock, element) as? XmlTagBlock ?: return createModel(FormattingContext.create(node.psi, settings)).rootBlock
             var start = block.textRange.startOffset - 1
-            var indent = Indent.getNormalIndent()
-            while (start > 0 && psiFile.text[start] != '\n') {
-                if (psiFile.text[start] != ' ') {
-                    indent = Indent.getNoneIndent()
-                }
-                start--
-            }
-            val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel), indent)
+            val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel))
             val model = XmlFormattingModel(
                     psiFile,
                     rootBlock,

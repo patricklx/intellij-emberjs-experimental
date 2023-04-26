@@ -7,7 +7,10 @@ import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsFileViewProvider
-import com.emberjs.hbs.*
+import com.emberjs.hbs.HbReference
+import com.emberjs.hbs.HbsLocalReference
+import com.emberjs.hbs.HbsModuleReference
+import com.emberjs.hbs.ImportNameReference
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
@@ -519,7 +522,7 @@ class EmberUtils {
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
-            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)component\\b"))) {
+            if (element is PsiElement && element.text?.contains(Regex("^(\\(|\\{\\{)component\\b")) == true) {
                 val idx = element.children.indexOfFirst { it.text == "component" }
                 val param = element.children.get(idx + 1)
                 if (param.children.firstOrNull()?.children?.firstOrNull() is HbStringLiteral) {

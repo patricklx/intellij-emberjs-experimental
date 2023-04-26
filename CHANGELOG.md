@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2023.1.13
+- fix: null access assertion
+- fix: gts template parsing issue
+- fix: fix gts formatting issues
+
 ## 2023.1.12
 - fix: assertion reference not for same element
 
