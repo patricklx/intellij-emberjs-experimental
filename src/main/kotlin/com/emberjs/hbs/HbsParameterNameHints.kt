@@ -1,5 +1,6 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.utils.EmberUtils
@@ -22,6 +23,8 @@ import com.intellij.lang.javascript.psi.types.JSSimpleRecordTypeImpl
 import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.lang.javascript.psi.types.JSTypeImpl
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.SyntaxTraverser
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
@@ -31,6 +34,11 @@ import java.util.*
 
 
 class HbsParameterNameHints : InlayParameterHintsProvider {
+
+    override fun createTraversal(root: PsiElement): SyntaxTraverser<PsiElement> {
+        return (root as? PsiFile)?.viewProvider?.getPsi(HbLanguage.INSTANCE)?.let { super.createTraversal(it) } ?:
+        return super.createTraversal(root)
+    }
 
     override fun getParameterHints(psiElement: PsiElement): MutableList<InlayInfo> {
         if (psiElement is HbParam) {

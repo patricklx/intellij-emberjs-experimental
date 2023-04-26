@@ -12,6 +12,7 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberJSModuleReference
+import com.emberjs.resolver.ProjectFile
 import com.emberjs.xml.AttrPsiReference
 import com.emberjs.xml.EmberAttrDec
 import com.emberjs.xml.EmberXmlElementDescriptor
@@ -19,6 +20,7 @@ import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
+import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
@@ -28,6 +30,7 @@ import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.JSArrayType
 import com.intellij.lang.javascript.psi.types.JSGenericTypeImpl
@@ -47,6 +50,7 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
+import com.intellij.testFramework.LightVirtualFile
 import com.intellij.xml.XmlAttributeDescriptor
 
 class ArgData(
@@ -151,6 +155,9 @@ class EmberUtils {
                 var func: PsiElement? = cls.argumentList!!.arguments.lastOrNull()
                 while (func is JSReferenceExpression) {
                     func = func.resolve()
+                }
+                if (func is JSVariable) {
+                    func = func.initializer
                 }
                 if (func is JSFunction) {
                     return Helper(func)
@@ -295,6 +302,11 @@ class EmberUtils {
                 return followReferences(ref.resolve())
             }
 
+            if (element is ES6ImportSpecifier) {
+                val results = element.multiResolve(false)
+                return results.find { it.element?.containingFile is ProjectFile }?.element ?: results.firstOrNull()?.element
+            }
+
             if (element is EmberNamedElement) {
                 return followReferences(element.target, path)
             }
@@ -363,7 +375,7 @@ class EmberUtils {
 
         fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
             val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
-            var func = followReferences(psi)
+            var func = resolveToEmber(followReferences(psi))
             if ((func == null || func == psi) && psi.children.isNotEmpty()) {
                 func = followReferences(psi.children[0])
                 if (func == psi.children[0]) {
@@ -409,8 +421,8 @@ class EmberUtils {
                 return data
             }
 
-            if ((func is Helper || func is Modifier) && (func as PsiElementDelegate<*>).element as? JSFunction != null) {
-                func = func.element as JSFunction
+            if ((func is Helper || func is Modifier) && (func as PsiElementDelegate<*>).element as? JSFunction != null || func?.originalVirtualFile is LightVirtualFile || func?.containingFile is ProjectFile) {
+                func = ((func as? PsiElementDelegate<*>)?.element ?: func) as JSFunction
                 var arrayName: String? = null
                 var array: JSType?
                 var named: MutableSet<String>? = null
@@ -444,8 +456,10 @@ class EmberUtils {
                 val positionalType = array
                 if (positionalType is JSTupleType) {
                     var names: List<String?>? = null
+                    val destruct = func.parameters.firstOrNull() as? JSDestructuringParameterImpl
+                    val destructArray = (destruct?.children?.find { it is JSDestructuringArray } as? JSDestructuringArray)?.elementsWithRest
                     if (positionalType.sourceElement is TypeScriptTupleTypeImpl) {
-                        names = (positionalType.sourceElement as TypeScriptTupleTypeImpl).members.map { it.tupleMemberName }
+                        names = (positionalType.sourceElement as TypeScriptTupleTypeImpl).members.mapIndexed { index, it -> it.tupleMemberName ?: destructArray?.getOrNull(index)?.text }
                     }
                     if (positionalType.sourceElement is JSDestructuringArray) {
                         names = (positionalType.sourceElement as JSDestructuringArray).elementsWithRest.map { it.text }

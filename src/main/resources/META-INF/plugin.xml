@@ -83,6 +83,7 @@
         <gotoRelatedProvider implementation="com.emberjs.navigation.EmberGotoRelatedProvider"/>
         <codeInsight.parameterInfo language="Handlebars" implementationClass="com.emberjs.hbs.HbsParameterInfoHandler"/>
         <codeInsight.parameterNameHints language="Handlebars" implementationClass="com.emberjs.hbs.HbsParameterNameHints"/>
+        <codeInsight.parameterNameHints language="Gts" implementationClass="com.emberjs.hbs.HbsParameterNameHints"/>
         <annotator language="ECMAScript 6" implementationClass="com.emberjs.psi.EmberInjectionAnnotator"/>
         <annotator language="ECMAScript 6" implementationClass="com.emberjs.psi.EmberRelationshipAnnotator"/>
 

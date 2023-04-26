@@ -6,8 +6,12 @@ import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.utils.*
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
+import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
+import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
+import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
@@ -51,12 +55,31 @@ class ProjectAwareVirtualFile(val virtualFile: VirtualFile): VirtualFile(), Proj
     override fun refresh(asynchronous: Boolean, recursive: Boolean, postRunnable: Runnable?) = virtualFile.refresh(asynchronous, recursive, postRunnable)
     override fun getInputStream() = virtualFile.inputStream
     override fun isInProject(project: Project) = true
+    override fun getFileType(): FileType {
+        return TypeScriptFileType.INSTANCE
+    }
 }
 
 
-class ProjectFile(val psiFile: PsiFile): PsiFile by psiFile {
+class ProjectFile(val psiFile: PsiFile): JSFileImpl(psiFile.viewProvider, JavaScriptSupportLoader.TYPESCRIPT) {
+
+    override fun getFileType(): FileType {
+        return TypeScriptFileType.INSTANCE
+    }
     override fun getVirtualFile(): VirtualFile {
         return ProjectAwareVirtualFile(psiFile.virtualFile)
+    }
+
+    override fun getContainingFile(): PsiFile {
+        return this
+    }
+
+    override fun accept(visitor: PsiElementVisitor) {
+        return psiFile.accept(visitor)
+    }
+
+    override fun getOriginalFile(): PsiFile {
+        return this
     }
 }
 
