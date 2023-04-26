@@ -681,14 +681,14 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
     override fun getSubBlocks(): MutableList<Block> {
         val subblocks = super.getSubBlocks()
         return subblocks.mapIndexed { index, it ->
-            var indent = Indent.getNormalIndent()
+            var indent = getBaseIndent(true)
             if (index == 0) {
                 indent = getBaseIndent()
             }
             if (index == subblocks.lastIndex) {
                 indent = getBaseIndent()
             }
-            SynteticBlockWrapper(it, this, indent)
+            SynteticBlockWrapper(it, this, indent!!)
         }.toMutableList()
     }
 
@@ -718,7 +718,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
     }
 
     override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
-        return ChildAttributes(Indent.getNoneIndent(), null)
+        return ChildAttributes(getBaseIndent(true), null)
     }
 
     override fun getChildrenIndent(): Indent {
