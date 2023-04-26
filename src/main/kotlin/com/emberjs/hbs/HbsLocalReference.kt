@@ -11,7 +11,6 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
-import com.emberjs.utils.parents
 import com.emberjs.xml.EmberAttrDec
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
@@ -364,7 +363,8 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             if (closeMustache != null) {
                 val blockWrapper = closeMustache.parent
                 val openId = PsiTreeUtil.collectElements(blockWrapper) { HbsPatterns.BLOCK_MUSTACHE_NAME_ID.accepts(it) }.firstOrNull()
-                return openId?.reference ?: openId?.references?.firstOrNull()
+                val ref = openId?.reference ?: openId?.references?.firstOrNull()
+                return HbsLocalReference(element, ref?.resolve())
             }
 
             val sibling = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.ID, null)

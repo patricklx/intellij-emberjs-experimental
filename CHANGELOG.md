@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.12
+- fix: assertion reference not for same element
+
 ## 2023.1.11
 - support inline hints in hbs templates in gts files
 

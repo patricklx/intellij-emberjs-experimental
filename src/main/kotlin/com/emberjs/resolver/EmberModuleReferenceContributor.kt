@@ -1,7 +1,6 @@
 package com.emberjs.resolver
 
 import com.emberjs.cli.EmberCliProjectConfigurator
-import com.emberjs.hbs.RangedReference
 import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.utils.*
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
@@ -15,12 +14,8 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileSystem
 import com.intellij.psi.*
-import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.search.ProjectAwareVirtualFile
-import java.io.InputStream
-import java.io.OutputStream
 import java.util.regex.Pattern
 
 open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePaths: List<String>, val extensions: Array<out String>?) : JSExactFileReference(context, range, filePaths, extensions) {
@@ -57,6 +52,9 @@ class ProjectAwareVirtualFile(val virtualFile: VirtualFile): VirtualFile(), Proj
     override fun isInProject(project: Project) = true
     override fun getFileType(): FileType {
         return TypeScriptFileType.INSTANCE
+    }
+    override fun getModificationStamp(): Long {
+        return 0
     }
 }
 
