@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.11
+- support inline hints in hbs templates in gts files
+
 ## 2023.1.10
 - fix some references
 
