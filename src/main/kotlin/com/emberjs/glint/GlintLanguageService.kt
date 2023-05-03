@@ -273,12 +273,13 @@ class GlintAnnotationError(val diagnostic: Diagnostic, private val path: String?
     override fun getLine() = diagnostic.range.start.line
     val endLine = diagnostic.range.end.line
     val endColumn = diagnostic.range.end.character
+    val diagCode = diagnostic.code?.get()
     override fun getColumn() = diagnostic.range.start.character
     val code by lazy { diagnostic.source?.toString() }
 
     override fun getAbsoluteFilePath(): String? = path
 
-    override fun getDescription(): String = diagnostic.message + " (${diagnostic.source}:${diagnostic.code.get()})"
+    override fun getDescription(): String = diagnostic.message + " (${diagnostic.source}${diagCode?.let { ":${it}" } ?: ""})"
 
     override fun getCategory() = when (diagnostic.severity) {
         DiagnosticSeverity.Error -> ERROR_CATEGORY

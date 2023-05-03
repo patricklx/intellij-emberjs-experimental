@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.15
+- fix: support older glint lsp messages
+
 ## 2023.1.14
 - fix: improve glint message
 
