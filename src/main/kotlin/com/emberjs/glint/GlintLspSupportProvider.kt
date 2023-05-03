@@ -88,7 +88,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     ?: throw RuntimeException("glint is not installed")
             val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
                     ?: throw RuntimeException("glint lsp was not found")
-            commandLine.addParameter("--inspect")
+//            commandLine.addParameter("--inspect")
             commandLine.addParameter(file.path)
             commandLine.addParameter("--stdio")
             commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())

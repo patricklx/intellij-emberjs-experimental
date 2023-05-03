@@ -42,7 +42,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlElement
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Diagnostic
@@ -279,7 +278,7 @@ class GlintAnnotationError(val diagnostic: Diagnostic, private val path: String?
 
     override fun getAbsoluteFilePath(): String? = path
 
-    override fun getDescription(): String = diagnostic.source + " " + diagnostic.message
+    override fun getDescription(): String = diagnostic.message + " (${diagnostic.source}:${diagnostic.code.get()})"
 
     override fun getCategory() = when (diagnostic.severity) {
         DiagnosticSeverity.Error -> ERROR_CATEGORY

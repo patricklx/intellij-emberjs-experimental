@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.14
+- fix: improve glint message
+
 ## 2023.1.13
 - fix: null access assertion
 - fix: gts template parsing issue
