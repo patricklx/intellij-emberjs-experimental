@@ -1,6 +1,6 @@
 
 type OnArgs = {
-  positional: [event: string, fn: Function]
+  positional: [event: keyof GlobalEventHandlersEventMap, fn: Function]
 }
 function on(_, __, args: OnArgs): any {}
 

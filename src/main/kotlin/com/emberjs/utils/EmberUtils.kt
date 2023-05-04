@@ -19,6 +19,7 @@ import com.emberjs.resolver.ProjectFile
 import com.emberjs.xml.AttrPsiReference
 import com.emberjs.xml.EmberAttrDec
 import com.emberjs.xml.EmberXmlElementDescriptor
+import com.intellij.application.options.CodeStyle
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
@@ -32,16 +33,16 @@ import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptClassImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptTupleTypeImpl
+import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptUnionOrIntersectionTypeImpl
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
-import com.intellij.lang.javascript.psi.types.JSArrayType
-import com.intellij.lang.javascript.psi.types.JSGenericTypeImpl
-import com.intellij.lang.javascript.psi.types.JSTupleType
-import com.intellij.lang.javascript.psi.types.JSTypeImpl
+import com.intellij.lang.javascript.psi.types.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.*
+import com.intellij.psi.codeStyle.CodeStyleSettings
+import com.intellij.psi.formatter.xml.HtmlCodeStyleSettings
 import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
@@ -371,7 +372,9 @@ class EmberUtils {
 
         class ArgsAndPositionals {
             val positional: MutableList<String?> = mutableListOf()
+            val positionalOptions = mutableMapOf<Int, List<String>>()
             val named: MutableList<String?> = mutableListOf()
+            val namedOptions = mapOf<String, List<String>>()
             val namedRefs: MutableList<PsiElement?> = mutableListOf()
             var restparamnames: String? = null
         }
@@ -438,10 +441,22 @@ class EmberUtils {
                     args = args.asRecordType()
                 }
 
+                val settings = CodeStyle.getCustomSettings(helperhelperOrModifier.containingFile, HtmlCodeStyleSettings::class.java)
+                val quote = (settings.HTML_QUOTE_STYLE == CodeStyleSettings.QuoteStyle.Double).ifTrue { '"' } ?: "'"
                 if (args is JSRecordType) {
                     array = args.findPropertySignature("positional")?.jsType
                     named = args.findPropertySignature("named")?.jsType?.asRecordType()?.propertyNames
                     refs = args.findPropertySignature("named")?.jsType?.asRecordType()?.properties?.toList()
+                    val options = (array as? JSTupleType)?.types?.mapIndexed { index, it ->
+                        if (it is TypeScriptTypeOperatorJSTypeImpl && it.typeText.startsWith("keyof ")) {
+                            return@mapIndexed Pair(index, it.referencedType.asRecordType().propertyNames.map { "${quote}${it}${quote}" })
+                        }
+                        val types = (it.asRecordType().sourceElement as? TypeScriptUnionOrIntersectionTypeImpl)?.types
+                        val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
+
+                        return@mapIndexed Pair(index, typesStr.map { "${quote}${it}${quote}" })
+                    }
+                    options?.toMap(data.positionalOptions)
                     arrayName = "positional"
                 }
 

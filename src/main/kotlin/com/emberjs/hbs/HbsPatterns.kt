@@ -2,12 +2,10 @@ package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
-import com.intellij.codeInsight.template.HtmlContextType
 import com.intellij.patterns.PlatformPatterns.psiElement
 import com.intellij.patterns.PsiElementPattern.Capture
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiWhiteSpace
-import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.html.HtmlTagImpl
 
 object HbsPatterns {
@@ -83,6 +81,13 @@ object HbsPatterns {
     val TRANSLATION_KEY_IN_SEXPR: Capture<HbParam> = STRING_PARAM
             .withParent(psiElement(HbParam::class.java))
             .afterSiblingSkipping(psiElement(PsiWhiteSpace::class.java), psiElement(HbParam::class.java).withText("t"))
+
+    val STRING_PARAM_OTHER: Capture<PsiElement> = psiElement(HbTokenTypes.STRING).withAncestor(10, STRING_PARAM.andNot(COMPONENT_KEY)
+            .andNot(COMPONENT_KEY_IN_SEXPR)
+            .andNot(LINK_TO_BLOCK_TARGET)
+            .andNot(LINK_TO_SIMPLE_TARGET)
+            .andNot(TRANSLATION_KEY)
+            .andNot(TRANSLATION_KEY_IN_SEXPR))
 
     val CONTENT: Capture<PsiElement> = psiElement(HbTokenTypes.STATEMENTS).withParent(HbPsiFile::class.java)
     val inXmlTag: Capture<PsiElement> = psiElement().withAncestor(10, psiElement(HtmlTagImpl::class.java))

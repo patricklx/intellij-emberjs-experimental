@@ -149,7 +149,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
-                        val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                        val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                         if (useScope.isAncestor(tpl as PsiElement)) {
                             return@mapNotNull it
                         }

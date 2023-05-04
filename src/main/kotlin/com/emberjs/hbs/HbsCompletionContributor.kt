@@ -4,14 +4,14 @@ import com.emberjs.hbs.HbsPatterns.BLOCK_MUSTACHE_NAME_ID
 import com.emberjs.hbs.HbsPatterns.BLOCK_MUSTACHE_PARAM
 import com.emberjs.hbs.HbsPatterns.IMPORT_NAMES
 import com.emberjs.hbs.HbsPatterns.IMPORT_PATH_AUTOCOMPLETE
-import com.emberjs.hbs.HbsPatterns.MUSTACHE_ID_MISSING
 import com.emberjs.hbs.HbsPatterns.MUSTACHE_ID
+import com.emberjs.hbs.HbsPatterns.MUSTACHE_ID_MISSING
 import com.emberjs.hbs.HbsPatterns.SIMPLE_MUSTACHE_NAME_ID
+import com.emberjs.hbs.HbsPatterns.STRING_PARAM_OTHER
 import com.emberjs.hbs.HbsPatterns.SUB_EXPR_NAME_ID
 import com.emberjs.hbs.HbsPatterns.inXmlTag
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType
-import com.intellij.patterns.XmlTagPattern
 
 
 val InternalsWithBlock = arrayListOf(
@@ -77,6 +77,7 @@ class HbsCompletionContributor : CompletionContributor() {
         extend(CompletionType.BASIC, IMPORT_PATH_AUTOCOMPLETE, HbsLocalCompletion())
         extend(CompletionType.BASIC, BLOCK_MUSTACHE_PARAM, HbsLocalCompletion())
         extend(CompletionType.BASIC, MUSTACHE_ID_MISSING, HbsLocalCompletion())
+        extend(CompletionType.BASIC, STRING_PARAM_OTHER, HbsLocalCompletion())
         extend(CompletionType.BASIC, inXmlTag, HbsLocalCompletion())
     }
 }

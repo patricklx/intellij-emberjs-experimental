@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2023.1.16
+- update: add completions for helper positional parameters
+- update: add event types for on modifier
+- fix: gts tag references to classes 
+
 ## 2023.1.15
 - fix: support older glint lsp messages
 

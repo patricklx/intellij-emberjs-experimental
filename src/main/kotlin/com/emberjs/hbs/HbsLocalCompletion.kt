@@ -1,10 +1,7 @@
 package com.emberjs.hbs
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.dmarcotte.handlebars.psi.HbData
-import com.dmarcotte.handlebars.psi.HbMustache
-import com.dmarcotte.handlebars.psi.HbParam
-import com.dmarcotte.handlebars.psi.HbStringLiteral
+import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.glint.GlintLanguageServiceProvider
@@ -157,16 +154,32 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         resolve(followed, result)
     }
 
-    fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>) {
+    fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>, currentPosition: Int) {
         val file = EmberUtils.followReferences(element.children.firstOrNull())
+        val hashNames = element.parent.children.filter { it is HbHash }.map { (it as HbHash).hashName }
+        val params = element.parent.children.filter { it is HbParam }
+        val param = params.getOrNull(currentPosition)
 
-        if (file is JSClass) {
-            val ref = EmberUtils.getComponentReferenceData(file.containingFile)
-            result.addAll(ref.args.map { LookupElementBuilder.create(it.value + "=") })
-        }
+        val isLiteral = PsiTreeUtil.findChildOfType(param, HbStringLiteral::class.java) != null
+                || PsiTreeUtil.findChildOfType(param, HbNumberLiteral::class.java) != null
+
         val map = EmberUtils.getArgsAndPositionals(element)
-        val named = map.named.map { LookupElementBuilder.create(it + "=") }
-        result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 100.0) })
+
+        if (!isLiteral) {
+            if (file is JSClass) {
+                val ref = EmberUtils.getComponentReferenceData(file.containingFile)
+                val args = ref.args.filter { !hashNames.contains(it.value) }
+                result.addAll(args.map { LookupElementBuilder.create("${it.value}=") })
+            }
+            val named = map.named.filter { !hashNames.contains(it) }.map { LookupElementBuilder.create("$it=") }
+            result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 100.0) })
+        }
+
+        if (currentPosition >= 0) {
+            map.positionalOptions.getOrDefault(currentPosition, null)
+                    ?.map { isLiteral.ifTrue { it.replace("'", "").replace("\"", "") } ?: it }
+                    ?.map { LookupElementBuilder.create(it) }?.toCollection(result)
+        }
     }
 
     fun addImportPathCompletions(element: PsiElement, result: CompletionResultSet) {
@@ -253,7 +266,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
         children.forEach {
             if (it is JSVariable) {
-                val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                 if (useScope.isAncestor(tpl)) {
                     result.addElement(LookupElementBuilder.create(it.name!!))
                 }
@@ -317,10 +330,13 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null && parameters.position.parent.prevSibling.elementType != HbTokenTypes.SEP) {
-            addHelperCompletions(helperElement, result)
+            val params = helperElement.parent.children.filter { it is HbParam }
+            val currentParam = params.find { it.textRange.contains(element.textRange) }
+            val pos = params.indexOf(currentParam)
+            addHelperCompletions(helperElement, result, pos)
             val r = EmberUtils.handleEmberHelpers(helperElement.parent)
             if (r != null) {
-                addHelperCompletions(r.children[0].children[0], result)
+                addHelperCompletions(r.children[0].children[0], result, pos)
             }
         }
 

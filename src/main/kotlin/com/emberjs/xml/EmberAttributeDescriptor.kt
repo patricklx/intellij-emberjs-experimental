@@ -3,6 +3,7 @@ package com.emberjs.xml
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptLiteralType
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptPropertySignatureImpl
 import com.intellij.lang.javascript.psi.ecma6.impl.TypeScriptUnionOrIntersectionTypeImpl
+import com.intellij.lang.javascript.psi.types.TypeScriptTypeOperatorJSTypeImpl
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.util.PsiTreeUtil
@@ -16,7 +17,7 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
     private val description: String
     private val declaration: PsiElement?
     private val isRequired: Boolean
-    private val values: List<String>
+    private var values: List<String>
     private var hasNonLiteralTypes: Boolean
     val reference: PsiReference?
     val xmlattr: XmlAttribute?
@@ -42,7 +43,9 @@ class EmberAttributeDescriptor(val context: XmlTag, value: String, isYield: Bool
         if (ref != null) {
             val type = PsiTreeUtil.collectElementsOfType(ref.resolve(), TypeScriptPropertySignatureImpl::class.java).firstOrNull()
             val types = (type?.jsType?.asRecordType()?.sourceElement as? TypeScriptUnionOrIntersectionTypeImpl?)?.types
-            val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
+            val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.let { it.innerText } }?.filterNotNull()
+                    ?: (type?.jsType as? TypeScriptTypeOperatorJSTypeImpl)?.let { it.referencedType.asRecordType().propertyNames.toList() }
+                    ?: arrayListOf()
             val isOptional = (type?.isOptional ?: true) || typesStr.isEmpty() || (typesStr.contains("undefined") || typesStr.contains("null") || typesStr.contains("*"))
             this.isRequired = !isOptional
             this.values = typesStr

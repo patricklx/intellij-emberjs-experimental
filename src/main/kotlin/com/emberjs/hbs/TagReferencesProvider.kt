@@ -25,6 +25,7 @@ import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
@@ -162,10 +163,17 @@ class TagReferencesProvider : PsiReferenceProvider() {
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
             } else {
-                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
+                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass }
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
-                        val useScope = JSUseScopeProvider.getUseScopeElement(it)
+                        val useScope = JSUseScopeProvider.getBlockScopeElement(it)
+                        if (useScope.isAncestor(tpl as PsiElement)) {
+                            return@mapNotNull it
+                        }
+                    }
+
+                    if (it is JSClass && it.name?.equals(parts.first()) == true) {
+                        val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                         if (useScope.isAncestor(tpl as PsiElement)) {
                             return@mapNotNull it
                         }
