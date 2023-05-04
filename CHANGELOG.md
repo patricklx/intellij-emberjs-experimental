@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.17
+- fix: gts formatting template without class
+
 ## 2023.1.16
 - update: add completions for helper positional parameters
 - update: add event types for on modifier

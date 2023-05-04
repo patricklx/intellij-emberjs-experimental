@@ -705,7 +705,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
             val psiRef = blockRef.node!!.psi.parent
 
-            val startOffset = psiRef.textRange?.startOffset ?: return Indent.getNormalIndent(true)
+            val startOffset = psiRef.textRange?.startOffset ?: return Indent.getNoneIndent()
             val line = document.getLineNumber(startOffset)
             val lineOffset = document.getLineStartOffset(line)
             val offset = startOffset - lineOffset + ((blockRef.node!!.psi is JSClass).ifTrue { INDENT_SIZE } ?: 0)
@@ -714,7 +714,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
             return Indent.getSpaceIndent(offset + (forChild.ifTrue { INDENT_SIZE } ?: 0))
         }
 
-        return Indent.getNormalIndent(true)
+        return Indent.getNoneIndent()
     }
 
     override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
