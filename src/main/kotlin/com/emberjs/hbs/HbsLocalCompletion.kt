@@ -221,7 +221,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 rootFolder = rootFolder?.findChild(it) ?: rootFolder
             }
             if (rootFolder != null) {
-                val validExtensions = arrayOf("css", "js", "ts")
+                val validExtensions = arrayOf("css", "js", "ts", "gts", "gjs")
                 val names = rootFolder!!.children.filter { it.isDirectory || validExtensions.contains(it.name.split(".").last()) }
                         .map {
                             val name = it.name

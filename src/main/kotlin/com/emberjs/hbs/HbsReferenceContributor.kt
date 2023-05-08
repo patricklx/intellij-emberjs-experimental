@@ -29,7 +29,9 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
         return null
     }
     if (element.containingFile.viewProvider is GtsFileViewProvider) {
-        return null
+        if (!InternalsWithoutBlock.contains(element.text) && !InternalsWithBlock.contains(element.text)) {
+            return null
+        }
     }
     val res = HbsLocalReference.createReference(element)
     if (res?.resolve() != null && (res.resolve() as? EmberNamedElement)?.target != element) {
@@ -290,6 +292,7 @@ class HbsReferenceContributor : PsiReferenceContributor() {
             register(PlatformPatterns.psiElement(XmlAttribute::class.java)) { toAttributeReference(it as XmlAttribute) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsComponentReference(it) } }
             register(HbsPatterns.BLOCK_MUSTACHE_NAME_ID) { filter(it) { HbsComponentReference(it) } }
+            register(HbsPatterns.BLOCK_MUSTACHE_NAME_ID) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.MUSTACHE_ID) { HbsLocalReference.createReference(it) }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsModuleReference(it, "helper") } }
             register(HbsPatterns.SIMPLE_MUSTACHE_NAME_ID) { filter(it) { HbsModuleReference(it, "modifier") } }

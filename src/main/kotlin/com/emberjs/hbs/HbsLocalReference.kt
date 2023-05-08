@@ -363,7 +363,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             if (closeMustache != null) {
                 val blockWrapper = closeMustache.parent
                 val openId = PsiTreeUtil.collectElements(blockWrapper) { HbsPatterns.BLOCK_MUSTACHE_NAME_ID.accepts(it) }.firstOrNull()
-                val ref = openId?.reference ?: openId?.references?.firstOrNull()
+                val ref = openId?.reference ?: openId?.references?.find { it.resolve() != null }
                 return HbsLocalReference(element, ref?.resolve())
             }
 
