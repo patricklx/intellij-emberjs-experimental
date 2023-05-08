@@ -44,8 +44,10 @@ import com.intellij.util.ProcessingContext
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
-    fun resolveJsType(jsType: JSType?, result: MutableList<LookupElement>, suffix: String = "") {
+    fun resolveJsType(type: JSType?, result: MutableList<LookupElement>, suffix: String = "") {
+        val jsType = EmberUtils.handleEmberProxyTypes(type) ?: type
         val jsRecordType = jsType?.asRecordType()
+        type?.asRecordType()?.propertyNames?.map { LookupElementBuilder.create(it + suffix) }?.toCollection(result)
         if (jsRecordType is JSRecordTypeImpl) {
             val names = jsRecordType.propertyNames
             result.addAll(names.map { LookupElementBuilder.create(it + suffix) })

@@ -40,6 +40,7 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.*
@@ -564,6 +565,25 @@ class EmberUtils {
             return ref.children[2]
         }
 
+        fun handleEmberProxyTypes(type: JSType?): JSType? {
+            var jsType = type
+            if (jsType !is JSArrayType && jsType != null) {
+                jsType = (jsType.asRecordType().typeMembers.find { (it as? PropertySignatureImpl)?.memberName == "content" } as? PropertySignatureImpl)?.jsType
+                if (jsType != null) {
+                    val containingClassName = (PsiTreeUtil.findFirstParent(jsType.sourceElement) { it is JSClass} as? JSClass)?.name
+                    if (containingClassName == "ArrayProxy") {
+                        jsType = (jsType as? JSCompositeTypeImpl)?.types?.firstOrNull()
+                        return jsType
+                    }
+                    if (jsType != null && containingClassName == "ObjectProxy") {
+                        jsType = (jsType as? JSCompositeTypeImpl)?.types?.firstOrNull()
+                        return jsType
+                    }
+                }
+            }
+            return null
+        }
+
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
             if (element is PsiElement && element.text?.contains(Regex("^(\\(|\\{\\{)component\\b")) == true) {
                 val idx = element.children.indexOfFirst { it.text == "component" }
@@ -606,8 +626,12 @@ class EmberUtils {
                             return param.parent
                         }
                         val jsRef = HbsLocalReference.resolveToJs(refResolved, emptyList(), false)
-                        if (jsRef is JSTypeOwner && jsRef.jsType is JSArrayType) {
-                            return (jsRef.jsType as JSArrayType).type?.sourceElement
+
+                        if (jsRef is JSTypeOwner && jsRef.jsType != null) {
+                            val jsType = handleEmberProxyTypes(jsRef.jsType) ?: jsRef.jsType
+                            if (jsType is JSArrayType) {
+                                return jsType.type?.sourceElement
+                            }
                         }
                     }
                 }

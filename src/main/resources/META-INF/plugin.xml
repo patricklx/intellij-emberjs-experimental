@@ -135,6 +135,7 @@
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
+        <externalAnnotator language="Gts" implementationClass="com.emberjs.gts.GtsEslintExternalAnnotator"/>
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>

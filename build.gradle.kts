@@ -13,7 +13,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2023.1.17"
+version = "2023.1.18"
 
 // Configure project's dependencies
 repositories {
