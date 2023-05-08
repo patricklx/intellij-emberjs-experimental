@@ -5,7 +5,7 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.glint.GlintLanguageServiceProvider
-import com.emberjs.gts.GtsFileViewProvider
+import com .emberjs.gts.GtsFileViewProvider
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
@@ -269,7 +269,19 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 return any
             }
 
+            if (any is JSRecordTypeImpl.PropertySignatureImpl) {
+                if (path.isEmpty()) {
+                    return any.jsType?.sourceElement
+                }
+                return resolveToJs(any.jsType, path)
+            }
+
             var jsType: JSType? = null
+
+            if (any is JSType) {
+                jsType = any
+            }
+
             if (any is JSTypedEntity) {
                 jsType = any.jsType
             }
@@ -288,6 +300,11 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                         return resolveToJs(res, path, resolveIncomplete, recursionCounter + 1)
                     }
                 }
+                if (jsType is JSRecordTypeImpl && jsType.findPropertySignature(path.first()) != null) {
+                    val elem = jsType.findPropertySignature(path.first())
+                    return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
+                }
+                jsType = EmberUtils.handleEmberProxyTypes(jsType) ?: jsType
                 jsType = jsType.asRecordType()
                 if (jsType is JSRecordTypeImpl) {
                     val elem = jsType.findPropertySignature(path.first())
@@ -363,7 +380,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             if (closeMustache != null) {
                 val blockWrapper = closeMustache.parent
                 val openId = PsiTreeUtil.collectElements(blockWrapper) { HbsPatterns.BLOCK_MUSTACHE_NAME_ID.accepts(it) }.firstOrNull()
-                val ref = openId?.reference ?: openId?.references?.firstOrNull()
+                val ref = openId?.reference ?: openId?.references?.find { it.resolve() != null }
                 return HbsLocalReference(element, ref?.resolve())
             }
 

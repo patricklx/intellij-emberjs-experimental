@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.gts.GtsFile
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsLocalReference
@@ -28,6 +29,7 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
@@ -38,6 +40,7 @@ import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSDestructuringParameterImpl
 import com.intellij.lang.javascript.psi.jsdoc.JSDocComment
 import com.intellij.lang.javascript.psi.types.*
+import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.*
@@ -60,7 +63,7 @@ import com.intellij.xml.XmlAttributeDescriptor
 class ArgData(
         var value: String = "",
         var description: String? = null,
-        var reference: AttrPsiReference? = null) {}
+        var reference: AttrPsiReference? = null)
 
 class ComponentReferenceData(
         val hasSplattributes: Boolean = false,
@@ -68,14 +71,12 @@ class ComponentReferenceData(
         val args: MutableList<ArgData> = mutableListOf(),
         val template: PsiFile? = null,
         val component: PsiFile? = null
-) {
+)
 
-}
+open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElement by element
 
-open class PsiElementDelegate<T: PsiElement>(val element: T) : PsiElement by element {}
-
-class Helper(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
-class Modifier(element: JSFunction) : PsiElementDelegate<JSFunction>(element) {}
+class Helper(element: JSFunction) : PsiElementDelegate<JSFunction>(element)
+class Modifier(element: JSFunction) : PsiElementDelegate<JSFunction>(element)
 
 
 class EmberUtils {
@@ -116,10 +117,10 @@ class EmberUtils {
                         return hbs
                     }
                 }
-                val resolved = exp ?: exportImport.fromClause?.references
-                        ?.map { (it as? FileReference)?.multiResolve(false)
-                                ?.firstOrNull() ?: it.resolve() }
-                        ?.filterNotNull()
+                val resolved = exp ?: exportImport.fromClause?.references?.mapNotNull {
+                    (it as? FileReference)?.multiResolve(false)
+                            ?.firstOrNull() ?: it.resolve()
+                }
                         ?.lastOrNull()
                 if (resolved is ResolveResult) {
                     exp = resolved.element
@@ -205,7 +206,11 @@ class EmberUtils {
         }
 
 
-        fun findDefaultExportClass(file: PsiFile): JSClass? {
+        fun findDefaultExportClass(f: PsiFile): JSClass? {
+            var file = f
+            if (file is GtsFile) {
+                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+            }
             val exp = ES6PsiUtil.findDefaultExport(file)
             var cls: Any? = exp?.children?.find { it is JSClass }
             cls = cls ?: exp?.children?.find { it is JSFunction }
@@ -235,7 +240,7 @@ class EmberUtils {
                 val TS = Language.findLanguageByID("TypeScript")!!
 
                 val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
-                cls = PsiTreeUtil.findFirstParent(inJs, { it is JSClass }) as JSElement?
+                cls = PsiTreeUtil.findFirstParent(inJs) { it is JSClass } as JSElement?
             }
             if (element.originalVirtualFile is VirtualFileWindow) {
                 val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
@@ -247,6 +252,8 @@ class EmberUtils {
             val file = dir?.findFile("$fileName.ts")
                     ?: dir?.findFile("$fileName.d.ts")
                     ?: dir?.findFile("$fileName.js")
+                    ?: dir?.findFile("$fileName.gts")
+                    ?: dir?.findFile("$fileName.gjs")
                     ?: dir?.findFile("controller.ts")
                     ?: dir?.findFile("controller.js")
             val relatedItems = EmberGotoRelatedProvider().getItems(element.originalVirtualFile!!, element.project)
@@ -294,13 +301,20 @@ class EmberUtils {
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
             if (element is ES6ImportedBinding) {
-                var ref:EmberJSModuleReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
+                var ref:PsiReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
+                if (ref == null) {
+                    ref = element.declaration?.fromClause?.references?.findLast { it is JSFileModuleReference }
+                    val res = ref?.resolve()
+                    if (res is PsiFile && res.name.matches(Regex(".*\\.(sass|scss|less|css)\$"))) {
+                        return ref?.resolve()
+                    }
+                }
                 if (ref == null) {
                     var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     if (tsFiles?.isEmpty() == true) {
                         tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? JSFileModuleReference)?.resolve() }
                     }
-                    return tsFiles?.filter { it is JSFile }?.maxByOrNull { it.virtualFile.path.length }
+                    return tsFiles?.filterIsInstance<JSFile>()?.maxByOrNull { it.virtualFile.path.length }
                 }
 
                 return followReferences(ref.resolve())
@@ -330,7 +344,7 @@ class EmberUtils {
             val resYield: XmlAttributeDescriptor? = findTagYieldAttribute(element)
             if (resYield != null && resYield.declaration != null && element != null) {
                 val name = element.text.replace("|", "")
-                val yieldParams = resYield.declaration!!.children.filter { it is HbParam }
+                val yieldParams = resYield.declaration!!.children.filterIsInstance<HbParam>()
                 val angleBracketBlock = element.parent as XmlTag
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
                 val endIdx = angleBracketBlock.attributes.size
@@ -341,9 +355,7 @@ class EmberUtils {
             }
 
             if (element?.references != null && element.references.isNotEmpty()) {
-                val res = element.references.map { resolveReference(it, path) }
-                        .filterNotNull()
-                        .firstOrNull()
+                val res = element.references.firstNotNullOfOrNull { resolveReference(it, path) }
                 if (res == element) {
                     return res
                 }
@@ -379,6 +391,20 @@ class EmberUtils {
             var restparamnames: String? = null
         }
 
+
+        fun getJsTypeCompletionOptions(jsType: JSType, quote: String = ""): List<Pair<String, List<String>>>? {
+            val options = (jsType as? JSTupleType)?.types?.mapIndexed { index, it ->
+                if (it is TypeScriptTypeOperatorJSTypeImpl && it.typeText.startsWith("keyof ")) {
+                    return@mapIndexed Pair(index.toString(), it.referencedType.asRecordType().propertyNames.map { "${quote}${it}${quote}" })
+                }
+                val types = (it.asRecordType().sourceElement as? TypeScriptUnionOrIntersectionTypeImpl)?.types
+                val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.innerText }?.filterNotNull() ?: arrayListOf()
+
+                return@mapIndexed Pair(index.toString(), typesStr.map { "${quote}${it}${quote}" })
+            }
+            return options
+        }
+
         fun getArgsAndPositionals(helperhelperOrModifier: PsiElement, positionalen: Int? = null): ArgsAndPositionals {
             val psi = PsiTreeUtil.collectElements(helperhelperOrModifier) { it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull() ?: helperhelperOrModifier
             var func = resolveToEmber(followReferences(psi))
@@ -404,7 +430,7 @@ class EmberUtils {
                     return data
 
                 }
-                val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers;
+                val signatures = func.jsType?.asRecordType()?.properties?.firstOrNull()?.jsType?.asRecordType()?.typeMembers
                 signatures?.map { it as? TypeScriptCallSignature }?.forEachIndexed { index, it ->
                     if (it ==null) return@forEachIndexed
                     val namedRecord = it.parameters.firstOrNull()?.jsType?.asRecordType()
@@ -442,21 +468,18 @@ class EmberUtils {
                 }
 
                 val settings = CodeStyle.getCustomSettings(helperhelperOrModifier.containingFile, HtmlCodeStyleSettings::class.java)
-                val quote = (settings.HTML_QUOTE_STYLE == CodeStyleSettings.QuoteStyle.Double).ifTrue { '"' } ?: "'"
+                val quote = (settings.HTML_QUOTE_STYLE == CodeStyleSettings.QuoteStyle.Double).ifTrue { "\"" } ?: "'"
                 if (args is JSRecordType) {
                     array = args.findPropertySignature("positional")?.jsType
                     named = args.findPropertySignature("named")?.jsType?.asRecordType()?.propertyNames
                     refs = args.findPropertySignature("named")?.jsType?.asRecordType()?.properties?.toList()
-                    val options = (array as? JSTupleType)?.types?.mapIndexed { index, it ->
-                        if (it is TypeScriptTypeOperatorJSTypeImpl && it.typeText.startsWith("keyof ")) {
-                            return@mapIndexed Pair(index, it.referencedType.asRecordType().propertyNames.map { "${quote}${it}${quote}" })
+                    val options = array?.let { this.getJsTypeCompletionOptions(it, quote) }
+                    options?.forEach { opt ->
+                        val key = opt.first.toDoubleOrNull()?.toInt()
+                        key?.let {
+                            data.positionalOptions[key] = opt.second
                         }
-                        val types = (it.asRecordType().sourceElement as? TypeScriptUnionOrIntersectionTypeImpl)?.types
-                        val typesStr = types?.map { (it as? TypeScriptLiteralType?)?.let { it.innerText } }?.filterNotNull() ?: arrayListOf()
-
-                        return@mapIndexed Pair(index, typesStr.map { "${quote}${it}${quote}" })
                     }
-                    options?.toMap(data.positionalOptions)
                     arrayName = "positional"
                 }
 
@@ -469,6 +492,7 @@ class EmberUtils {
                     }
                 }
                 named?.forEach { data.named.add(it) }
+                refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
                 refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
 
                 val positionalType = array
@@ -485,9 +509,17 @@ class EmberUtils {
                     if (names == null) {
                         data.restparamnames = arrayName
                     }
+                    val options = this.getJsTypeCompletionOptions(positionalType, quote)
+                    options?.forEach { opt ->
+                        val key = opt.first.toDoubleOrNull()?.toInt()
+                        key?.let {
+                            data.positionalOptions[key] = opt.second
+                        }
+                    }
                     names?.forEach { data.positional.add(it) }
                     return data
                 }
+
 
                 if (positionalType is JSArrayType) {
                     data.restparamnames = arrayName
@@ -511,7 +543,7 @@ class EmberUtils {
                 return null
             }
             val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
-            val imports = PsiTreeUtil.collectElements(hbsView, { it is HbMustache && it.children[1].text == "import" })
+            val imports = PsiTreeUtil.collectElements(hbsView) { it is HbMustache && it.children[1].text == "import" }
             val ref = imports.find {
                 val names = it.children[2].text
                         .replace("'", "")
@@ -527,13 +559,29 @@ class EmberUtils {
                     }
                 }.map { it.replace(" ", "") }
                 named.contains(name)
-            }
-            if (ref == null) {
-                return null
-            }
+            } ?: return null
             //val index = Regex("$name").find(ref.children[2].text)!!.range.first
             //val file = element.containingFile.findReferenceAt(ref.children[2].textOffset + index)
             return ref.children[2]
+        }
+
+        fun handleEmberProxyTypes(type: JSType?): JSType? {
+            var jsType = type
+            if (jsType !is JSArrayType && jsType != null) {
+                jsType = (jsType.asRecordType().typeMembers.find { (it as? PropertySignatureImpl)?.memberName == "content" } as? PropertySignatureImpl)?.jsType
+                if (jsType != null) {
+                    val containingClassName = (PsiTreeUtil.findFirstParent(jsType.sourceElement) { it is JSClass} as? JSClass)?.name
+                    if (containingClassName == "ArrayProxy") {
+                        jsType = (jsType as? JSCompositeTypeImpl)?.types?.firstOrNull()
+                        return jsType
+                    }
+                    if (jsType != null && containingClassName == "ObjectProxy") {
+                        jsType = (jsType as? JSCompositeTypeImpl)?.types?.firstOrNull()
+                        return jsType
+                    }
+                }
+            }
+            return null
         }
 
         fun handleEmberHelpers(element: PsiElement?): PsiElement? {
@@ -578,8 +626,12 @@ class EmberUtils {
                             return param.parent
                         }
                         val jsRef = HbsLocalReference.resolveToJs(refResolved, emptyList(), false)
-                        if (jsRef is JSTypeOwner && jsRef.jsType is JSArrayType) {
-                            return (jsRef.jsType as JSArrayType).type?.sourceElement
+
+                        if (jsRef is JSTypeOwner && jsRef.jsType != null) {
+                            val jsType = handleEmberProxyTypes(jsRef.jsType) ?: jsRef.jsType
+                            if (jsType is JSArrayType) {
+                                return jsType.type?.sourceElement
+                            }
                         }
                     }
                 }
@@ -657,12 +709,14 @@ class EmberUtils {
                 name = "component"
             }
 
-            val fullPathToTs = "$name.ts"
-            val fullPathToDts = "$name.d.ts"
-
-            val fullPathToIndexTs = "index.ts"
-            val fullPathToIndexDts = "index.d.ts"
-
+            val possibleFiles = arrayOf(
+                    "$name.ts",
+                    "$name.d.ts",
+                    "$name.gts",
+                    "index.ts",
+                    "index.d.ts",
+                    "index.gts"
+            )
             var containingFile = file.containingFile
             if (containingFile == null) {
                 return ComponentReferenceData()
@@ -672,20 +726,19 @@ class EmberUtils {
                         ?: containingFile
             }
 
-            val tsFile = getFileByPath(parentModule, fullPathToTs) ?: getFileByPath(parentModule, fullPathToDts) ?:
-            getFileByPath(parentModule, fullPathToIndexTs) ?: getFileByPath(parentModule, fullPathToIndexDts) ?:containingFile
+            val tsFile = possibleFiles.firstNotNullOfOrNull { getFileByPath(parentModule, it) } ?:containingFile
             var cls = findDefaultExportClass(tsFile)
                     ?: findDefaultExportClass(containingFile)
                     ?: file
 
             if (f is JSElement && f !is PsiFile) {
-                cls = f;
+                cls = f
             }
 
             if (cls is PsiFile && cls.name == "intellij-emberjs/internal/components-stub") {
-                cls = f;
+                cls = f
             }
-            var jsTemplate: Any? = null;
+            var jsTemplate: Any? = null
             if (cls is JSElement) {
 
                 val scope = ProjectScope.getAllScope(cls.project)

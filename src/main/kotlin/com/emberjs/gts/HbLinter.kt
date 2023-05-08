@@ -196,7 +196,7 @@ class HbLintAnnotator() : Annotator {
             annotation.needsUpdateOnTyping()
             annotation.create()
         }
-        if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && element.references.find { it is HbReference || it is HbsModuleReference }?.resolve() == null)) {
+        if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && !element.references.any { (it is HbReference || it is HbsModuleReference) && it.resolve() != null })) {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
             if (insideImport) return
             val name = element.text

@@ -2,6 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2023.1.18
+- fix: fix more gts referencing issues
+- fix: internal helpers references
+- fix: remove duplicate eslint messages for gts files
+- feature: resolve ember proxies
+
 ## 2023.1.17
 - fix: gts formatting template without class
 

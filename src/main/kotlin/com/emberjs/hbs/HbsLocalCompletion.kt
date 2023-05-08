@@ -44,8 +44,10 @@ import com.intellij.util.ProcessingContext
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
-    fun resolveJsType(jsType: JSType?, result: MutableList<LookupElement>, suffix: String = "") {
+    fun resolveJsType(type: JSType?, result: MutableList<LookupElement>, suffix: String = "") {
+        val jsType = EmberUtils.handleEmberProxyTypes(type) ?: type
         val jsRecordType = jsType?.asRecordType()
+        type?.asRecordType()?.propertyNames?.map { LookupElementBuilder.create(it + suffix) }?.toCollection(result)
         if (jsRecordType is JSRecordTypeImpl) {
             val names = jsRecordType.propertyNames
             result.addAll(names.map { LookupElementBuilder.create(it + suffix) })
@@ -221,7 +223,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 rootFolder = rootFolder?.findChild(it) ?: rootFolder
             }
             if (rootFolder != null) {
-                val validExtensions = arrayOf("css", "js", "ts")
+                val validExtensions = arrayOf("css", "js", "ts", "gts", "gjs")
                 val names = rootFolder!!.children.filter { it.isDirectory || validExtensions.contains(it.name.split(".").last()) }
                         .map {
                             val name = it.name
