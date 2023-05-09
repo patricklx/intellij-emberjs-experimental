@@ -43,6 +43,11 @@
     <depends config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
 
+    <applicationListeners>
+        <listener class="com.emberjs.hbs.HbMustacheNameSynchronizer$MyCommandListener" topic="com.intellij.openapi.command.CommandListener"/>
+        <listener class="com.emberjs.hbs.HbMustacheNameSynchronizer$MyDynamicPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener"/>
+    </applicationListeners>
+
     <extensions defaultExtensionNs="com.intellij">
         <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
@@ -60,9 +65,11 @@
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
         <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
         <lang.formatter language="Gts" implementationClass="com.emberjs.gts.GtsFormattingModelBuilder" />
+        <editorFactoryListener implementation="com.emberjs.hbs.HbMustacheNameSynchronizer$MyEditorFactoryListener"/>
 
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <lang.inspectionSuppressor language="Gts" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
+        <typedHandler implementation="com.emberjs.gts.GtsTypeHandler" order="before xmlSlash"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>

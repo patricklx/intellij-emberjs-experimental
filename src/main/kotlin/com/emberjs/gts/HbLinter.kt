@@ -131,19 +131,23 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
             val endLineNumber = it.endLine
             val rangeStart = it.column
             val rangeEnd = it.endColumn
-            val startOffset: Int = document.getLineStartOffset(startLineNumber) + rangeStart
-            val endLineLength: Int = document.getLineEndOffset(endLineNumber) - document.getLineStartOffset(endLineNumber)
-            val endOffset: Int = document.getLineStartOffset(endLineNumber) + Math.min(rangeEnd, endLineLength)
-            if (endOffset > file.textLength) {
+            try {
+                val startOffset: Int = document.getLineStartOffset(startLineNumber) + rangeStart
+                val endLineLength: Int = document.getLineEndOffset(endLineNumber) - document.getLineStartOffset(endLineNumber)
+                val endOffset: Int = document.getLineStartOffset(endLineNumber) + Math.min(rangeEnd, endLineLength)
+                if (endOffset > file.textLength) {
+                    return@forEach
+                }
+                val annotation = holder.newAnnotation(it.severity, it.description).range(TextRange(startOffset, endOffset))
+                if (it.tooltipText != null) {
+                    annotation.tooltip(it.tooltipText!!)
+                } else {
+                    annotation.tooltip(it.description)
+                }
+                annotation.create()
+            } catch (e: IndexOutOfBoundsException) {
                 return@forEach
             }
-            val annotation = holder.newAnnotation(it.severity, it.description).range(TextRange(startOffset, endOffset))
-            if (it.tooltipText != null) {
-                annotation.tooltip(it.tooltipText!!)
-            } else {
-                annotation.tooltip(it.description)
-            }
-            annotation.create()
         }
     }
 }
