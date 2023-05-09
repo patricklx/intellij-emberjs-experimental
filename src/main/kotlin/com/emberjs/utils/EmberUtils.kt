@@ -366,14 +366,11 @@ class EmberUtils {
 
 
         fun findFirstHbsParamFromParam(psiElement: PsiElement?): PsiElement? {
-            val parent = psiElement?.parents(false)
-                    ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN_SEXPR }
-                    ?:
-                    psiElement?.parents(false)
-                            ?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN }
-            if (parent == null) {
-                return null
-            }
+            val parents = psiElement?.parents(false)
+            val parent = parents?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN_SEXPR }
+                    ?: parents?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN }
+                    ?: parents?.find { it.children.getOrNull(0)?.elementType == HbTokenTypes.OPEN_BLOCK }
+                    ?: return null
 
             val name = parent.children.getOrNull(1)
             if (name?.text == "component") {
@@ -386,7 +383,7 @@ class EmberUtils {
             val positional: MutableList<String?> = mutableListOf()
             val positionalOptions = mutableMapOf<Int, List<String>>()
             val named: MutableList<String?> = mutableListOf()
-            val namedOptions = mapOf<String, List<String>>()
+            val namedOptions = mutableMapOf<String, List<String>>()
             val namedRefs: MutableList<PsiElement?> = mutableListOf()
             var restparamnames: String? = null
         }
@@ -493,7 +490,27 @@ class EmberUtils {
                 }
                 named?.forEach { data.named.add(it) }
                 refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
-                refs?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                refs?.forEach {
+                    val type = it.jsType
+                    val options = mutableListOf<String>()
+                    val types = mutableListOf<JSType?>()
+                    if (type is JSCompositeTypeImpl) {
+                        types.addAll(type.types)
+                    } else {
+                        types.add(type)
+                    }
+
+                    types.forEach { t ->
+                        if (t is JSLiteralType) {
+                            options.add(t.typeText)
+                        }
+                        if (t is JSKeyofType) {
+                            options.add("___keyof__")
+                        }
+                    }
+
+                    data.namedOptions[it.memberName] = options
+                }
 
                 val positionalType = array
                 if (positionalType is JSTupleType) {
@@ -609,7 +626,10 @@ class EmberUtils {
                 val mustacheName = element.parent.children.find { it is HbMustacheName }?.text
                 val helpers = arrayOf("let", "each", "with", "component", "yield")
                 if (helpers.contains(mustacheName)) {
-                    val param = PsiTreeUtil.findSiblingBackward(element, HbTokenTypes.PARAM, null)
+                    val param = element.parent.children.find { it is HbParam }
+                    if (element == param) {
+                        return null
+                    }
                     if (param == null) {
                         return null
                     }
