@@ -87,7 +87,7 @@ class Component {}
  @see https://api.emberjs.com/ember/release/classes/Ember.Templates.helpers/methods/each?anchor=each
  @public
  */
-function each(params: [items: any[]]) {}
+function each<T>(params: [items: T[]], hash: {key: keyof T|'@index'|'@identity'}) {}
 
 /**
  The `let` helper receives one or more positional arguments and yields

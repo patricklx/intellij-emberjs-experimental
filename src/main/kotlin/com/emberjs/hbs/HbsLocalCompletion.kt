@@ -156,18 +156,32 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         resolve(followed, result)
     }
 
-    fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>, currentPosition: Int) {
+    fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>, currentParam: PsiElement?) {
         val file = EmberUtils.followReferences(element.children.firstOrNull())
         val hashNames = element.parent.children.filter { it is HbHash }.map { (it as HbHash).hashName }
         val params = element.parent.children.filter { it is HbParam }
-        val param = params.getOrNull(currentPosition)
 
-        val isLiteral = PsiTreeUtil.findChildOfType(param, HbStringLiteral::class.java) != null
-                || PsiTreeUtil.findChildOfType(param, HbNumberLiteral::class.java) != null
+        val isLiteral = PsiTreeUtil.findChildOfType(currentParam, HbStringLiteral::class.java) != null
+                || PsiTreeUtil.findChildOfType(currentParam, HbNumberLiteral::class.java) != null
 
         val map = EmberUtils.getArgsAndPositionals(element)
 
-        if (!isLiteral) {
+        if (currentParam is HbHash) {
+            val options = map.namedOptions.getOrDefault(currentParam.hashName, emptyList()).toMutableList()
+            if (options.contains("___keyof__")) {
+                options.remove("___keyof__")
+                if (element.text == "each") {
+                    val typeRef = EmberUtils.handleEmberHelpers(element)
+                    resolve(typeRef, result)
+                }
+            }
+            if (isLiteral) {
+                options.replaceAll { it.replace("'", "").replace("\"", "") }
+            }
+            result.addAll(options.map { LookupElementBuilder.create(it) })
+        }
+
+        if (!isLiteral && element.parent !is HbHash) {
             if (file is JSClass) {
                 val ref = EmberUtils.getComponentReferenceData(file.containingFile)
                 val args = ref.args.filter { !hashNames.contains(it.value) }
@@ -177,8 +191,9 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             result.addAll(named.map { PrioritizedLookupElement.withPriority(it, 100.0) })
         }
 
-        if (currentPosition >= 0) {
-            map.positionalOptions.getOrDefault(currentPosition, null)
+        if (currentParam is HbParam) {
+            val pos = params.indexOf(currentParam)
+            map.positionalOptions.getOrDefault(pos, null)
                     ?.map { isLiteral.ifTrue { it.replace("'", "").replace("\"", "") } ?: it }
                     ?.map { LookupElementBuilder.create(it) }?.toCollection(result)
         }
@@ -313,6 +328,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val service = languageService.getService(element.originalVirtualFile!!)
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
+        if(parameters.isExtendedCompletion) {
+            val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()
+                    ?: arrayListOf()
+            if (items.size < 100) {
+                completionResultSet.addAllElements(items.map { it.intoLookupElement() })
+            }
+        }
+
         if (element.containingFile.fileType is HtmlFileType && parameters.isExtendedCompletion) {
             val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map {
                 if (completionResultSet.prefixMatcher.prefix == "@") {
@@ -332,27 +355,17 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         val helperElement = EmberUtils.findFirstHbsParamFromParam(element)
         if (helperElement != null && parameters.position.parent.prevSibling.elementType != HbTokenTypes.SEP) {
-            val params = helperElement.parent.children.filter { it is HbParam }
+            val params = helperElement.parent.children.filter { it is HbParam || it is HbHash }
             val currentParam = params.find { it.textRange.contains(element.textRange) }
-            val pos = params.indexOf(currentParam)
-            addHelperCompletions(helperElement, result, pos)
+            addHelperCompletions(helperElement, result, currentParam)
             val r = EmberUtils.handleEmberHelpers(helperElement.parent)
             if (r != null) {
-                addHelperCompletions(r.children[0].children[0], result, pos)
+                addHelperCompletions(r.children[0].children[0], result, currentParam)
             }
         }
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
-            val before = result.size
             resolve(parameters.position.parent.prevSibling?.prevSibling, result)
-            val didAdd = before != result.size
-            if (!didAdd && parameters.isExtendedCompletion) {
-                val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()
-                        ?: arrayListOf()
-                if (items.size < 100) {
-                    result.addAll(items.map { it.intoLookupElement() })
-                }
-            }
             completionResultSet.addAllElements(result)
             return
         }

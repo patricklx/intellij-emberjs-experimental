@@ -137,7 +137,8 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                                             positionInFileOffset: Int): Future<List<TypeScriptService.CompletionEntry>?>? {
         val descriptor = getDescriptor(virtualFile) ?: return null
         return withServer {
-            return@withServer completedFuture(items.map { descriptor.server!!.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
+            val entries = items.filterIsInstance<TypeScriptServerServiceCompletionEntry>()
+            return@withServer completedFuture(items.filterIsInstance<GlintCompletionEntry>().map { descriptor.server!!.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
                     .map { descriptor.server!!.getResolvedCompletionItem(it) }
                     .map {
                         val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
@@ -152,7 +153,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                         detail.documentation = arrayOf(doc)
                         detail.displayParts = arrayOf(disp)
                         TypeScriptServerServiceCompletionEntry(detail)
-                    })
+                    } + entries)
         }
     }
 
