@@ -159,9 +159,6 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
 
     override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
         var sourceElement: PsiElement = elem
-        if (sourceElement is LeafPsiElement) {
-            sourceElement = sourceElement.parent
-        }
         if (sourceElement is XmlElement || sourceElement is HbPsiElement) {
             return null
         }

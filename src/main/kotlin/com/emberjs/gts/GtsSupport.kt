@@ -83,7 +83,7 @@ import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
 
-class GtsLanguage : Language("Gts") {
+class GtsLanguage : Language(TS, "Gts") {
 
     companion object {
         val INSTANCE = GtsLanguage()

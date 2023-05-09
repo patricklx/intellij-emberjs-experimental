@@ -422,7 +422,8 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                         val modelProp = (cls as? JSClass)?.let { it.jsType.asRecordType().properties.find { it.memberName == "model" } }
                         return modelProp?.let { HbsLocalReference(element, it.memberSource.singleElement) }
                     }
-                    return null
+                    val resolved = service?.getNavigationFor(document, element)?.firstOrNull()?.parent
+                    return resolved?.let { HbsLocalReference(element, it) }
                 }
             }
 
