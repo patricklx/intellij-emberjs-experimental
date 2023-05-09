@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.psi.HbBlockWrapper
 import com.dmarcotte.handlebars.psi.HbCloseBlockMustache
 import com.dmarcotte.handlebars.psi.HbOpenBlockMustache
+import com.emberjs.utils.ifTrue
 import com.intellij.application.options.editor.WebEditorOptions
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.codeInsight.lookup.impl.LookupImpl
@@ -192,11 +193,12 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
             val open = block.children.firstOrNull() as? HbOpenBlockMustache ?: return null
             val close = block.children.lastOrNull() as? HbCloseBlockMustache ?: return null
             val start = open.children.firstOrNull()?.nextSibling ?: return null
-            val support = close.children.firstOrNull()?.nextSibling ?: return null
-            if (start.text != support.text) {
+            val end = close.children.firstOrNull()?.nextSibling ?: return null
+            if (start.text != end.text) {
                 return null
             }
-            return document.createRangeMarker(start.startOffset, start.endOffset, true)
+            val leader = open.textRange.contains(offset).ifTrue { start } ?: end
+            return document.createRangeMarker(leader.startOffset, leader.endOffset, true)
         }
 
         fun beforeCommandFinished() {
@@ -238,10 +240,11 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
             val open = block.children.firstOrNull() as? HbOpenBlockMustache ?: return null
             val close = block.children.lastOrNull() as? HbCloseBlockMustache ?: return null
             val start = open.children.firstOrNull()?.nextSibling ?: return null
-            val support = close.children.firstOrNull()?.nextSibling ?: return null
-            if (start.text != support.text) {
+            val end = close.children.firstOrNull()?.nextSibling ?: return null
+            if (start.text != end.text) {
                 return null
             }
+            val support = open.textRange.contains(offset).ifTrue { end } ?: start
             return document.createRangeMarker(support.startOffset, support.endOffset, true)
         }
 

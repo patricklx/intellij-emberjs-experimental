@@ -2,9 +2,12 @@
 
 Changelog
 ===============================================================================
+## 2023.1.21
+- fix: allow auto rename when editing closing hbs stach
+
 ## 2023.1.20
-- feature: support auto complete hb close tag in gts
-- feature: support auto rename of open and close hbs tags
+- feature: support auto complete hb close stach in gts
+- feature: support auto rename of open and close hbs stachs
 
 ## 2023.1.19
 - fix: cast exception
