@@ -46,7 +46,7 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
             return
         }
         val document = editor.document
-        val virtualFile = FileDocumentManager.getInstance().getFile(document)!!
+        val virtualFile = FileDocumentManager.getInstance().getFile(document) ?: return
         val file = PsiManager.getInstance(project).findFile(virtualFile)
         if (file?.viewProvider?.getPsi(HbLanguage.INSTANCE) == null) {
             return

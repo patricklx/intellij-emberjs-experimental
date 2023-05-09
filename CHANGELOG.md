@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.22
+- fix: null ptr exception
+
 ## 2023.1.21
 - fix: allow auto rename when editing closing hbs stach
 
