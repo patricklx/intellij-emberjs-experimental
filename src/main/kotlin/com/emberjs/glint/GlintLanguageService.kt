@@ -157,9 +157,9 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
     }
 
-    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
+    fun getNavigationFor(document: Document, elem: PsiElement, includeOther: Boolean): Array<PsiElement>? {
         var sourceElement: PsiElement = elem
-        if (sourceElement is XmlElement || sourceElement is HbPsiElement) {
+        if (!includeOther && (sourceElement is XmlElement || sourceElement.containingFile is HbPsiFile)) {
             return null
         }
         var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
@@ -194,6 +194,10 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
 
         return getDescriptor()?.server?.getElementDefinitions(elem as PsiElement)?.toTypedArray()
+    }
+
+    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
+        return getNavigationFor(document, elem, false)
     }
 
 

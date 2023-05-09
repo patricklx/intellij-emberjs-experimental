@@ -399,7 +399,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 val yieldRef = (ref as? HbsLocalReference)?.resolveYield()
                 if (yieldRef != null) {
                     val res = resolveToJs(yieldRef, listOf(element.text))
-                    return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
+                    return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element, true)?.firstOrNull()?.parent)
                 }
                 val sig = (ref as? HbsLocalReference)?.resolved as? JSRecordType.PropertySignature
                 if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
@@ -407,7 +407,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
                 val res = resolveToJs(ref2?.resolve(), listOf(element.text))
-                return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element)?.firstOrNull()?.parent)
+                return HbsLocalReference(element, res ?: service?.getNavigationFor(document, element, true)?.firstOrNull()?.parent)
             }
 
             if (element.parent is HbData) {
@@ -422,7 +422,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                         val modelProp = (cls as? JSClass)?.let { it.jsType.asRecordType().properties.find { it.memberName == "model" } }
                         return modelProp?.let { HbsLocalReference(element, it.memberSource.singleElement) }
                     }
-                    val resolved = service?.getNavigationFor(document, element)?.firstOrNull()?.parent
+                    val resolved = service?.getNavigationFor(document, element, true)?.firstOrNull()?.parent
                     return resolved?.let { HbsLocalReference(element, it) }
                 }
             }
@@ -447,7 +447,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             return referenceBlocks(element, name)
                     ?: resolveToLocalJs(element)
                     ?: let {
-                        val resolved = service?.getNavigationFor(document, element)?.firstOrNull()?.parent
+                        val resolved = service?.getNavigationFor(document, element, true)?.firstOrNull()?.parent
                         resolved?.let { HbsLocalReference(element, it) }
                     }
         }

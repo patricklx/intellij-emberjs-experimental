@@ -182,7 +182,7 @@ class ImportPathReferencesProvider : PsiReferenceProvider() {
             val document = PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!)!!
             val languageService = GlintLanguageServiceProvider(element.project)
             val service = languageService.getService(element.originalVirtualFile!!)
-            val res = service?.getNavigationFor(document, element)?.firstOrNull()
+            val res = service?.getNavigationFor(document, element, true)?.firstOrNull()
             return res?.let {
                 if (it.parent is JSLiteralExpression) {
                     return@let it.parent.parent as? TypeScriptModule ?: it

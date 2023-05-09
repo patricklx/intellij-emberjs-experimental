@@ -69,7 +69,7 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
     val psiFile = PsiManager.getInstance(target.project).findFile(target.originalVirtualFile!!)
     val document = PsiDocumentManager.getInstance(target.project).getDocument(psiFile!!)!!
     val service = GlintLanguageServiceProvider(target.project).getService(target.originalVirtualFile!!)
-    val resolved = service?.getNavigationFor(document, target)?.firstOrNull()
+    val resolved = service?.getNavigationFor(document, target, true)?.firstOrNull()
     return resolved?.let {
         ResolvedReference(target, resolved)
     }
@@ -290,7 +290,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                         val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
                         var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
                         val service = GlintLanguageServiceProvider(tag.project).getService(tag.originalVirtualFile!!)
-                        service?.getNavigationFor(document, tag)?.firstOrNull()
+                        service?.getNavigationFor(document, tag, true)?.firstOrNull()
                     }
         }
 
