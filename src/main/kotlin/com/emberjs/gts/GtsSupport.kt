@@ -83,7 +83,7 @@ import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
 
-class GtsLanguage : Language(TS,"Gts") {
+class GtsLanguage : Language("Gts") {
 
     companion object {
         val INSTANCE = GtsLanguage()
@@ -346,7 +346,7 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
     }
 
     override fun getLanguages(): MutableSet<Language> {
-        return mutableSetOf(GtsLanguage.INSTANCE, TS, HbLanguage.INSTANCE, HTMLLanguage.INSTANCE)
+        return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, TS, GtsLanguage.INSTANCE)
     }
 
     override fun getTemplateDataLanguage(): Language {

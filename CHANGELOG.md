@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.20
+- feature: support auto complete hb close tag in gts
+- feature: support auto rename of open and close hbs tags
+
 ## 2023.1.19
 - fix: cast exception
 - feature: each helper key= completion&reference
