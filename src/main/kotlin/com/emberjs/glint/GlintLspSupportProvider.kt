@@ -2,6 +2,7 @@ package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.gts.GtsFileType
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
@@ -36,7 +37,7 @@ class GlintLspSupportProvider : LspServerSupportProvider {
 }
 
 
-class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(server, processHandler) {
+class GlintLanguageServerConnectorStdio(val server: LspServer, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(server, processHandler) {
 
 
     override fun getFilePath(file: VirtualFile): String {
@@ -52,6 +53,7 @@ class GlintLanguageServerConnectorStdio(server: LspServer, processHandler: OSPro
 
     override fun initializeServer() {
         super.initializeServer()
+        DaemonCodeAnalyzer.getInstance(server.project).restart()
         ApplicationManager.getApplication().invokeLater {
             ApplicationManager.getApplication().runWriteAction {
                 FileContentUtil.reparseOpenedFiles()

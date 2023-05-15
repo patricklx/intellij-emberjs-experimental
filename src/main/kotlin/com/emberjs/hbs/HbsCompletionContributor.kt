@@ -10,52 +10,11 @@ import com.emberjs.hbs.HbsPatterns.SIMPLE_MUSTACHE_NAME_ID
 import com.emberjs.hbs.HbsPatterns.STRING_PARAM_OTHER
 import com.emberjs.hbs.HbsPatterns.SUB_EXPR_NAME_ID
 import com.emberjs.hbs.HbsPatterns.inXmlTag
+import com.emberjs.hbs.Internals.InternalsWithBlock
+import com.emberjs.hbs.Internals.InternalsWithoutBlock
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType
 
-
-val InternalsWithBlock = arrayListOf(
-        "component",
-        "each",
-        "each-in",
-        "if",
-        "input",
-        "let",
-        "link-to",
-        "mount",
-        "outlet",
-        "query-params",
-        "textarea",
-        "unbound",
-        "unless",
-        "with")
-
-val InternalsWithoutBlock = arrayListOf(
-        "action",
-        "array",
-        "component",
-        "concat",
-        "debugger",
-        "fn",
-        "get",
-        "hasBlock",
-        "hasBlockParams",
-        "hash",
-        "if",
-        "in-element",
-        "input",
-        "link-to",
-        "loc",
-        "log",
-        "mount",
-        "mut",
-        "on",
-        "outlet",
-        "query-params",
-        "textarea",
-        "unbound",
-        "unless",
-        "yield")
 
 
 /**

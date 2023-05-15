@@ -1,5 +1,6 @@
 package com.emberjs.lookup
 
+import com.emberjs.hbs.Internals.mapping
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.icons.EmberIcons
 import com.emberjs.resolver.EmberName
@@ -51,17 +52,7 @@ object EmberLookupElementBuilder {
 }
 
 object EmberLookupInternalElementBuilder {
-    val mapping = mapOf(
-            "fn" to listOf("@ember/helper", "helper"),
-            "array" to listOf("@ember/helper", "helper"),
-            "concat" to listOf("@ember/helper", "helper"),
-            "get" to listOf("@ember/helper", "helper"),
-            "hash" to listOf("@ember/helper", "helper"),
-            "on" to listOf("@ember/modifier", "modifier"),
-            "Input" to listOf("@ember/component", "component"),
-            "TextArea" to listOf("@ember/component", "component"),
-            "LinkTo" to listOf("@ember/routing", "component"),
-    )
+
 
     fun getCandidate(file: PsiFile, name: String): JSImportCandidate? {
         val moduleName = mapping.getOrDefault(name, null)?.first() ?: return null

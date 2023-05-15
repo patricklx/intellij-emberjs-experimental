@@ -4,6 +4,8 @@ import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.hbs.Internals.InternalsWithBlock
+import com.emberjs.hbs.Internals.InternalsWithoutBlock
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
@@ -29,6 +31,9 @@ fun filter(element: PsiElement, fn: (PsiElement) -> PsiReference?): PsiReference
         return null
     }
     if (element.containingFile.viewProvider is GtsFileViewProvider) {
+        if (Internals.mapping.contains(element.text)) {
+            return null
+        }
         if (!InternalsWithoutBlock.contains(element.text) && !InternalsWithBlock.contains(element.text)) {
             return null
         }
