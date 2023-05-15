@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.23
+- fix: glint navigation for hbs
+
 ## 2023.1.22
 - fix: null ptr exception
 
