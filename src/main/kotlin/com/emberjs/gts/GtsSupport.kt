@@ -494,6 +494,9 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "helper" }
                 .toCollection(emberNames)
 
+        EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "modifier" }
+                .toCollection(emberNames)
+
         emberNames.mapNotNull { getComponentTemplateInfo(it) }.toCollection(list)
 
         return@lazy list.groupBy { it.name }

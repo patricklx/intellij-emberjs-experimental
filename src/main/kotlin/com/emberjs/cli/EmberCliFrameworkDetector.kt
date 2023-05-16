@@ -2,6 +2,7 @@ package com.emberjs.cli
 
 
 import com.emberjs.glint.GlintLspSupportProvider
+import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.glint.getGlintDescriptor
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.isEmber
@@ -90,7 +91,9 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         } else if (rootDir != null) {
             context.project?.let {
                 ApplicationManager.getApplication().invokeLaterOnWriteThread {
-                    getGlintDescriptor(it).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(it))
+                    if (context.project!!.getService(GlintTypeScriptService::class.java).isDisabledByContext(rootDir)) {
+                        getGlintDescriptor(it).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(it))
+                    }
                 }
             }
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
@@ -128,7 +131,9 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                         val entry = MarkRootActionBase.findContentEntry(model, root)
                         if (entry != null) {
                             EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
-                            getGlintDescriptor(model.project).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(model.project))
+                            if (model.project.getService(GlintTypeScriptService::class.java).isDisabledByContext(files.first())) {
+                                getGlintDescriptor(model.project).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(model.project))
+                            }
                             modifiableModelsProvider.commitModuleModifiableModel(model)
                         } else {
                             modifiableModelsProvider.disposeModuleModifiableModel(model)

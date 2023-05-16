@@ -5,6 +5,8 @@ import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.lookup.EmberLookupElementBuilderWithCandidate
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.*
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -18,6 +20,11 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.completion.JSImportCompletionUtil
+import com.intellij.lang.javascript.modules.JSImportPlaceInfo
+import com.intellij.lang.javascript.modules.imports.JSImportCandidate
+import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
@@ -27,6 +34,7 @@ import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -40,6 +48,7 @@ import com.intellij.psi.util.isAncestor
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
+import java.util.function.Predicate
 
 
 class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
@@ -318,6 +327,31 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
+    fun addCandidates(element: PsiElement, name: String, completionResultSet: CompletionResultSet) {
+        val file = element.containingFile
+        if (file.viewProvider !is GtsFileViewProvider) {
+            return
+        }
+        if (name.contains(".")) {
+            return
+        }
+        if (element.parent is HbData) {
+            return
+        }
+        val view = file.viewProvider
+        val f = view.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: view.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+        val candidates = mutableListOf<JSImportCandidate>()
+        ApplicationManager.getApplication().runReadAction {
+            val keyFilter = Predicate { n: String? -> n != null && n.contains(name) }
+            val info = JSImportPlaceInfo(f)
+            val providers = JSImportCandidatesProvider.getProviders(info)
+            JSImportCompletionUtil.processExportedElements(f, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
+                candidates.addAll(elements.filterNotNull())
+            }
+        }
+        completionResultSet.addAllElements(candidates.map { EmberLookupElementBuilderWithCandidate.create(it, file) })
+    }
+
     override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, completionResultSet: CompletionResultSet) {
         val regex = Regex("\\|.*\\|")
         var element = parameters.position
@@ -379,6 +413,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         addArgsCompletion(element, completionResultSet)
         addImportPathCompletions(element, completionResultSet)
         addImportCompletions(element, completionResultSet)
+        addCandidates(element, txt, completionResultSet)
 
         // find all |blocks| from mustache
         val blocks = PsiTreeUtil.collectElements(element.containingFile) { it is HbBlockWrapperImpl }

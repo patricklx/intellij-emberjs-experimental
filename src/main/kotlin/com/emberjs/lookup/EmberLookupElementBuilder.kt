@@ -19,6 +19,26 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.psi.PsiFile
 import java.util.function.Predicate
 
+object EmberLookupElementBuilderWithCandidate {
+    fun create(it: JSImportCandidate, file: PsiFile? = null, dots: Boolean = true): LookupElement? {
+        val name = it.name
+        if (it.descriptor?.moduleName == null) {
+            return null
+        }
+        val descriptor = it.descriptor!!
+        val element = LookupElementBuilder
+                .create(descriptor.moduleName, if (dots) name.replace("/", ".") else name)
+                .withTypeText(descriptor.importType.toString())
+                .withTailText(" from ${descriptor.moduleName}")
+                .withCaseSensitivity(true)
+                .withInsertHandler(HbsInsertHandler())
+        element.putUserData(PathKey, descriptor.moduleName)
+        element.putUserData(FullPathKey, descriptor.moduleName)
+        file?.let { f -> element.putUserData(CandidateKey, it) }
+        return element
+    }
+}
+
 object EmberLookupElementBuilder {
 
     fun getCandidate(file: PsiFile, it: EmberName): JSImportCandidate? {

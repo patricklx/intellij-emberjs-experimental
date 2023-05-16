@@ -1,12 +1,20 @@
 package com.emberjs.gts
 
+import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.lang.annotation.AnnotationHolder
+import com.intellij.lang.javascript.JavaScriptBundle
 import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.linter.JSLinterAnnotationResult
 import com.intellij.lang.javascript.linter.JSLinterInput
+import com.intellij.lang.javascript.linter.eslint.EsLintFixAction
 import com.intellij.lang.javascript.linter.eslint.EslintExternalAnnotator
 import com.intellij.lang.javascript.linter.eslint.EslintState
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
+import icons.JavaScriptLanguageIcons
 
 
 class FakeVirtualVile(val virtualFile: VirtualFile): VirtualFile() {
@@ -33,7 +41,26 @@ class FakeVirtualVile(val virtualFile: VirtualFile): VirtualFile() {
 
 class FakeFile(val psiFile: PsiFile): PsiFile by psiFile {
     override fun getVirtualFile() = FakeVirtualVile(psiFile.virtualFile)
+}
 
+class GtsEsLintFixAction : EsLintFixAction() {
+
+    override fun fixFile(psiFile: PsiFile): String? {
+        return super.fixFile(FakeFile(psiFile))
+    }
+
+    override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
+        return file.fileType == GtsFileType.INSTANCE
+    }
+
+    override fun asIntentionAction(): IntentionAction {
+        val x = super.asIntentionAction()
+        return object : IntentionAction by x {
+            override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
+                return file is GtsFile
+            }
+        }
+    }
 }
 
 class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
@@ -43,5 +70,14 @@ class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
     }
     override fun acceptPsiFile(file: PsiFile): Boolean {
         return file is GtsFile
+    }
+
+    override fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult?, holder: AnnotationHolder) {
+        if (annotationResult != null) {
+            val fixFileAction = GtsEsLintFixAction().asIntentionAction()
+            val toolName = JavaScriptBundle.message("settings.javascript.linters.eslint.configurable.name", *arrayOfNulls(0))
+            val icon = JavaScriptLanguageIcons.FileTypes.Eslint
+            apply(file, annotationResult, holder, fixFileAction, toolName, icon, false, null as String?, this.inspectionClass)
+        }
     }
 }

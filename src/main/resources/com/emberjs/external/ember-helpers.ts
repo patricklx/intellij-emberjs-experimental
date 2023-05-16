@@ -707,6 +707,220 @@ declare function outlet(): any;
  */
 declare function hash(args: never, hash: {[x: string]: any}): any
 
+
+/**
+ `{{yield}}` denotes an area of a template that will be rendered inside
+ of another template.
+
+ ### Use with `Component`
+
+ When designing components `{{yield}}` is used to denote where, inside the component's
+ template, an optional block passed to the component should render:
+
+ ```app/templates/application.hbs
+ <LabeledTextfield @value={{@model.name}}>
+ First name:
+ </LabeledTextfield>
+ ```
+
+ ```app/components/labeled-textfield.hbs
+ <label>
+ {{yield}} <Input @value={{@value}} />
+ </label>
+ ```
+
+ Result:
+
+ ```html
+ <label>
+ First name: <input type="text" />
+ </label>
+ ```
+
+ Additionally you can `yield` properties into the context for use by the consumer:
+
+ ```app/templates/application.hbs
+ <LabeledTextfield @value={{@model.validation}} @validator={{this.firstNameValidator}} as |validationError|>
+ {{#if validationError}}
+ <p class="error">{{validationError}}</p>
+ {{/if}}
+ First name:
+ </LabeledTextfield>
+ ```
+
+ ```app/components/labeled-textfield.hbs
+ <label>
+ {{yield this.validationError}} <Input @value={{@value}} />
+ </label>
+ ```
+
+ Result:
+
+ ```html
+ <label>
+ <p class="error">First Name must be at least 3 characters long.</p>
+ First name: <input type="text" />
+ </label>
+ ```
+
+ `yield` can also be used with the `hash` helper:
+
+ ```app/templates/application.hbs
+ <DateRanges @value={{@model.date}} as |range|>
+ Start date: {{range.start}}
+ End date: {{range.end}}
+ </DateRanges>
+ ```
+
+ ```app/components/date-ranges.hbs
+ <div>
+ {{yield (hash start=@value.start end=@value.end)}}
+ </div>
+ ```
+
+ Result:
+
+ ```html
+ <div>
+ Start date: July 1st
+ End date: July 30th
+ </div>
+ ```
+
+ Multiple values can be yielded as block params:
+
+ ```app/templates/application.hbs
+ <Banner @value={{@model}} as |title subtitle body|>
+ <h1>{{title}}</h1>
+ <h2>{{subtitle}}</h2>
+ {{body}}
+ </Banner>
+ ```
+
+ ```app/components/banner.hbs
+ <div>
+ {{yield "Hello title" "hello subtitle" "body text"}}
+ </div>
+ ```
+
+ Result:
+
+ ```html
+ <div>
+ <h1>Hello title</h1>
+ <h2>hello subtitle</h2>
+ body text
+ </div>
+ ```
+
+ However, it is preferred to use the hash helper, as this can prevent breaking changes to your component and also simplify the api for the component.
+
+ Multiple components can be yielded with the `hash` and `component` helper:
+
+ ```app/templates/application.hbs
+ <Banner @value={{@model}} as |banner|>
+ <banner.Title>Banner title</banner.Title>
+ <banner.Subtitle>Banner subtitle</banner.Subtitle>
+ <banner.Body>A load of body text</banner.Body>
+ </Banner>
+ ```
+
+ ```app/components/banner.js
+ import Title from './banner/title';
+ import Subtitle from './banner/subtitle';
+ import Body from './banner/body';
+
+ export default class Banner extends Component {
+    Title = Title;
+    Subtitle = Subtitle;
+    Body = Body;
+  }
+ ```
+
+ ```app/components/banner.hbs
+ <div>
+ {{yield (hash
+      Title=this.Title
+      Subtitle=this.Subtitle
+      Body=(component this.Body defaultArg="some value")
+    )}}
+ </div>
+ ```
+
+ Result:
+
+ ```html
+ <div>
+ <h1>Banner title</h1>
+ <h2>Banner subtitle</h2>
+ A load of body text
+ </div>
+ ```
+
+ A benefit of using this pattern is that the user of the component can change the order the components are displayed.
+
+ ```app/templates/application.hbs
+ <Banner @value={{@model}} as |banner|>
+ <banner.Subtitle>Banner subtitle</banner.Subtitle>
+ <banner.Title>Banner title</banner.Title>
+ <banner.Body>A load of body text</banner.Body>
+ </Banner>
+ ```
+
+ Result:
+
+ ```html
+ <div>
+ <h2>Banner subtitle</h2>
+ <h1>Banner title</h1>
+ A load of body text
+ </div>
+ ```
+
+ Another benefit to using `yield` with the `hash` and `component` helper
+ is you can pass attributes and arguments to these components:
+
+ ```app/templates/application.hbs
+ <Banner @value={{@model}} as |banner|>
+ <banner.Subtitle class="mb-1">Banner subtitle</banner.Subtitle>
+ <banner.Title @variant="loud">Banner title</banner.Title>
+ <banner.Body>A load of body text</banner.Body>
+ </Banner>
+ ```
+
+ ```app/components/banner/subtitle.hbs
+ {{!-- note the use of ..attributes --}}
+ <h2 ...attributes>
+ {{yield}}
+ </h2>
+ ```
+
+ ```app/components/banner/title.hbs
+ {{#if (eq @variant "loud")}}
+ <h1 class="loud">{{yield}}</h1>
+ {{else}}
+ <h1 class="quiet">{{yield}}</h1>
+ {{/if}}
+ ```
+
+ Result:
+
+ ```html
+ <div>
+ <h2 class="mb-1">Banner subtitle</h2>
+ <h1 class="loud">Banner title</h1>
+ A load of body text
+ </div>
+ ```
+
+ @method yield
+ @for Ember.Templates.helpers
+ @param {Hash} options
+ @return {String} HTML string
+ @public
+ */
+declare function _yield(args: any[], hash: Record<string, any>);
+
 export {
     fn,
     component,
@@ -729,7 +943,8 @@ const helpers = {
   'if': _if,
   'unless': unless,
   'outlet': outlet,
-  'in-element': in_element
+  'in-element': in_element,
+  'yield': _yield
 }
 
 export default helpers;

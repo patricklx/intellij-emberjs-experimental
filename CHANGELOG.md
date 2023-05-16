@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2023.1.25
+- fix: support eslint "fix file" for gts
+- add yield and in-element references
+- fix: lookup js/ts candidates for hbs helpers/modifiers
+
 ## 2023.1.23
 - fix: glint navigation for hbs
 
