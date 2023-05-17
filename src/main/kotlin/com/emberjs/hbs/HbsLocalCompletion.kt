@@ -349,7 +349,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 candidates.addAll(elements.filterNotNull())
             }
         }
-        completionResultSet.addAllElements(candidates.map { EmberLookupElementBuilderWithCandidate.create(it, file) })
+        completionResultSet.addAllElements(candidates.mapNotNull { EmberLookupElementBuilderWithCandidate.create(it, file) })
     }
 
     override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, completionResultSet: CompletionResultSet) {

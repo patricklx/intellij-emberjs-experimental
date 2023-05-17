@@ -1,11 +1,13 @@
 package com.emberjs.utils
 
 
+import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFile
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.HbReference
@@ -29,7 +31,10 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JSLanguageDialect
 import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.JavascriptLanguage
+import com.intellij.lang.javascript.dialects.TypeScriptLanguageDialect
 import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
@@ -348,10 +353,12 @@ class EmberUtils {
                 val angleBracketBlock = element.parent as XmlTag
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
                 val endIdx = angleBracketBlock.attributes.size
-                val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
-                val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
-                val blockParamIdx = params.indexOf(refPsi)
-                return followReferences(yieldParams.getOrNull(blockParamIdx), path)
+                if (startIdx > -1 && startIdx < endIdx) {
+                    val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
+                    val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
+                    val blockParamIdx = params.indexOf(refPsi)
+                    return followReferences(yieldParams.getOrNull(blockParamIdx), path)
+                }
             }
 
             if (element?.references != null && element.references.isNotEmpty()) {
@@ -450,7 +457,8 @@ class EmberUtils {
                 return data
             }
 
-            if ((func is Helper || func is Modifier) && (func as PsiElementDelegate<*>).element as? JSFunction != null || func?.originalVirtualFile is LightVirtualFile || func?.containingFile is ProjectFile) {
+            val ovf = func?.originalVirtualFile
+            if ((func is Helper || func is Modifier) && (func as PsiElementDelegate<*>).element as? JSFunction != null || (ovf is LightVirtualFile && ovf.language is JSLanguageDialect) || func?.containingFile is ProjectFile) {
                 func = ((func as? PsiElementDelegate<*>)?.element ?: func) as JSFunction
                 var arrayName: String? = null
                 var array: JSType?
@@ -785,6 +793,9 @@ class EmberUtils {
                     jsTemplate = cls.fields.find { it.name == "layout" } ?: jsTemplate
                     jsTemplate = jsTemplate ?: cls.fields.find { it.name == "template" }
                     jsTemplate = followReferences(jsTemplate as PsiElement?)
+                    jsTemplate = jsTemplate
+                            ?:
+                            PsiTreeUtil.collectElements(cls) { it.elementType == GtsElementTypes.GTS_OUTER_ELEMENT_TYPE && it.parent == cls }.firstOrNull()
                 }
             }
 
@@ -811,6 +822,13 @@ class EmberUtils {
             if (jsTemplate is String) {
                 jsTemplate = jsTemplate.substring(1, jsTemplate.lastIndex)
                 jsTemplate = PsiFileFactory.getInstance(file.project).createFileFromText("$name-virtual", Language.findLanguageByID("Handlebars")!!, jsTemplate)
+            }
+
+            var psiRange = template?.textRange
+
+            if (jsTemplate is PsiElement && jsTemplate.elementType == GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) {
+                template = jsTemplate.containingFile.viewProvider.getPsi(HbLanguage.INSTANCE)
+                psiRange = jsTemplate.textRange
             }
 
             if (dir != null || jsTemplate != null) {
@@ -843,8 +861,8 @@ class EmberUtils {
                                 ?: getFileByPath(parentModule, fullPathToHbs.replace("/components/", "/templates/components/"))
 
 
-                if (template?.node?.psi != null) {
-                    val args = PsiTreeUtil.collectElementsOfType(template.node.psi, HbDataImpl::class.java)
+                if (template?.node?.psi != null && psiRange != null) {
+                    val args = PsiTreeUtil.collectElements(template.node.psi) { it is HbData && psiRange.contains(it.textRange) }
                     for (arg in args) {
                         val argName = arg.text.split(".").first()
                         if (tplArgs.find { it.value == argName } == null) {
@@ -852,7 +870,7 @@ class EmberUtils {
                         }
                     }
 
-                    val yields = PsiTreeUtil.collectElements(template.node.psi, { it is HbPathImpl && it.text == "yield" })
+                    val yields = PsiTreeUtil.collectElements(template.node.psi) { it is HbPathImpl && it.text == "yield" && psiRange.contains(it.textRange) }
                     for (y in yields) {
                         tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
                     }

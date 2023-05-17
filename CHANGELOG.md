@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.26
+- fix: array index error exception
+- fix: null ptr exception (gts)
+
 ## 2023.1.25
 - fix: support eslint "fix file" for gts
 - add yield and in-element references
