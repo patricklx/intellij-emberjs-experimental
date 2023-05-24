@@ -700,7 +700,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
     }
 
     fun getBaseIndent(forChild: Boolean = false): Indent? {
-        val file = this.node.psi.containingFile
+        val file = this.node.psi.containingFile.originalFile
         val project = this.node.psi.project
         val document = PsiDocumentManager.getInstance(project).getDocument(file)!!
         val INDENT_SIZE = this.policy.settings.getIndentOptionsByDocument(project, document).INDENT_SIZE
