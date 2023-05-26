@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.27
+- fix: support fix eslint rule in gts files
+
 ## 2023.1.26
 - fix: array index error exception
 - fix: null ptr exception (gts)
