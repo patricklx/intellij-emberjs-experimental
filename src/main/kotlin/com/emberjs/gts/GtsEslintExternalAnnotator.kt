@@ -1,29 +1,26 @@
 package com.emberjs.gts
 
+import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.file.HbFileViewProvider
+import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInspection.util.IntentionName
 import com.intellij.lang.annotation.AnnotationHolder
+import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.javascript.JavaScriptBundle
-import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.linter.*
 import com.intellij.lang.javascript.linter.eslint.*
 import com.intellij.lang.javascript.validation.JSAnnotatorProblemGroup
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColorsScheme
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.openapi.util.text.StringUtilRt
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
-import com.intellij.testFramework.LightVirtualFile
-import com.intellij.util.LineSeparator
 import com.intellij.util.ObjectUtils
 import com.intellij.util.containers.ContainerUtil
 import icons.JavaScriptLanguageIcons
-import org.jetbrains.annotations.Nls
 import javax.swing.Icon
 
 
@@ -44,7 +41,7 @@ class FakeVirtualVile(val virtualFile: VirtualFile): VirtualFile() {
     override fun getExtension() = "ts"
     override fun getName() = virtualFile.name
     override fun getFileSystem() = virtualFile.fileSystem
-    override fun getPath() = virtualFile.path.replace(".gts", ".ts")
+    override fun getPath() = virtualFile.path.replace(".gts", ".ts").replace(".hbs", ".ts")
     override fun isWritable() = virtualFile.isWritable
     override fun isDirectory() = virtualFile.isDirectory
     override fun isValid() = virtualFile.isValid
@@ -71,14 +68,14 @@ class GtsEsLintFixAction : EsLintFixAction() {
     }
 
     override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
-        return file.fileType == GtsFileType.INSTANCE
+        return file.fileType == GtsFileType.INSTANCE || file.fileType == HbFileType.INSTANCE
     }
 
     override fun asIntentionAction(): IntentionAction {
         val x = super.asIntentionAction()
         return object : IntentionAction by x {
             override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
-                return file is GtsFile
+                return file is GtsFile || file is HbPsiFile
             }
         }
     }
@@ -87,10 +84,10 @@ class GtsEsLintFixAction : EsLintFixAction() {
 class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
 
     override fun createInfo(psiFile: PsiFile, state: EslintState, colorsScheme: EditorColorsScheme?): JSLinterInput<EslintState> {
-        return super.createInfo(FakeFile(psiFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)), state, colorsScheme)
+        return super.createInfo(FakeFile(psiFile.viewProvider.getPsi(HTMLLanguage.INSTANCE)), state, colorsScheme)
     }
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is GtsFile
+        return file is GtsFile || (file.viewProvider is HbFileViewProvider && file is HbPsiFile)
     }
 
     override fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult?, holder: AnnotationHolder) {
@@ -103,7 +100,7 @@ class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
     }
 
     companion object {
-        fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult, holder: AnnotationHolder, fixFileAction: IntentionAction, toolName: @Nls String, icon: Icon?, editConfig: Boolean, editSettingCaption: @Nls String?, inspectionClass: Class<out JSLinterInspection?>?) {
+        fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult, holder: AnnotationHolder, fixFileAction: IntentionAction, toolName: String, icon: Icon?, editConfig: Boolean, editSettingCaption: String?, inspectionClass: Class<out JSLinterInspection?>?) {
             val document = PsiDocumentManager.getInstance(file.project).getDocument(file)
             val documentModificationStamp = document?.modificationStamp ?: -1L
             val configurable = EslintConfigurable(file.project, true)

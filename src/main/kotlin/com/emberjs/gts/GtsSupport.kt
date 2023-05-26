@@ -775,7 +775,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
                 override fun isLeaf(): Boolean {
                     return true
                 }
-            }, (formattingContext.node as OuterLanguageElement).project, formattingContext.getCodeStyleSettings(), formattingContext.containingFile.fileType, formattingContext.containingFile)
+            }, (formattingContext.node as OuterLanguageElement).project, formattingContext.codeStyleSettings, formattingContext.containingFile.fileType, formattingContext.containingFile)
         }
 
         var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
