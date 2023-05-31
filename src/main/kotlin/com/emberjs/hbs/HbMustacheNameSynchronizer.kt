@@ -194,7 +194,7 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
             val close = block.children.lastOrNull() as? HbCloseBlockMustache ?: return null
             val start = open.children.firstOrNull()?.nextSibling ?: return null
             val end = close.children.firstOrNull()?.nextSibling ?: return null
-            if (start.text != end.text) {
+            if (start.text != end.text || !close.text.endsWith("}}")) {
                 return null
             }
             val leader = open.textRange.contains(offset).ifTrue { start } ?: end

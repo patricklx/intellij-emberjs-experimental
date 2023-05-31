@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.29
+- fix: duplicate auto close in hbs files
+- fix: detect glint before trying to start glint language service
+
 ## 2023.1.27
 - fix: support fix eslint rule in gts files
 

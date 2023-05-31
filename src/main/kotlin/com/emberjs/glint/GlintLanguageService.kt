@@ -1,7 +1,6 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
-import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.HbReference
@@ -12,7 +11,6 @@ import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
-import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.completion.JSInsertHandler
@@ -211,16 +209,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun isDisabledByContext(context: VirtualFile): Boolean {
-        val workingDir = project.guessProjectDir()!!
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-        if (glintPkg == null) {
-            return true
-        }
-        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-        if (file == null) {
-            return true
-        }
-        return false
+        return getDescriptor()?.isAvailable?.not() ?: return true
     }
 
     override fun getQuickInfoAt(element: PsiElement, originalElement: PsiElement, originalFile: VirtualFile): CompletableFuture<String?> =
@@ -231,9 +220,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         val lspServers = lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java)
         lspServers.forEach { lspServerManager.stopServer(it) }
         if (!lspServers.isEmpty()) {
-            getGlintDescriptor(project)?.let {
-                lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, it)
-            }
+            getGlintDescriptor(project).ensureStarted()
             TypeScriptMessageBus.get(project).changed()
         }
     }

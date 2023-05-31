@@ -32,7 +32,8 @@ import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        getGlintDescriptor(project)?.let { serverStarter.ensureServerStarted(it) }
+        val descriptor = getGlintDescriptor(project)
+        descriptor.ensureStarted()
     }
 }
 
@@ -76,6 +77,24 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
+
+    val isAvailable by lazy {
+        val workingDir = project.guessProjectDir()!!
+        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
+        if (glintPkg == null) {
+            return@lazy false
+        }
+        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
+        if (file == null) {
+            return@lazy false
+        }
+        return@lazy true
+    }
+
+    fun ensureStarted() {
+        if (!isAvailable) return
+        lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, this)
+    }
 
     override fun createCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!

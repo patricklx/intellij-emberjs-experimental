@@ -91,9 +91,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         } else if (rootDir != null) {
             context.project?.let {
                 ApplicationManager.getApplication().invokeLaterOnWriteThread {
-                    if (context.project!!.getService(GlintTypeScriptService::class.java).isDisabledByContext(rootDir)) {
-                        getGlintDescriptor(it).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(it))
-                    }
+                    getGlintDescriptor(it).ensureStarted()
                 }
             }
             return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
@@ -131,9 +129,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                         val entry = MarkRootActionBase.findContentEntry(model, root)
                         if (entry != null) {
                             EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
-                            if (model.project.getService(GlintTypeScriptService::class.java).isDisabledByContext(files.first())) {
-                                getGlintDescriptor(model.project).lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(model.project))
-                            }
+                            getGlintDescriptor(model.project).ensureStarted()
                             modifiableModelsProvider.commitModuleModifiableModel(model)
                         } else {
                             modifiableModelsProvider.disposeModuleModifiableModel(model)
