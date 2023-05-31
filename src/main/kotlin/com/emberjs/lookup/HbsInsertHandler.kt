@@ -18,13 +18,12 @@ import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
 import com.intellij.psi.PsiManager
-import com.intellij.psi.util.PsiTreeUtil
 
 class HbsInsertHandler : InsertHandler<LookupElement> {
 
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
         XmlTagInsertHandler().handleInsert(context, item)
-        if (PsiTreeUtil.collectElements(item.psiElement) { it.references.find { it is HbsLocalReference } != null }.size > 0) {
+        if (item.psiElement?.references?.find { it is HbsLocalReference } != null) {
             return
         }
         var path = item.getUserData(PathKey)

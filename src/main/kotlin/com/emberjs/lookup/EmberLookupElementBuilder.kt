@@ -1,5 +1,6 @@
 package com.emberjs.lookup
 
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.hbs.Internals.mapping
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.icons.EmberIcons
@@ -91,9 +92,10 @@ object EmberLookupInternalElementBuilder {
 
     fun create(file: PsiFile, name: String, useImports: Boolean): LookupElement {
         val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+        val isGts = file.viewProvider is GtsFileViewProvider
         val match = mapping.getOrDefault(name, null) ?: return LookupElementBuilder.create(name)
         val candidate = tsFile?.let { getCandidate(tsFile, name) }
-        if (!useImports || tsFile == null) {
+        if (!useImports && !isGts) {
             return LookupElementBuilder.create(name)
                     .withTypeText(match[1])
                     .withTailText(" from ${match[0]}")

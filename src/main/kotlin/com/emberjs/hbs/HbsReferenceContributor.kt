@@ -221,6 +221,7 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
                 .replace("\"", "")
                 .replace("{", "")
                 .replace("}", "")
+                .replace(" ", "")
                 .split(",")
         val named = names.map {
             if (it.contains(" as ")) {
@@ -237,8 +238,8 @@ class ImportNameReferencesProvider : PsiReferenceProvider() {
         }
         if (fileRef is JSObjectLiteralExpression) {
             return named
-                    .map { fileRef.findProperty(it)?.jsType?.sourceElement as JSReferenceExpression }
-                    .map { it.resolve() }
+                    .map { fileRef.findProperty(it)?.jsType?.sourceElement as? JSReferenceExpression }
+                    .map { it?.resolve() }
                     .mapIndexed{ index, it ->
                         val r = Regex("\\b${named[index]}\\b", RegexOption.IGNORE_CASE).find(element.text)!!.range
                         ImportNameReference(element, it, TextRange(r.first, r.last + 1))
