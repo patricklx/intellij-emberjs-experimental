@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.30
+- fix: Access is allowed from Event Dispatch Thread (EDT) only
+
 ## 2023.1.29
 - fix: duplicate auto close in hbs files
 - fix: detect glint before trying to start glint language service

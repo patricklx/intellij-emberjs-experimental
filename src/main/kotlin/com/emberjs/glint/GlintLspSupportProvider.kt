@@ -32,8 +32,10 @@ import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        val descriptor = getGlintDescriptor(project)
-        descriptor.ensureStarted()
+        ApplicationManager.getApplication().invokeLater {
+            val descriptor = getGlintDescriptor(project)
+            descriptor.ensureStarted()
+        }
     }
 }
 
