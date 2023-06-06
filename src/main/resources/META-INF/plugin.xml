@@ -142,13 +142,22 @@
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
-        <externalAnnotator language="Gts" implementationClass="com.emberjs.gts.GtsEslintExternalAnnotator"/>
-        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.GtsEslintExternalAnnotator"/>
+        <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
+        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
         <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
+        <actionOnSaveInfoProvider id="TemplateLintOnSaveInfoProvider"
+                                  implementation="TemplateLintOnSaveInfoProvider"
+                                  order="after FormatOnSaveInfoProvider, before PrettierOnSaveInfoProvider, before BuildOnSaveInfoProvider, before FileWatcherOnSaveInfoProvider, before UploadOnSaveInfoProvider"/>
+        <actionOnSave id="EsLintActionOnSave"
+                      implementation="EsLintActionOnSave"
+                      order="after FormatOnSaveAction, before PrettierActionOnSave"/>
+        <actionOnSave id="TemplateLintActionOnSave"
+                      implementation="TemplateLintActionOnSave"
+                      order="after FormatOnSaveAction, before PrettierActionOnSave"/>
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
@@ -169,6 +178,11 @@
     <actions>
         <action id="GenerateEmberCode" class="com.emberjs.actions.EmberGenerateCodeAction">
             <add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFromTemplate"/>
+        </action>
+
+        <action id="TemplateLintFix" class="TemplateLintFixAction">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
         </action>
     </actions>
 </idea-plugin>

@@ -1,8 +1,10 @@
-package com.emberjs.gts
+package com.emberjs.hbs.linter.eslint
 
-import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.emberjs.gts.GtsFile
+import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.settings.EmberApplicationOptions
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInspection.util.IntentionName
 import com.intellij.lang.annotation.AnnotationHolder
@@ -18,6 +20,7 @@ import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiManager
 import com.intellij.util.ObjectUtils
 import com.intellij.util.containers.ContainerUtil
 import icons.JavaScriptLanguageIcons
@@ -63,19 +66,20 @@ class FakeFile(val psiFile: PsiFile): PsiFile by psiFile {
 
 class GtsEsLintFixAction : EsLintFixAction() {
 
-    override fun fixFile(psiFile: PsiFile): String? {
+    public override fun fixFile(psiFile: PsiFile): String? {
         return super.fixFile(FakeFile(psiFile))
     }
 
-    override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
-        return file.fileType == GtsFileType.INSTANCE || file.fileType == HbFileType.INSTANCE
+    public override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
+        val f = PsiManager.getInstance(project).findFile(file)
+        return f?.viewProvider is GtsFileViewProvider || f?.viewProvider is HbFileViewProvider
     }
 
     override fun asIntentionAction(): IntentionAction {
         val x = super.asIntentionAction()
         return object : IntentionAction by x {
             override fun isAvailable(project: Project, editor: Editor?, file: PsiFile?): Boolean {
-                return file is GtsFile || file is HbPsiFile
+                return file?.viewProvider is GtsFileViewProvider || file?.viewProvider is HbFileViewProvider
             }
         }
     }
@@ -87,7 +91,9 @@ class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
         return super.createInfo(FakeFile(psiFile.viewProvider.getPsi(HTMLLanguage.INSTANCE)), state, colorsScheme)
     }
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is GtsFile || (file.viewProvider is HbFileViewProvider && file is HbPsiFile)
+        if (file is GtsFile && EmberApplicationOptions.runEslintOnGts) return true
+        if (file.viewProvider is HbFileViewProvider && file is HbPsiFile && EmberApplicationOptions.runEslintOnHbs) return true
+        return false
     }
 
     override fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult?, holder: AnnotationHolder) {

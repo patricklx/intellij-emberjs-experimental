@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.31
+- feature: provide configuration for eslint run on hbs/gts
+
 ## 2023.1.30
 - fix: Access is allowed from Event Dispatch Thread (EDT) only
 

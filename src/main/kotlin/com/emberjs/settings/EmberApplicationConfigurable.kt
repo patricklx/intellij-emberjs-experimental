@@ -8,12 +8,14 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 class EmberApplicationConfigurable private constructor() : SearchableConfigurable {
-    private var excludeNodeModulesCheckbox: JBCheckBox? = null
-    private var excludeBowerComponentsCheckbox: JBCheckBox? = null
+    private var runEslintOnHbsFiles: JBCheckBox? = null
+    private var runEslintOnGtsFiles: JBCheckBox? = null
+    private var fixOnSave: JBCheckBox? = null
 
     init {
-        excludeNodeModulesCheckbox = JBCheckBox("Exclude node_modules folder")
-        excludeBowerComponentsCheckbox = JBCheckBox("Exclude bower_components folder")
+        runEslintOnHbsFiles = JBCheckBox("Run eslint on Hbs files")
+        runEslintOnGtsFiles = JBCheckBox("Run eslint on Gts files")
+        fixOnSave = JBCheckBox("run eslint --fix on save")
     }
 
     @Nls
@@ -25,28 +27,33 @@ class EmberApplicationConfigurable private constructor() : SearchableConfigurabl
 
     override fun createComponent(): JComponent? {
         val panel = JPanel(VerticalFlowLayout())
-        panel.add(excludeNodeModulesCheckbox!!)
-        panel.add(excludeBowerComponentsCheckbox!!)
+        panel.add(runEslintOnHbsFiles!!)
+        panel.add(runEslintOnGtsFiles!!)
+        panel.add(fixOnSave!!)
         return panel
     }
 
     override fun isModified(): Boolean {
-        return excludeNodeModulesCheckbox!!.isSelected != EmberApplicationOptions.excludeNodeModules ||
-                excludeBowerComponentsCheckbox!!.isSelected != EmberApplicationOptions.excludeBowerComponents
+        return runEslintOnHbsFiles!!.isSelected != EmberApplicationOptions.runEslintOnHbs ||
+                runEslintOnGtsFiles!!.isSelected != EmberApplicationOptions.runEslintOnGts ||
+                fixOnSave!!.isSelected != EmberApplicationOptions.fixOnSave
     }
 
     override fun apply() {
-        EmberApplicationOptions.excludeNodeModules = excludeNodeModulesCheckbox!!.isSelected
-        EmberApplicationOptions.excludeBowerComponents = excludeBowerComponentsCheckbox!!.isSelected
+        EmberApplicationOptions.runEslintOnHbs = runEslintOnHbsFiles!!.isSelected
+        EmberApplicationOptions.runEslintOnGts = runEslintOnGtsFiles!!.isSelected
+        EmberApplicationOptions.fixOnSave = fixOnSave!!.isSelected
     }
 
     override fun reset() {
-        excludeNodeModulesCheckbox!!.isSelected = EmberApplicationOptions.excludeNodeModules
-        excludeBowerComponentsCheckbox!!.isSelected = EmberApplicationOptions.excludeBowerComponents
+        runEslintOnHbsFiles!!.isSelected = EmberApplicationOptions.runEslintOnHbs
+        runEslintOnGtsFiles!!.isSelected = EmberApplicationOptions.runEslintOnGts
+        fixOnSave!!.isSelected = EmberApplicationOptions.fixOnSave
     }
 
     override fun disposeUIResources() {
-        excludeNodeModulesCheckbox = null
-        excludeBowerComponentsCheckbox = null
+        runEslintOnHbsFiles = null
+        runEslintOnGtsFiles = null
+        fixOnSave = null
     }
 }
