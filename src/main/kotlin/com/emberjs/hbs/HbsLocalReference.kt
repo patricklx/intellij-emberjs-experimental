@@ -103,7 +103,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
     override fun handleElementRename(newElementName: String): PsiElement? {
         if (leaf is HbPsiElement) {
-            val node = SimpleNodeFactory.createNode(leaf.project, newElementName)
+            val node = SimpleNodeFactory.createIdNode(leaf.project, newElementName)
             return leaf.replace(node)
         }
         return leaf

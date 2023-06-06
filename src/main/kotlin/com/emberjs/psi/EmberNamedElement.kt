@@ -324,7 +324,7 @@ open class EmberNamedElement(val target: PsiElement, val range: IntRange? = null
 
     override fun setName(name: String): PsiElement {
         if (target is HbPsiElement) {
-            val node = SimpleNodeFactory.createNode(target.project, name)
+            val node = SimpleNodeFactory.createIdNode(target.project, name)
             return target.replace(node)
         }
         if (target is PsiNamedElement) {

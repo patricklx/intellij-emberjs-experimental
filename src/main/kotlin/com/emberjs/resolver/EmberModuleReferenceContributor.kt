@@ -160,11 +160,11 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
            parts.mapIndexed { index, it ->
                currentPath = "$currentPath/$it"
                val isLast = index == parts.lastIndex
-               ref = EmberJSModuleReference(host, TextRange.create(currentOffset, currentOffset + it.length), listOf(currentPath), isLast.ifTrue { exts } ?: emptyArray())
+               ref = EmberJSModuleReference(host, TextRange.create(offset, currentOffset + it.length), listOf(currentPath), isLast.ifTrue { exts } ?: emptyArray())
                refs.add(ref)
                if (isLast) {
                    currentPath = "$currentPath/index"
-                   ref = EmberJSModuleReference(host, TextRange.create(currentOffset, currentOffset + it.length), listOf(currentPath), isLast.ifTrue { exts } ?: emptyArray())
+                   ref = EmberJSModuleReference(host, TextRange.create(offset, currentOffset + it.length), listOf(currentPath), isLast.ifTrue { exts } ?: emptyArray())
                }
                 currentOffset += it.length + 1
                 refs.add(ref)

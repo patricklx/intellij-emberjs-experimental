@@ -1,16 +1,22 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.psi.HbSimpleMustache
+import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
+import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
+import com.emberjs.utils.originalVirtualFile
 import com.emberjs.xml.EmberAttrDec
 import com.intellij.lang.Language
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceBase
-import com.intellij.psi.impl.source.resolve.reference.impl.PsiMultiReference
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
@@ -78,6 +84,13 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
         if (element is HbStatementsImpl) {
             val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
             tag.name = newElementName
+            return tag
+        }
+        val target = this.target as? PsiFile
+        if (element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith("{{import ") == true && target is PsiFile) {
+            val text = EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target.originalVirtualFile }.firstOrNull()?.first?.importPath ?: return element
+            val node = SimpleNodeFactory.createTextNode(element.project, text)
+            return element.replace(node)
         }
         return super.handleElementRename(newElementName)
     }
@@ -102,7 +115,7 @@ class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiEleme
     }
 
     override fun handleElementRename(newElementName: String): PsiElement {
-        val node = SimpleNodeFactory.createNode(leaf.project, newElementName)
+        val node = SimpleNodeFactory.createIdNode(leaf.project, newElementName)
         return leaf.replace(node)
     }
 }
