@@ -7,10 +7,12 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.refactoring.SimpleNodeFactory
+import com.emberjs.resolver.EmberName
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.xml.EmberAttrDec
 import com.intellij.lang.Language
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiReference
@@ -20,6 +22,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.rename.BindablePsiReference
 
 
 abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
@@ -32,7 +35,7 @@ abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(el
     }
 }
 
-open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element) {
+open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val range: TextRange) : HbReference(element), BindablePsiReference {
     private var targetRef: PsiReference? = null
     constructor(element: PsiElement, targetRef: PsiReference, range: TextRange) : this(element, null, range) {
         this.targetRef = targetRef
@@ -67,6 +70,23 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
         return range
     }
 
+    val isImportFrom by lazy {
+        element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith("{{import ") == true && target is PsiFile
+    }
+
+    override fun bindToElement(newElement: PsiElement): PsiElement {
+        if (isImportFrom) {
+            var newFileLocation = newElement as? PsiFile
+            if (newElement is PsiDirectory) {
+                newFileLocation = newElement.findFile((target as PsiFile).name)
+            }
+            val importPath = newFileLocation?.let { EmberName.from(newFileLocation.virtualFile)?.importPath } ?: return super.bindToElement(newElement)
+            val node = SimpleNodeFactory.createTextNode(newElement.project, importPath)
+            return element.replace(node)
+        }
+        return super.bindToElement(newElement)
+    }
+
     override fun handleElementRename(newElementName: String): PsiElement {
         if (element is XmlAttribute) {
             val attr = element as XmlAttribute
@@ -87,8 +107,8 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
             return tag
         }
         val target = this.target as? PsiFile
-        if (element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith("{{import ") == true && target is PsiFile) {
-            val text = EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target.originalVirtualFile }.firstOrNull()?.first?.importPath ?: return element
+        if (isImportFrom) {
+            val text = EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target?.originalVirtualFile }.firstOrNull()?.first?.importPath ?: return element
             val node = SimpleNodeFactory.createTextNode(element.project, text)
             return element.replace(node)
         }
@@ -97,7 +117,14 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
 }
 
 
-class ImportNameReference(element: PsiElement, psiElement: PsiElement?, textRange: TextRange): RangedReference(element, psiElement, textRange)
+class ImportNameReference(element: PsiElement, psiElement: PsiElement?, textRange: TextRange): RangedReference(element, psiElement,textRange) {
+    override fun handleElementRename(newElementName: String): PsiElement {
+        val intRange = IntRange(range.startOffset, range.endOffset)
+        val text = element.text.replaceRange(intRange, newElementName)
+        val node = SimpleNodeFactory.createTextNode(element.project, text)
+        return element.replace(node)
+    }
+}
 
 
 class HbsLocalRenameReference(private val leaf: PsiElement, val target: PsiElement?) : HbReference(leaf) {

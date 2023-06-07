@@ -20,10 +20,7 @@ import java.util.regex.Pattern
 
 open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePaths: List<String>, val extensions: Array<out String>?) : JSExactFileReference(context, range, filePaths, extensions) {
     override fun acceptFileWithoutExtension(): Boolean {
-        if (extensions?.isEmpty() == true) {
-            return true
-        }
-        return false
+        return extensions?.isEmpty() == true
     }
 }
 
