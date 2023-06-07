@@ -145,6 +145,7 @@
         <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
+        <annotator language="HTML" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>

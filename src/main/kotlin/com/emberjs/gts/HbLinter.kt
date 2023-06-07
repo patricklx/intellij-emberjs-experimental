@@ -194,7 +194,7 @@ class HbLintAnnotator() : Annotator {
                     .tooltip(message)
             candidates?.forEach { c ->
                 val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
+                val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.MULTI)
                 annotation.withFix(fix)
             }
             annotation.needsUpdateOnTyping()

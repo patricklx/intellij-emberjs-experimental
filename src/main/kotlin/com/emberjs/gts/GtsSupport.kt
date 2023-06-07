@@ -593,6 +593,10 @@ class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponent
     override fun getIcon(flags: Int): Icon {
         return info.icon
     }
+
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other) && this.descriptor?.moduleName == (other as? GtsImportCandidate)?.descriptor?.moduleName
+    }
 }
 
 class GtsIndexedFileTypeProvider : IndexedFileTypeProvider {
