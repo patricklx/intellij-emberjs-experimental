@@ -910,7 +910,6 @@ class EmberUtils {
         }
 
         fun isInScope(file: VirtualFile?, list: List<VirtualFile>?): Boolean {
-            return true
             if (file == null) return true
             if (list.isNullOrEmpty()) return true
             return file.parents.any { list.contains(it) }
