@@ -77,7 +77,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
         return EmberNameIndex.getFilteredFiles(scope) { matches(it) }
                 // Convert search results for LookupElements
                 .asSequence()
-                .filter { EmberUtils.isInScope(it, validParents.toList()) }
+                .filter { EmberUtils.isInScope(it, validParents) }
                 .mapNotNull { psiManager.findFile(it) }
                 .map { EmberUtils.resolveToEmber(it) }
                 .take(1)
@@ -89,7 +89,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
         // Collect all components from the index
         return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == moduleType }
                 // Convert search results for LookupElements
-                .filter { EmberUtils.isInScope(it.virtualFile, validParents.toList()) }
+                .filter { EmberUtils.isInScope(it.virtualFile, validParents) }
                 .map { EmberLookupElementBuilder.create(it, this.element.containingFile, dots = false, useImports) }
                 .toTypedArray()
     }

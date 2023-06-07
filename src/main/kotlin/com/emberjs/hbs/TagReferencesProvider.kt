@@ -311,13 +311,17 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return (prop?.jsType?.sourceElement as JSReferenceExpression).resolve()
             }
 
+            val scopes = EmberUtils.getScopesForFile(tag.containingFile.virtualFile)
+
             val scope = ProjectScope.getAllScope(project)
             val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
             val templates = EmberNameIndex.getFilteredFiles(scope) { it.isComponentTemplate && it.angleBracketsName == name }
+                    .filter { EmberUtils.isInScope(it, scopes) }
                     .mapNotNull { psiManager.findFile(it) }
 
             val components = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
+                    .filter { EmberUtils.isInScope(it, scopes) }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.js first, then component.js
             val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }

@@ -880,11 +880,20 @@ class EmberUtils {
             return ComponentReferenceData(hasSplattributes, tplYields, tplArgs, template, tsFile)
         }
 
-        fun getScopesForFile(file: VirtualFile): MutableList<VirtualFile> {
+        fun getScopesForFile(file: VirtualFile?): List<VirtualFile>? {
+            if (file == null) {
+                return null
+            }
             val validParents = mutableListOf<VirtualFile>()
             val addonScope = file.parentEmberModule?.findDirectory("addon")
             val appScope = file.parentEmberModule?.findDirectory("app")
             val testScope = file.parentEmberModule?.findDirectory("tests")
+            val nodeModules = file.parentEmberModule?.findDirectory("node_modules")
+
+            if (nodeModules != null) {
+                validParents.add(nodeModules)
+            }
+
             if (addonScope != null && file.parents.contains(addonScope)) {
                 validParents.add(addonScope)
             }
@@ -897,12 +906,14 @@ class EmberUtils {
                 appScope?.let { validParents.add(it) }
                 validParents.add(testScope)
             }
-            return validParents
+            return validParents.toList()
         }
 
-        fun isInScope(file: VirtualFile?, list: List<VirtualFile>): Boolean {
+        fun isInScope(file: VirtualFile?, list: List<VirtualFile>?): Boolean {
+            return true
             if (file == null) return true
-            return !file.parents.any { list.contains(it) }
+            if (list.isNullOrEmpty()) return true
+            return file.parents.any { list.contains(it) }
         }
     }
 }

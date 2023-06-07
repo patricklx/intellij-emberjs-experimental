@@ -326,14 +326,18 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
         val componentMap = hashMapOf<String, LookupElement>()
 
+        val scopes = EmberUtils.getScopesForFile(tag.containingFile.virtualFile)
+
         // Collect all components from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "component" }
+                .filter { EmberUtils.isInScope(it.virtualFile, scopes) }
             // Convert search results for LookupElements
             .map { Pair(it.angleBracketsName, toLookupElement(it, useImports)) }
             .toMap(componentMap)
 
         // Collect all component templates from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.isComponentTemplate }
+                .filter { EmberUtils.isInScope(it.virtualFile, scopes) }
 
             // Filter out components that are already in the map
             .filter { !componentMap.containsKey(it.angleBracketsName) }

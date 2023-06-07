@@ -11,12 +11,10 @@ import com.intellij.lang.Language
 import com.intellij.lang.javascript.psi.JSField
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
-import com.intellij.model.psi.impl.referencesAt
 import com.intellij.psi.PsiElement
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
-import com.intellij.refactoring.suggested.startOffset
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.rd.util.assert
 
@@ -299,7 +297,6 @@ class HbsReferencesTest : BasePlatformTestCase() {
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
         myFixture.addFileToProject("package.json", "{}")
-        myFixture.addFileToProject(".ember-cli", "")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         val element = PsiTreeUtil.collectElements(htmlView, { it.text == "header" }).first()
