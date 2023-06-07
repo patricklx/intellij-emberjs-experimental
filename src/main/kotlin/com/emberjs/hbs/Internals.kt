@@ -42,7 +42,10 @@ object Internals {
             "textarea",
             "unbound",
             "unless",
-            "yield")
+            "yield",
+            "has-block-params",
+            "has-block",
+            )
 
     val mapping = mapOf(
             "fn" to listOf("@ember/helper", "helper"),

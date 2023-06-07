@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.33
+- feature: filter out completions based on scope (in addon/app/tests)
+- feature: add support for has-block, has-block-params
+
 ## 2023.1.31
 - feature: provide configuration for eslint run on hbs/gts
 

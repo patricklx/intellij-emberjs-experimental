@@ -31,6 +31,8 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
 
     private val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
+    private val validParents = EmberUtils.getScopesForFile(element.containingFile.virtualFile)
+
     private val hasHbsImports by lazy {
         var f = element.containingFile.originalFile
         if (element.originalVirtualFile is VirtualFileWindow) {
@@ -48,6 +50,8 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
     override fun multiResolve(incompleteCode: Boolean): Array<out ResolveResult> {
         // Collect all components from the index
         val text = element.text.replace("'", "").replace("\"", "")
+
+
 
         if (moduleType == "helper") {
             if (internalHelpers.properties.map { it.name }.contains(text)) {
@@ -72,10 +76,12 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
 
         return EmberNameIndex.getFilteredFiles(scope) { matches(it) }
                 // Convert search results for LookupElements
-                .map { psiManager.findFile(it) }
-                .filterNotNull()
+                .asSequence()
+                .filter { EmberUtils.isInScope(it, validParents.toList()) }
+                .mapNotNull { psiManager.findFile(it) }
                 .map { EmberUtils.resolveToEmber(it) }
                 .take(1)
+                .toList()
                 .let(::createResults)
     }
 
@@ -83,6 +89,7 @@ open class HbsModuleReference(element: PsiElement, val moduleType: String) :
         // Collect all components from the index
         return EmberNameIndex.getFilteredProjectKeys(scope) { it.type == moduleType }
                 // Convert search results for LookupElements
+                .filter { EmberUtils.isInScope(it.virtualFile, validParents.toList()) }
                 .map { EmberLookupElementBuilder.create(it, this.element.containingFile, dots = false, useImports) }
                 .toTypedArray()
     }

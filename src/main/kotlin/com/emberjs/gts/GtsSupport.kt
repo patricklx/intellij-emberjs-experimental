@@ -10,13 +10,13 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
+import com.emberjs.utils.parentEmberModule
+import com.emberjs.utils.parents
 import com.intellij.formatting.*
 import com.intellij.lang.*
-import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.impl.ES6CreateImportUtil
 import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
-import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
@@ -53,6 +53,7 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.DocumentBasedFormattingModel
@@ -435,19 +436,26 @@ class GtsImportResolver(project: Project,
 
         //accept all, even without lang="ts"
         super.processAllFilesInScope(includeScope, processor)
+
+        processGtsPackage(processor)
     }
 
     override fun getExtensionsWithDot(): Array<String> {
         return super.getExtensionsWithDot() + arrayOf(".gts", ".gjs")
     }
+
+    private fun processGtsPackage(processor: Processor<in VirtualFile>) {
+        TypeScriptImportsResolverProvider.getDefaultProvider(project, resolveContext)
+                .resolveFileModule("gts", contextFile)
+                ?.let { processor.process(it) }
+    }
+
+    override fun getPriority(): Int = TypeScriptFileImportsResolver.JS_DEFAULT_PRIORITY
 }
 
 class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
     override fun isImplicitTypeScriptFile(project: Project, file: VirtualFile): Boolean {
-        if (!FileTypeRegistry.getInstance().isFileOfType(file, GtsFileType.INSTANCE)) return false
-
         val psiFile = PsiManager.getInstance(project).findFile(file) ?: return false
-
         return psiFile.viewProvider is GtsFileViewProvider
     }
 
@@ -479,6 +487,23 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
                 .flatten()
                 .toMutableList()
 
+        val validParents = mutableListOf<VirtualFile>()
+        val addonScope = myPlaceInfo.file.parentEmberModule?.findDirectory("addon")
+        val appScope = myPlaceInfo.file.parentEmberModule?.findDirectory("app")
+        val testScope = myPlaceInfo.file.parentEmberModule?.findDirectory("tests")
+        if (addonScope != null && myPlaceInfo.file.parents.contains(addonScope)) {
+            validParents.add(addonScope)
+        }
+        if (appScope != null && myPlaceInfo.file.parents.contains(appScope)) {
+            addonScope?.let { validParents.add(it) }
+            validParents.add(appScope)
+        }
+        if (testScope != null && myPlaceInfo.file.parents.contains(testScope)) {
+            addonScope?.let { validParents.add(it) }
+            appScope?.let { validParents.add(it) }
+            validParents.add(testScope)
+        }
+
         val scope = ProjectScope.getAllScope(project)
         val emberNames = mutableListOf<EmberName>()
 
@@ -496,6 +521,8 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
 
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "modifier" }
                 .toCollection(emberNames)
+
+        emberNames.removeIf { it.virtualFile?.let { !it.parents.any { validParents.contains(it) } } ?: false }
 
         emberNames.mapNotNull { getComponentTemplateInfo(it) }.toCollection(list)
 
@@ -515,9 +542,9 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
             return exports
         }
         file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-        val defaultExport = ES6PsiUtil.findDefaultExport(file) as ES6ExportDefaultAssignment?
+        val defaultExport = PsiTreeUtil.collectElements(file) { (it as? JSElementBase)?.isExportedWithDefault == true }.firstOrNull()
         if (defaultExport != null) {
-            exports.add(Info("default", defaultExport.namedElement?.name ?: getComponentName(virtualFile), GtsIcons.icon, virtualFile))
+            exports.add(Info("default", (defaultExport as? JSNamedElement)?.name ?: getComponentName(virtualFile), GtsIcons.icon, virtualFile))
             exports.add(Info("default", getComponentName(virtualFile), GtsIcons.icon, virtualFile))
         }
 
@@ -596,6 +623,12 @@ class GtsImportCandidate(name: String, place: PsiElement, val info: GtsComponent
 
     override fun equals(other: Any?): Boolean {
         return super.equals(other) && this.descriptor?.moduleName == (other as? GtsImportCandidate)?.descriptor?.moduleName
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + info.hashCode()
+        return result
     }
 }
 

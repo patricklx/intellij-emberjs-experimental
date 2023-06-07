@@ -4,7 +4,6 @@ package com.emberjs.utils
 import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
-import com.dmarcotte.handlebars.psi.impl.HbDataImpl
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsElementTypes
@@ -33,8 +32,6 @@ import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.JSLanguageDialect
 import com.intellij.lang.javascript.JavaScriptSupportLoader
-import com.intellij.lang.javascript.JavascriptLanguage
-import com.intellij.lang.javascript.dialects.TypeScriptLanguageDialect
 import com.intellij.lang.javascript.frameworks.modules.JSFileModuleReference
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.*
@@ -48,6 +45,8 @@ import com.intellij.lang.javascript.psi.types.*
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl.PropertySignatureImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.xml.HtmlCodeStyleSettings
@@ -879,6 +878,31 @@ class EmberUtils {
 
             val hasSplattributes = template?.text?.contains("...attributes") ?: false
             return ComponentReferenceData(hasSplattributes, tplYields, tplArgs, template, tsFile)
+        }
+
+        fun getScopesForFile(file: VirtualFile): MutableList<VirtualFile> {
+            val validParents = mutableListOf<VirtualFile>()
+            val addonScope = file.parentEmberModule?.findDirectory("addon")
+            val appScope = file.parentEmberModule?.findDirectory("app")
+            val testScope = file.parentEmberModule?.findDirectory("tests")
+            if (addonScope != null && file.parents.contains(addonScope)) {
+                validParents.add(addonScope)
+            }
+            if (appScope != null && file.parents.contains(appScope)) {
+                addonScope?.let { validParents.add(it) }
+                validParents.add(appScope)
+            }
+            if (testScope != null && file.parents.contains(testScope)) {
+                addonScope?.let { validParents.add(it) }
+                appScope?.let { validParents.add(it) }
+                validParents.add(testScope)
+            }
+            return validParents
+        }
+
+        fun isInScope(file: VirtualFile?, list: List<VirtualFile>): Boolean {
+            if (file == null) return true
+            return !file.parents.any { list.contains(it) }
         }
     }
 }

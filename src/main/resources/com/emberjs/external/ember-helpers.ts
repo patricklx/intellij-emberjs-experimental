@@ -921,6 +921,109 @@ declare function hash(args: never, hash: {[x: string]: any}): any
  */
 declare function _yield(args: any[], hash: Record<string, any>);
 
+/**
+ `{{(has-block)}}` indicates if the component was invoked with a block.
+
+ This component is invoked with a block:
+
+ ```handlebars
+ {{#my-component}}
+ Hi Jen!
+ {{/my-component}}
+ ```
+
+ This component is invoked without a block:
+
+ ```handlebars
+ {{my-component}}
+ ```
+
+ Using angle bracket invocation, this looks like:
+
+ ```html
+ <MyComponent>Hi Jen!</MyComponent> {{! with a block}}
+ ```
+
+ ```html
+ <MyComponent/> {{! without a block}}
+ ```
+
+ This is useful when you want to create a component that can optionally take a block
+ and then render a default template when it is not invoked with a block.
+
+ ```app/templates/components/my-component.hbs
+ {{#if (has-block)}}
+ Welcome {{yield}}, we are happy you're here!
+ {{else}}
+ Hey you! You're great!
+ {{/if}}
+ ```
+
+ @method has-block
+ @for Ember.Templates.helpers
+ @param {String} the name of the block. The name (at the moment) is either "main" or "inverse" (though only curly components support inverse)
+ @return {Boolean} `true` if the component was invoked with a block
+ @public
+ */
+declare function hasBlock(params: [blockName: string]): boolean;
+
+
+/**
+ `{{(has-block-params)}}` indicates if the component was invoked with block params.
+
+ This component is invoked with block params:
+
+ ```handlebars
+ {{#my-component as |favoriteFlavor|}}
+ Hi Jen!
+ {{/my-component}}
+ ```
+
+ This component is invoked without block params:
+
+ ```handlebars
+ {{#my-component}}
+ Hi Jenn!
+ {{/my-component}}
+ ```
+
+ With angle bracket syntax, block params look like this:
+
+ ```handlebars
+ <MyComponent as |favoriteFlavor|>
+ Hi Jen!
+ </MyComponent>
+ ```
+
+ And without block params:
+
+ ```handlebars
+ <MyComponent>
+ Hi Jen!
+ </MyComponent>
+ ```
+
+ This is useful when you want to create a component that can render itself
+ differently when it is not invoked with block params.
+
+ ```app/templates/components/my-component.hbs
+ {{#if (has-block-params)}}
+ Welcome {{yield this.favoriteFlavor}}, we're happy you're here and hope you
+ enjoy your favorite ice cream flavor.
+ {{else}}
+ Welcome {{yield}}, we're happy you're here, but we're unsure what
+ flavor ice cream you would enjoy.
+ {{/if}}
+ ```
+
+ @method has-block-params
+ @for Ember.Templates.helpers
+ @param {String} the name of the block. The name (at the moment) is either "main" or "inverse" (though only curly components support inverse)
+ @return {Boolean} `true` if the component was invoked with block params
+ @public
+ */
+declare function hasBlockParams(params: [blockName: string]);
+
 export {
     fn,
     component,
@@ -941,6 +1044,8 @@ const helpers = {
   'each-in': eachIn,
   get,
   'if': _if,
+  'has-block': hasBlock,
+  'has-block-params': hasBlockParams,
   'unless': unless,
   'outlet': outlet,
   'in-element': in_element,
