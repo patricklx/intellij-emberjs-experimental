@@ -13,6 +13,7 @@ import com.emberjs.utils.ifTrue
 import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parents
 import com.intellij.formatting.*
+import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
 import com.intellij.lang.*
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.impl.ES6CreateImportUtil
@@ -62,7 +63,6 @@ import com.intellij.psi.formatter.common.AbstractBlock
 import com.intellij.psi.formatter.xml.AnotherLanguageBlockWrapper
 import com.intellij.psi.formatter.xml.HtmlPolicy
 import com.intellij.psi.formatter.xml.XmlFormattingPolicy
-import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.html.HtmlDocumentImpl
@@ -77,6 +77,7 @@ import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
+import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
 import java.util.function.Predicate
@@ -166,7 +167,7 @@ class GtsElementTypes {
         val HB_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_HB", GtsLanguage.INSTANCE, HB_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
 
             override fun createBaseLexer(viewProvider: TemplateLanguageFileViewProvider?): Lexer {
-                return GtsLexerAdapter()
+                return GtsLexerAdapter(hbMode = true)
             }
             override fun getTemplateFileLanguage(viewProvider: TemplateLanguageFileViewProvider?): Language {
                 return HbLanguage.INSTANCE
@@ -240,7 +241,7 @@ internal object GtsIcons {
     val icon: Icon = IconLoader.getIcon("/com/emberjs/icons/glimmer.svg", GtsIcons::class.java)
 }
 
-class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =false) : LookAheadLexer(baseLexer) {
+class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =false, val hbMode: Boolean =false) : LookAheadLexer(baseLexer) {
     val hbLexer = HbLexer()
     override fun lookAhead(baseLexer: Lexer) {
         if (baseLexer.tokenType == XmlTokenType.XML_START_TAG_START && baseLexer.bufferSequence.substring(baseLexer.currentPosition.offset, baseLexer.bufferEnd).startsWith("<template")) {
@@ -266,6 +267,11 @@ class GtsLexerAdapter(val baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean 
             val end = baseLexer.tokenEnd
             if (hideMode) {
                 addToken(end, JSElementTypes.OUTER_LANGUAGE_ELEMENT_EXPRESSION)
+                baseLexer.advance()
+                return
+            }
+            if (hbMode) {
+                addToken(end, GtsElementTypes.HB_TOKEN)
                 baseLexer.advance()
                 return
             }
@@ -640,17 +646,26 @@ val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?): Block by block {
+open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
 
     val astnode by lazy {
         return@lazy (block as? ASTBlock)?.node
     }
 
+    override fun getDebugName(): String {
+        var b = block
+        if (b is DataLanguageBlockWrapper) {
+            b = b.original
+        }
+        return b.debugName ?: b.javaClass.simpleName
+    }
+
     override fun getTextRange(): TextRange {
-        if (this.subBlocks.isEmpty()) {
+        val subBlocks = this.block.subBlocks
+        if (subBlocks.isEmpty()) {
             return block.textRange
         }
-        return TextRange(this.subBlocks.first().textRange.startOffset, this.subBlocks.last().textRange.endOffset)
+        return TextRange(subBlocks.first().textRange.startOffset, subBlocks.last().textRange.endOffset)
     }
 
     private fun nexOuterLanguageBlock(block: Block): RootBlockWrapper? {
@@ -661,28 +676,50 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?): Block 
         return null
     }
 
-    fun mapToWrapper(block: Block): JsBlockWrapper {
+    fun mapToWrapper(block: Block, hbsBlock: Block?): JsBlockWrapper {
         if (block is ASTBlock) {
-            return JSAstBlockWrapper(block, this)
+            return JSAstBlockWrapper(block, this, hbsBlock)
         }
-        return JsBlockWrapper(block, this)
+        return JsBlockWrapper(block, this, hbsBlock)
+    }
+
+    fun findHandlebarsBlocksInRange(block: Block, listout: MutableList<Block>) {
+        if (block is DataLanguageBlockWrapper &&
+                textRange.contains(block.textRange) &&
+                !this.block.subBlocks.any { it.textRange.contains(block.textRange) }) {
+            listout.add(block)
+            return
+        }
+        block.subBlocks.forEach {
+            findHandlebarsBlocksInRange(it, listout)
+        }
     }
 
     override fun getSubBlocks(): MutableList<JsBlockWrapper> {
-        val blocks = block.subBlocks.map { mapToWrapper(it) }.toMutableList()
+        if (block is RootBlockWrapper) {
+            hbsBlock = block.hbsModel
+        }
+        val hbBlocks = mutableListOf<Block>()
+        val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
+        if (block is AnotherLanguageBlockWrapper) {
+            hbsBlock?.let { findHandlebarsBlocksInRange(it, hbBlocks) }
+            blocks.addAll(hbBlocks.map { mapToWrapper(it, hbsBlock) })
+        }
+
         blocks.toTypedArray().forEach {
             blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
             if (it.block is RootBlockWrapper && !it.block.patched) {
                 it.block.parent = this
             }
         }
+
         val psiElement = this.astnode?.psi
         if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
             val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
                 val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
                 if (outerLanguageBlock != null) {
-                    blocks.add(JSAstBlockWrapper(outerLanguageBlock, this))
+                    blocks.add(JSAstBlockWrapper(outerLanguageBlock, this, hbsBlock))
                     outerLanguageBlock.patched = true
                     outerLanguageBlock.parent = this
                 }
@@ -692,18 +729,22 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?): Block 
     }
 }
 
-class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?): JsBlockWrapper(block, parent), ASTBlock {
+class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?, hbsBlock: Block?): JsBlockWrapper(block, parent, hbsBlock), ASTBlock {
     override fun getNode(): ASTNode? {
        return super.astnode
     }
 }
 
-class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBlock(block.node, NoWrap, block.alignment, policy, Indent.getNoneIndent()) {
+class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPolicy, val hbsModel: Block): ASTBlock by block {
 
     var patched = false
     var parent: Block? = null
 
-    override fun chooseWrap(child: ASTNode?, tagBeginWrap: Wrap?, attrWrap: Wrap?, textWrap: Wrap?): Wrap {
+    override fun getIndent(): Indent? {
+        return Indent.getNoneIndent()
+    }
+
+    override fun getWrap(): Wrap? {
         return NoWrap
     }
 
@@ -719,7 +760,7 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
     }
 
     override fun getSubBlocks(): MutableList<Block> {
-        val subblocks = super.getSubBlocks()
+        val subblocks = block.subBlocks
         return subblocks.mapIndexed { index, it ->
             var indent = getBaseIndent(true)
             if (index == 0) {
@@ -732,13 +773,9 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
         }.toMutableList()
     }
 
-    override fun getChildIndent(): Indent? {
-        return Indent.getNoneIndent()
-    }
-
     fun getBaseIndent(forChild: Boolean = false): Indent? {
-        val file = this.node.psi.containingFile.originalFile
-        val project = this.node.psi.project
+        val file = this.node!!.psi.containingFile.originalFile
+        val project = this.node!!.psi.project
         val document = PsiDocumentManager.getInstance(project).getDocument(file)!!
         val INDENT_SIZE = this.policy.settings.getIndentOptionsByDocument(project, document).INDENT_SIZE
         if (this.parent != null) {
@@ -760,10 +797,6 @@ class RootBlockWrapper(val block: XmlTagBlock, val policy: HtmlPolicy): XmlTagBl
     override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
         return ChildAttributes(getBaseIndent(true), null)
     }
-
-    override fun getChildrenIndent(): Indent {
-        return Indent.getNoneIndent()
-    }
 }
 
 class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
@@ -783,7 +816,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
     }
 
     fun findTemplateRootBlock(block: Block, element: PsiElement): Block? {
-        if (block is XmlTagBlock && block.node is HtmlTag && (block.node as HtmlTag).parent is HtmlDocumentImpl && block.textRange.contains(element.textRange)) {
+        if (block is DataLanguageBlockWrapper && block.node is HtmlTag && (block.node as HtmlTag).parent is HtmlDocumentImpl && block.textRange.contains(element.textRange)) {
             return block
         }
         block.subBlocks.forEach {
@@ -821,7 +854,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         }
         val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS)
         val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
-        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null))
+        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null))
         if (element.language is JSLanguageDialect) {
             return jsModel
         }
@@ -856,12 +889,14 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
 
         if (element.language == XMLLanguage.INSTANCE || element.language == HTMLLanguage.INSTANCE || element.language == HbLanguage.INSTANCE) {
             val psiFile = element.containingFile
-            val hbSModel = LanguageFormatting.INSTANCE.forLanguage(element.language).createModel(FormattingContext.create(element, settings))
-            val hbsRootBlock = hbSModel.rootBlock
+            val htmlElement = element.containingFile.viewProvider.findElementAt(element.startOffset, HTMLLanguage.INSTANCE)!!
+            val htmlModel = LanguageFormatting.INSTANCE.forLanguage(HTMLLanguage.INSTANCE).createModel(FormattingContext.create(htmlElement, settings))
+            val ctxElement = element.containingFile.viewProvider.findElementAt(element.startOffset, HbLanguage.INSTANCE)!!
+            val hbsModel = LanguageFormatting.INSTANCE.forLanguage(HbLanguage.INSTANCE).createModel(FormattingContext.create(ctxElement, settings)).rootBlock
+            val hbsRootBlock = htmlModel.rootBlock
             val documentModel = FormattingDocumentModelImpl.createOn(psiFile)
-            val block = findTemplateRootBlock(hbsRootBlock, element) as? XmlTagBlock ?: return createModel(FormattingContext.create(node.psi, settings)).rootBlock
-            var start = block.textRange.startOffset - 1
-            val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel))
+            val block = findTemplateRootBlock(hbsModel, element) as? DataLanguageBlockWrapper ?: return createModel(FormattingContext.create(node.psi, settings)).rootBlock
+            val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel), hbsModel)
             val model = XmlFormattingModel(
                     psiFile,
                     rootBlock,

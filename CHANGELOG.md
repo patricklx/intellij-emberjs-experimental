@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.34
+- fix: fix gts embedded template formatting
+
 ## 2023.1.33
 - feature: filter out completions based on scope (in addon/app/tests)
 - feature: add support for has-block, has-block-params
