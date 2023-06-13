@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-java@v2.3.1
         with:
           java-version: '17'
+          distribution: 'zulu'
 
       - run: chmod +x ./gradlew 
       - run: ./gradlew assemble
