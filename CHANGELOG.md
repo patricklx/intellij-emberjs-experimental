@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.35
+- fix: fix gts embedded template formatting for invalid hbs
+
 ## 2023.1.34
 - fix: fix gts embedded template formatting
 
