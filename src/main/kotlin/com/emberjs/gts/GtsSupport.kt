@@ -76,6 +76,7 @@ import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
@@ -346,6 +347,15 @@ class GtsFileViewProviderFactory: FileViewProviderFactory {
 }
 
 class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
+
+
+    override fun findElementAt(offset: Int): PsiElement? {
+        val element = super.findElementAt(offset)
+        if (element.elementType == HbTokenTypes.CONTENT) {
+            return super.findElementAt(offset, HTMLLanguage.INSTANCE)
+        }
+        return element
+    }
 
     override fun getBaseLanguage(): Language {
         return GtsLanguage.INSTANCE
