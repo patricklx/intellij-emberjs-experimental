@@ -3,6 +3,7 @@
     <name>Ember Experimental.js</name>
     <version>2.0</version>
     <vendor url="https://github.com/patricklx/">Patrick Pircher</vendor>
+    <incompatible-with>com.emberjs</incompatible-with>
 
     <description><![CDATA[
       This plugin provides basic <a href="https://emberjs.com/">Ember.js</a> support to all JetBrains IDEs that support JavaScript.
