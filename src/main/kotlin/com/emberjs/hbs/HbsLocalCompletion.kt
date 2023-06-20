@@ -276,20 +276,34 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     }
 
     fun addLocalJSCompletion(element: PsiElement, result: CompletionResultSet) {
-        if (element.originalVirtualFile !is VirtualFileWindow) {
+        var f: PsiFile? = null
+        var tpl: PsiElement? = null
+        if (element.originalVirtualFile is VirtualFileWindow) {
+            val psiManager = PsiManager.getInstance(element.project)
+            f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) ?: return
+            val manager = InjectedLanguageManager.getInstance(element.project)
+            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+            tpl = templates.find {
+                val injected = manager.findInjectedElementAt(f!!, it.startOffset)?.containingFile ?: return@find false
+                val virtualFile = injected.virtualFile
+                return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
+            } ?: return
+        }
+        if (element.containingFile.viewProvider is GtsFileViewProvider) {
+            val view = element.containingFile.viewProvider
+            val JS = Language.findLanguageByID("JavaScript")!!
+            val TS = Language.findLanguageByID("TypeScript")!!
+            val tsView = view.getPsi(TS)
+            val jsView = view.getPsi(JS)
+            f = tsView ?: jsView
+            tpl = view.findElementAt(element.startOffset, f.language)
+        }
+
+        if (tpl == null) {
             return
         }
-        val psiManager = PsiManager.getInstance(element.project)
-        val f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) ?: return
-        val manager = InjectedLanguageManager.getInstance(element.project)
-        val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
-        val tpl = templates.find {
-            val injected = manager.findInjectedElementAt(f, it.startOffset)?.containingFile ?: return@find false
-            val virtualFile = injected.virtualFile
-            return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
-        } ?: return
 
-        val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration }
+        val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass}
         children.forEach {
             if (it is JSVariable) {
                 val useScope = JSUseScopeProvider.getBlockScopeElement(it)
@@ -299,8 +313,12 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
 
             if (it is ES6ImportDeclaration) {
-                result.addAllElements(it.importSpecifiers.mapNotNull {it.alias?.name ?: it.name!! }.map { LookupElementBuilder.create(it)})
+                result.addAllElements(it.importSpecifiers.mapNotNull { it.alias?.name ?: it.name!! }.map { LookupElementBuilder.create(it)})
                 result.addAllElements(it.importedBindings.mapNotNull { it.name }.map { LookupElementBuilder.create(it)})
+            }
+
+            if (it is JSClass && it.name != null) {
+                result.addElement(LookupElementBuilder.create(it.name!!))
             }
         }
     }
