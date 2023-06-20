@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.37
+- fix: fix too many completion suggestions inside html
+
 ## 2023.1.36
 - fix: fix gts eslint annotations range
 

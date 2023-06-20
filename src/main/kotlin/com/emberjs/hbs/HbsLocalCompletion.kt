@@ -370,7 +370,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
         }
 
-        if (element.containingFile.fileType is HtmlFileType && parameters.isExtendedCompletion) {
+        if (element.containingFile.fileType is HtmlFileType) {
+            if (!parameters.isExtendedCompletion) return
             val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map {
                 if (completionResultSet.prefixMatcher.prefix == "@") {
                     LookupElementBuilder.create("@" + it.name)
