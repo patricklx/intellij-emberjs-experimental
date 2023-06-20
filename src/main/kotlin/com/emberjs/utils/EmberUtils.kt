@@ -16,6 +16,7 @@ import com.emberjs.hbs.ImportNameReference
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
+import com.emberjs.resolver.EmberInternalJSModuleReference
 import com.emberjs.resolver.EmberJSModuleReference
 import com.emberjs.resolver.ProjectFile
 import com.emberjs.xml.AttrPsiReference
@@ -28,6 +29,7 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
+import com.intellij.lang.ecmascript6.psi.impl.ES6ImportDeclarationImpl
 import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.JSLanguageDialect
@@ -326,6 +328,11 @@ class EmberUtils {
 
             if (element is ES6ImportSpecifier) {
                 val results = element.multiResolve(false)
+                val internal = (element.parent.parent as ES6ImportDeclarationImpl).fromClause?.references?.find { it is EmberInternalJSModuleReference }
+                if (internal != null) {
+                    return PsiTreeUtil.collectElements(internal.resolve()) { (it is JSElementBase) && it.isExported && it.name == element.name }.firstOrNull()
+                }
+
                 return results.find { it.element?.containingFile is ProjectFile }?.element ?: results.firstOrNull()?.element
             }
 
