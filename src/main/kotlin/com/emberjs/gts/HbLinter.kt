@@ -10,6 +10,7 @@ import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.hbs.HbReference
 import com.emberjs.hbs.HbsModuleReference
 import com.emberjs.utils.ifTrue
+import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.lang.Language
 import com.intellij.lang.annotation.AnnotationHolder
@@ -76,7 +77,7 @@ class FakeJsElement(val element: PsiElement): PsiElement by element {
     }
 }
 
-class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, hintMode: HintMode) : JSImportModuleFix(FakeJsElement(node), descriptor, hintMode) {
+class GtsImportFix(node: PsiElement, val descriptor: JSImportCandidateWithExecutor, hintMode: HintMode) : JSImportModuleFix(FakeJsElement(node), descriptor, hintMode) {
 
     override fun invoke(project: Project, file: PsiFile, startElement: PsiElement, endElement: PsiElement) {
         super.invoke(project, file, startElement, endElement)
@@ -91,6 +92,13 @@ class GtsImportFix(node: PsiElement, descriptor: JSImportCandidateWithExecutor, 
         if (startElement is XmlTag) {
             startElement.name = startElement.name.split("::").last()
         }
+    }
+
+    override fun getPriority(): PriorityAction.Priority {
+        val moduleName = descriptor.descriptor?.moduleName ?: return super.getPriority()
+        return descriptor.name.equals(this.startElement.text)
+                .and(moduleName.contains("helpers") || moduleName.contains("components") || moduleName.startsWith("@ember/")
+                ).ifTrue { PriorityAction.Priority.HIGH } ?: PriorityAction.Priority.NORMAL
     }
 }
 
@@ -156,7 +164,7 @@ class HbLintAnnotator() : Annotator {
 
     fun getCandidates(file: PsiFile, name: String): MutableList<JSImportCandidate> {
         val candidates = mutableListOf<JSImportCandidate>()
-        ApplicationManager.getApplication().runReadAction {
+            ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
             val keyFilter = Predicate { n: String? -> n?.startsWith(name) == true }
             val info = JSImportPlaceInfo(tsFile)
@@ -165,6 +173,7 @@ class HbLintAnnotator() : Annotator {
                 candidates.addAll(elements.filterNotNull())
             }
         }
+        candidates.sortBy { c -> c.descriptor?.let { c.name.equals(name).and(it.moduleName.contains("helpers").or(it.moduleName.contains("components"))).ifTrue { 0 }} ?: 1 }
         return candidates
     }
 
@@ -194,7 +203,7 @@ class HbLintAnnotator() : Annotator {
                     .tooltip(message)
             candidates?.forEach { c ->
                 val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.MULTI)
+                val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
                 annotation.withFix(fix)
             }
             annotation.needsUpdateOnTyping()

@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.40
+- fix: fix missing import suggestions for gts 
+- improve: better suggestion for imports
+
 ## 2023.1.37
 - fix: fix too many completion suggestions inside html
 

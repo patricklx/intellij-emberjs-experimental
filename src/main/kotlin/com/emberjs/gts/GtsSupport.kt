@@ -502,22 +502,7 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
                 .flatten()
                 .toMutableList()
 
-        val validParents = mutableListOf<VirtualFile>()
-        val addonScope = myPlaceInfo.file.parentEmberModule?.findDirectory("addon")
-        val appScope = myPlaceInfo.file.parentEmberModule?.findDirectory("app")
-        val testScope = myPlaceInfo.file.parentEmberModule?.findDirectory("tests")
-        if (addonScope != null && myPlaceInfo.file.parents.contains(addonScope)) {
-            validParents.add(addonScope)
-        }
-        if (appScope != null && myPlaceInfo.file.parents.contains(appScope)) {
-            addonScope?.let { validParents.add(it) }
-            validParents.add(appScope)
-        }
-        if (testScope != null && myPlaceInfo.file.parents.contains(testScope)) {
-            addonScope?.let { validParents.add(it) }
-            appScope?.let { validParents.add(it) }
-            validParents.add(testScope)
-        }
+        val scopes = EmberUtils.getScopesForFile(myPlaceInfo.file)
 
         val scope = ProjectScope.getAllScope(project)
         val emberNames = mutableListOf<EmberName>()
@@ -537,7 +522,7 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "modifier" }
                 .toCollection(emberNames)
 
-        emberNames.removeIf { it.virtualFile?.let { !it.parents.any { validParents.contains(it) } } ?: false }
+        emberNames.removeIf { it.virtualFile?.let { !EmberUtils.isInScope(it, scopes) } ?: false }
 
         emberNames.mapNotNull { getComponentTemplateInfo(it) }.toCollection(list)
 
