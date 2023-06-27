@@ -111,8 +111,11 @@ class EmberUtils {
             return modifier.find { it != null && it.parameters.contains(args) }?.let { Modifier(it) }
         }
 
-        fun resolveDefaultExport(file: PsiElement?): PsiElement? {
-            if (file == null) return null
+        fun resolveDefaultExport(ffile: PsiElement?): PsiElement? {
+            var file = ffile ?: return null
+            if (file is GtsFile) {
+                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+            }
             var exp: PsiElement? = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
             if (exportImport != null && exportImport.children.find { it.text == "default" } != null) {

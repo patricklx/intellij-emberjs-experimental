@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.41
+- fix: missing hash parameter for yield
+- fix: missing resolve for component params in gts file
+
 ## 2023.1.40
 - fix: fix missing import suggestions for gts 
 - improve: better suggestion for imports

@@ -919,7 +919,7 @@ declare function hash(args: never, hash: {[x: string]: any}): any
  @return {String} HTML string
  @public
  */
-declare function _yield(args: any[], hash: Record<string, any>);
+declare function _yield(args: any[], hash: {to: string});
 
 /**
  `{{(has-block)}}` indicates if the component was invoked with a block.
