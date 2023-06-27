@@ -15,6 +15,7 @@ import com.emberjs.lookup.HbsInsertHandler
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.ifFalse
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
@@ -187,18 +188,19 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
             for (yieldRef in tplYields) {
                 val yieldblock = yieldRef.yieldBlock
-                val namedYields = yieldblock.children.filter { it is HbHash && it.hashName == "to"}.map { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
-                val names: List<String>
+                var namedYields = yieldblock.children.find { it is HbHash && it.hashName == "to"}?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
+                namedYields = namedYields ?: yieldblock.children.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
+                val names: String
 
                 // if the tag has already colon, then remove it from the lookup elements, otherwise intellij will
                 // add it again and it wil turn into <::name
                 if (element.name.startsWith(":")) {
-                    names = namedYields
+                    names = namedYields!!
                 } else {
-                    names = namedYields.map { ":$it" }
+                    names = namedYields.let { ":$it" }
                 }
                 // needs prioritization to appear before common html tags
-                result.addAll(names.map { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it), 2.0) })
+                result.add(names.let { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it), 2.0) })
             }
         }
     }

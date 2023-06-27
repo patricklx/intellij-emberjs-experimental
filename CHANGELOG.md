@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.43
+- fix: resolve :default correctly
+
 ## 2023.1.41
 - fix: missing hash parameter for yield
 - fix: missing resolve for component params in gts file

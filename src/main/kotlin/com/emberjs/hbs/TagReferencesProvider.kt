@@ -214,11 +214,20 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val data = (angleComponents.descriptor as EmberXmlElementDescriptor).getReferenceData()
             val tplYields = data.yields
 
+            if (name == "default") {
+                return tplYields
+                        .map { it.yieldBlock }
+                        .filterNotNull()
+                        .find {
+                            !it.children.any { it is HbHash && it.hashName == "to" }
+                        }
+            }
+
             return tplYields
                     .map { it.yieldBlock }
                     .filterNotNull()
                     .find {
-                        it.children.find { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name} != null
+                        it.children.any { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name}
                     }
         }
 

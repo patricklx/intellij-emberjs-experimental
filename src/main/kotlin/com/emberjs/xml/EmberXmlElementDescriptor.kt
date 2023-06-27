@@ -1,4 +1,5 @@
 package com.emberjs.xml
+import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.psi.EmberNamedElement
@@ -134,7 +135,8 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         }
         if (attributeName == "as") {
             val data = getReferenceData()
-            return EmberAttributeDescriptor(context, attributeName, true, "yield", null, data.yields.toTypedArray())
+            val ref = data.yields.find { !it.yieldBlock.children.any { it is HbHash && it.hashName == "to" } }
+            return EmberAttributeDescriptor(context, attributeName, true, "yield", ref, null)
         }
         val asIndex = context.attributes.indexOfFirst { it.text == "as" }
         if (asIndex >= 0) {
