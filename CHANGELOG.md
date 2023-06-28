@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.44
+- fix: fix formatting issues in gts files
+
 ## 2023.1.43
 - fix: resolve :default correctly
 

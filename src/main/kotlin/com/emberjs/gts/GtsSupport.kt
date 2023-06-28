@@ -10,8 +10,6 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
-import com.emberjs.utils.parentEmberModule
-import com.emberjs.utils.parents
 import com.intellij.formatting.*
 import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
 import com.intellij.lang.*
@@ -54,7 +52,6 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.findDirectory
 import com.intellij.psi.*
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.formatter.DocumentBasedFormattingModel
@@ -742,7 +739,7 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
     override fun getSubBlocks(): MutableList<Block> {
         val subblocks = (block.parent == null).ifTrue { block.original.subBlocks } ?: block.subBlocks
         return subblocks.mapIndexed { index, it ->
-            var indent = getBaseIndent(true)
+            var indent = getBaseIndent()
             if (index == 0) {
                 indent = getBaseIndent()
             }
