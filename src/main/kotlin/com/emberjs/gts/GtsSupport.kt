@@ -739,7 +739,8 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
     override fun getSubBlocks(): MutableList<Block> {
         val subblocks = (block.parent == null).ifTrue { block.original.subBlocks } ?: block.subBlocks
         return subblocks.mapIndexed { index, it ->
-            var indent = getBaseIndent()
+            val shouldIndent = it.javaClass.simpleName == "HandlebarsBlock"
+            var indent = getBaseIndent(shouldIndent)
             if (index == 0) {
                 indent = getBaseIndent()
             }

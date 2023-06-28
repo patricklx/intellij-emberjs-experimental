@@ -27,7 +27,7 @@ class EmberAttrDec(private val descriptor: EmberAttributeDescriptor, ref: PsiRef
     }
 
     init {
-        this.reference = ref ?: references!!.firstOrNull()
+        this.reference = ref ?: references?.firstOrNull()
         this.name = descriptor.name
     }
 
