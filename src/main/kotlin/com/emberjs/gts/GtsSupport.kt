@@ -639,6 +639,7 @@ val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
 open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
 
+    private var cachedBlocks: List<JsBlockWrapper>? = null
     val astnode by lazy {
         return@lazy (block as? ASTBlock)?.node
     }
@@ -675,9 +676,10 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
     }
 
     override fun getSubBlocks(): MutableList<JsBlockWrapper> {
-        val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
-        if (block is AnotherLanguageBlockWrapper) {
+        if (this.cachedBlocks != null) {
+            return this.cachedBlocks!!.toMutableList()
         }
+        val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
 
         blocks.toTypedArray().forEach {
             blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
@@ -698,6 +700,7 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
                 }
             }
         }
+        this.cachedBlocks = blocks.toList()
         return blocks
     }
 }

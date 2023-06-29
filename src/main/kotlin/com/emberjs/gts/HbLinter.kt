@@ -2,6 +2,7 @@ package com.emberjs.gts
 
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
+import com.dmarcotte.handlebars.psi.HbData
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbPsiFile
@@ -225,7 +226,8 @@ class HbLintAnnotator() : Annotator {
                     .tooltip(message)
             val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
                     element.prevSibling.elementType == HbTokenTypes.SEP
-            if (!prevSiblingIsSep) {
+            val isInHbData = element.parent !is HbData
+            if (!prevSiblingIsSep && !isInHbData) {
                 candidates?.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
                     val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)

@@ -2,6 +2,10 @@
 
 Changelog
 ===============================================================================
+## 2023.1.47
+- fix: gts formatting freeze on large files
+- fix: remove import suggestions for args properties in templates
+
 ## 2023.1.44
 - fix: fix formatting issues in gts files
 
