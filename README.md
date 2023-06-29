@@ -19,6 +19,7 @@ Experimental:
 - Handlebars parameter hints for helpers/modifiers and components
 - Handlebars renaming for mustache ids and html tags
 - Glint Support
+- Gts Support
 - Find Usage between Js/Ts and Hbs
 
 Basic:
