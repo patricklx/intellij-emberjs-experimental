@@ -227,7 +227,7 @@ class HbLintAnnotator() : Annotator {
             val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
                     element.prevSibling.elementType == HbTokenTypes.SEP
             val isInHbData = element.parent !is HbData
-            if (!prevSiblingIsSep && !isInHbData) {
+            if (!prevSiblingIsSep || !isInHbData) {
                 candidates?.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
                     val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
