@@ -382,6 +382,10 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
             val name = element.text.replace("IntellijIdeaRulezzz", "")
 
+            if (name == "if") {
+                return HbsModuleReference(element, "helper")
+            }
+
             val closeMustache = PsiTreeUtil.collectParents(element, HbCloseBlockMustache::class.java, false) { it is HbBlockWrapper }.firstOrNull()
             if (closeMustache != null) {
                 val blockWrapper = closeMustache.parent

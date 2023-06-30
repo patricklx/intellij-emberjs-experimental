@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.49
+- feature: support reference of `if` inside `{{else if}}`
+
 ## 2023.1.47
 - fix: gts formatting freeze on large files
 - fix: remove import suggestions for args properties in templates
