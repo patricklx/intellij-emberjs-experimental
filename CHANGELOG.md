@@ -2,6 +2,11 @@
 
 Changelog
 ===============================================================================
+## 2023.1.50
+- feature: warn if gts file is not included in tsconfig
+- feature: add back typescript actions
+- feature: add glint ignore actions
+
 ## 2023.1.49
 - feature: support reference of `if` inside `{{else if}}`
 

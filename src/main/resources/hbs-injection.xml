@@ -1,8 +1,13 @@
 <component name="LanguageInjectionConfiguration">
-<injection language="Handlebars" injector-id="js">
-    <display-name>hbs injection</display-name>
-    <single-file value="false" />
-    <place><![CDATA[taggedString("hbs")]]></place>
-    <templateTag>hbs</templateTag>
-</injection>
+    <injection language="Handlebars" injector-id="js">
+        <display-name>hbs injection</display-name>
+        <single-file value="false" />
+        <place><![CDATA[taggedString("hbs")]]></place>
+        <templateTag>hbs</templateTag>
+    </injection>
+    <injection language="Handlebars" injector-id="js">
+        <display-name>hbs precompileTemplate injection</display-name>
+        <single-file value="false" />
+        <place><![CDATA[jsLiteralExpression(jsArgument(jsReferenceExpression().withQualifiedName("precompileTemplate"), 0))]]></place>
+    </injection>
 </component>

@@ -67,6 +67,7 @@
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
         <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
         <lang.formatter language="Gts" implementationClass="com.emberjs.gts.GtsFormattingModelBuilder" />
+        <editorNotificationProvider implementation="com.emberjs.glint.GlintEditorNotificationsProvider"/>
         <editorFactoryListener implementation="com.emberjs.hbs.HbMustacheNameSynchronizer$MyEditorFactoryListener"/>
 
         <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>

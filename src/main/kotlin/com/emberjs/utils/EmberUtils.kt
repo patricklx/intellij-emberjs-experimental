@@ -460,9 +460,11 @@ class EmberUtils {
             }
 
             if (func is JSClass) {
-                val args = findComponentArgsType(func)
-                args?.propertyNames?.forEach { data.named.add(it) }
-                args?.properties?.forEach { data.namedRefs.add(it.memberSource.singleElement) }
+                val componentData = getComponentReferenceData(func)
+                componentData.args.forEach {
+                    data.named.add(it.value)
+                    data.namedRefs.add(it.reference?.resolve())
+                }
                 return data
             }
 
@@ -805,6 +807,16 @@ class EmberUtils {
                     jsTemplate = jsTemplate
                             ?:
                             PsiTreeUtil.collectElements(cls) { it.elementType == GtsElementTypes.GTS_OUTER_ELEMENT_TYPE && it.parent == cls }.firstOrNull()
+
+                    if (jsTemplate == null) {
+                        val setComponentTemplate = PsiTreeUtil.collectElements(cls.containingFile) {
+                            (it is JSCallExpression) && it.children.firstOrNull()?.children?.firstOrNull()?.text == "setComponentTemplate" && it.arguments.lastOrNull()?.reference?.isReferenceTo(cls) == true
+                        }.firstOrNull() as? JSCallExpression
+                        if (setComponentTemplate != null) {
+                            val precompileTemplate = (setComponentTemplate.arguments.firstOrNull() as? JSCallExpression)
+                            jsTemplate = precompileTemplate?.arguments?.firstOrNull()
+                        }
+                    }
                 }
             }
 
@@ -817,23 +829,22 @@ class EmberUtils {
                 jsTemplate = jsTemplate.initializer
             }
             if (jsTemplate is ES6TaggedTemplateExpression) {
-                jsTemplate = jsTemplate.templateExpression
+                jsTemplate = jsTemplate.templateExpression?.value
             }
             if (jsTemplate is JSStringTemplateExpression) {
                 val manager = InjectedLanguageManager.getInstance(jsTemplate.project)
                 val injected = manager.findInjectedElementAt(jsTemplate.containingFile, jsTemplate.startOffset)?.containingFile
-                jsTemplate = injected?.containingFile?.viewProvider?.getPsi(Language.findLanguageByID("Handlebars")!!)?.containingFile
+                jsTemplate = injected?.containingFile?.viewProvider?.getPsi(Language.findLanguageByID("Handlebars")!!)?.containingFile ?: jsTemplate
             }
             if (jsTemplate is JSLiteralExpression) {
-                jsTemplate = jsTemplate.text
+                jsTemplate = jsTemplate.value
             }
 
             if (jsTemplate is String) {
-                jsTemplate = jsTemplate.substring(1, jsTemplate.lastIndex)
                 jsTemplate = PsiFileFactory.getInstance(file.project).createFileFromText("$name-virtual", Language.findLanguageByID("Handlebars")!!, jsTemplate)
             }
 
-            var psiRange = template?.textRange
+            var psiRange = template?.textRange ?: (jsTemplate as? PsiFile)?.textRange
 
             if (jsTemplate is PsiElement && jsTemplate.elementType == GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) {
                 template = jsTemplate.containingFile.viewProvider.getPsi(HbLanguage.INSTANCE)

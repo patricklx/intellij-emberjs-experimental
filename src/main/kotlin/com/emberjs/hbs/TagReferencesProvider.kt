@@ -24,6 +24,7 @@ import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
@@ -136,9 +137,9 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 val psiManager = PsiManager.getInstance(element.project)
                 f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
                 val manager = InjectedLanguageManager.getInstance(element.project)
-                val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+                val templates = PsiTreeUtil.collectElements(f) { it is JSStringTemplateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset)?.containingFile ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null

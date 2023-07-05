@@ -12,7 +12,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2023.1.49"
+version = "2023.1.50"
 
 // Configure project's dependencies
 repositories {
@@ -20,7 +20,7 @@ repositories {
 }
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.assertj:assertj-core:3.22.0")
+    testImplementation("org.assertj:assertj-core:3.23.1")
     implementation(kotlin("test"))
 }
 
@@ -69,5 +69,3 @@ tasks.test {
 tasks.buildSearchableOptions {
     enabled = false
 }
-
-sourceSets["main"].java.srcDirs("src/main/gen")

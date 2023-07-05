@@ -16,7 +16,7 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.*
-import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
@@ -118,9 +118,9 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 val psiManager = PsiManager.getInstance(element.project)
                 f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate)!!
                 val manager = InjectedLanguageManager.getInstance(element.project)
-                val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+                val templates = PsiTreeUtil.collectElements(f) { it is JSStringTemplateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset)?.containingFile ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset+1)?.containingFile ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null

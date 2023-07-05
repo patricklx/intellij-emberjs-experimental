@@ -27,7 +27,7 @@ import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.JSRecordType.PropertySignature
-import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
@@ -282,9 +282,9 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val psiManager = PsiManager.getInstance(element.project)
             f = psiManager.findFile((element.originalVirtualFile as VirtualFileWindow).delegate) ?: return
             val manager = InjectedLanguageManager.getInstance(element.project)
-            val templates = PsiTreeUtil.collectElements(f) { it is ES6TaggedTemplateExpression && it.tag?.text == "hbs" }.mapNotNull { (it as ES6TaggedTemplateExpression).templateExpression }
+            val templates = PsiTreeUtil.collectElements(f) { it is JSStringTemplateExpression }
             tpl = templates.find {
-                val injected = manager.findInjectedElementAt(f!!, it.startOffset)?.containingFile ?: return@find false
+                val injected = manager.findInjectedElementAt(f!!, it.startOffset+1)?.containingFile ?: return@find false
                 val virtualFile = injected.virtualFile
                 return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
             } ?: return

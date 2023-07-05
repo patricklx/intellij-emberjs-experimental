@@ -8,14 +8,17 @@ import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
+import com.intellij.codeInsight.intention.impl.BaseIntentionAction
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.completion.JSInsertHandler
+import com.intellij.lang.javascript.inspections.JSInspectionSuppressor
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
+import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSFunctionType
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
@@ -23,6 +26,7 @@ import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceCompletionEntry
+import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScriptSuppressByCommentFix
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
 import com.intellij.lsp.LspServer
@@ -41,6 +45,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.xml.XmlElement
+import com.intellij.ui.EditorNotifications
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -58,6 +63,7 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
     override fun getAllServices() =
             if (project.guessProjectDir()?.emberRoot != null) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
+
 
 
 class GlintTypeScriptService(private val project: Project) : TypeScriptService, Disposable {
@@ -116,17 +122,43 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
     }
 
-    override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): Collection<IntentionAction> {
+    fun isTSCompilerError(annotationError: GlintAnnotationError): Boolean {
+        return annotationError.code == "tslint"
+    }
+
+    fun getSuppressActions(element: PsiElement?): List<BaseIntentionAction>? {
+        if (element == null) return null
+        if (element.containingFile !is JSFile) {
+            return listOf(GlintHBSupressErrorFix("ignore"), GlintHBSupressErrorFix("expect"))
+        }
+        val aClass = JSInspectionSuppressor.getHolderClass(element)
+        return listOf(TypeScriptSuppressByCommentFix(aClass), TypeScriptSupressByExpectErrorFix(aClass))
+    }
+
+    override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): List<IntentionAction?> {
         if (result as? GlintAnnotationError == null) {
             return emptyList()
         }
+
         val descriptor = getDescriptor(file.virtualFile) ?: return emptyList()
-        return descriptor.server?.getCodeActions(file, result.diagnostic) { command, _ ->
-            if (command == "x") {
-                return@getCodeActions true
+        descriptor.server?.let {
+            val codeActionMethod = GlintCodeActionMethod.create(it, file, result.diagnostic) { command, _ ->
+                return@create command == "x"
             }
-            return@getCodeActions false
-        } ?: emptyList()
+            val actions = it.invokeSynchronously(codeActionMethod)?.toMutableList() ?: emptyList<IntentionAction?>().toMutableList()
+            val isSuggestion = "hide" == result.category
+            val isTSCompilerError = isTSCompilerError(result)
+            if (!isTSCompilerError && file.virtualFile != null) {
+                if (!isSuggestion || isTSCompilerError) {
+                    val suppressByCommentFix = this.getSuppressActions(element)
+                    if (suppressByCommentFix != null) {
+                        actions.addAll(suppressByCommentFix)
+                    }
+                }
+                return actions.toList()
+            }
+            return emptyList()
+        } ?: return emptyList()
     }
 
     override fun getDetailedCompletionItems(virtualFile: VirtualFile,
@@ -228,6 +260,8 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
         val server = getDescriptor()?.server ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
+
+        EditorNotifications.getInstance(project).updateNotifications(virtualFile)
 
         return completedFuture(server.getDiagnostics(virtualFile)?.map {
             GlintAnnotationError(it, virtualFile.canonicalPath)

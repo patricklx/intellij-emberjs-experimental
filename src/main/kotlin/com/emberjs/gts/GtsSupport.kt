@@ -593,7 +593,7 @@ class GtsJSModuleDescriptor(val descriptor: JSModuleDescriptor): JSModuleDescrip
         if (toRemove.contains(parts.getOrNull(1))) {
             parts.removeAt(1)
         }
-        return parts.joinToString("/")
+        return parts.joinToString("/").removeSuffix("/index")
     }
 }
 

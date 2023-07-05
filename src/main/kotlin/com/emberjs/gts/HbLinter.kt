@@ -187,6 +187,7 @@ class HbLintAnnotator() : Annotator {
         if (file.viewProvider !is GtsFileViewProvider) {
             return
         }
+
         val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
         if (element is XmlTag && element.reference?.resolve() == null) {
             val candidates = tsFile?.let { getCandidates(file, element.name) }
@@ -226,8 +227,8 @@ class HbLintAnnotator() : Annotator {
                     .tooltip(message)
             val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
                     element.prevSibling.elementType == HbTokenTypes.SEP
-            val isInHbData = element.parent !is HbData
-            if (!prevSiblingIsSep || !isInHbData) {
+            val isInHbData = element.parent is HbData
+            if (!prevSiblingIsSep && !isInHbData) {
                 candidates?.forEach { c ->
                     val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
                     val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
