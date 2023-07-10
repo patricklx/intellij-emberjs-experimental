@@ -23,7 +23,7 @@
         <li>Handlebars parameter hints for helpers/modifiers and components</li>
         <li>Handlebars renaming for mustache ids and html tags</li>
         <li>Glint Support</li>
-        <li>Gts Support</li>
+        <li>Gts/Gjs Support</li>
         <li>Find Usage between Js/Ts and Hbs</li>
       </ul>
     ]]></description>
@@ -52,16 +52,27 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
+        <lang.fileViewProviderFactory language="Gjs" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
+        <editorHighlighterProvider filetype="Gjs File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>
         <lang.parserDefinition
                 language="Gts"
                 implementationClass="com.emberjs.gts.GtsParserDefinition"/>
+        <lang.parserDefinition
+                language="Gjs"
+                implementationClass="com.emberjs.gts.GjsParserDefinition"/>
         <fileType
                 name="Gts File"
                 implementationClass="com.emberjs.gts.GtsFileType"
                 fieldName="INSTANCE"
                 language="Gts"
                 extensions="gts"/>
+        <fileType
+                name="Gjs File"
+                implementationClass="com.emberjs.gts.GjsFileType"
+                fieldName="INSTANCE"
+                language="Gjs"
+                extensions="gjs"/>
         <lang.syntaxHighlighterFactory
                 language="Gts"
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>

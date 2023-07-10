@@ -218,7 +218,7 @@ class EmberUtils {
         fun findDefaultExportClass(f: PsiFile): JSClass? {
             var file = f
             if (file is GtsFile) {
-                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
             }
             val exp = ES6PsiUtil.findDefaultExport(file)
             var cls: Any? = exp?.children?.find { it is JSClass }

@@ -2,6 +2,9 @@
 
 Changelog
 ===============================================================================
+## 2023.1.51
+- feature: support gjs files
+
 ## 2023.1.50
 - feature: warn if gts file is not included in tsconfig
 - feature: add back typescript actions

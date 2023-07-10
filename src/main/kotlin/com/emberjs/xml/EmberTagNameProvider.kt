@@ -262,7 +262,10 @@ class EmberTagNameProvider : XmlTagNameProvider {
     }
 
     fun forGtsFiles(tag: XmlTag, lookupElements: MutableList<LookupElement>) {
-        val info = JSImportPlaceInfo(tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT))
+        val info = JSImportPlaceInfo(
+                tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+                        ?: tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+        )
         val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
         val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.contains(tagName) }
         val providers = JSImportCandidatesProvider.getProviders(info)
@@ -276,6 +279,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
                         .withInsertHandler(object : InsertHandler<LookupElement> {
                             override fun handleInsert(context: InsertionContext, item: LookupElement) {
                                 val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
+                                        ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
                                 val action = JSImportAction(context.editor, tag, name!!)
                                 val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
                                 if (candidateWithExecutors.size == 1) {

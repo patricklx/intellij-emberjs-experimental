@@ -83,17 +83,28 @@ import java.util.function.Predicate
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
+val JS: Language = JavaScriptSupportLoader.JAVASCRIPT.language
 
-class GtsLanguage : Language(TS, "Gts") {
+
+
+open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : Language(lang, id) {
 
     companion object {
         val INSTANCE = GtsLanguage()
     }
 }
 
-class GtsFile(viewProvider: FileViewProvider?) : JSFileImpl(viewProvider!!, GtsLanguage.INSTANCE) {
+class GjsLanguage(): GtsLanguage(JavascriptLanguage.INSTANCE, "Gjs") {
+    companion object {
+        val INSTANCE = GjsLanguage()
+    }
+}
+
+
+class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
+    : JSFileImpl(viewProvider!!, isJS.ifTrue { GjsLanguage.INSTANCE } ?: GtsLanguage.INSTANCE) {
     override fun getFileType(): FileType {
-        return GtsFileType.INSTANCE
+        return isJS.ifTrue { GjsFileType.INSTANCE } ?: GtsFileType.INSTANCE
     }
 
     override fun toString(): String {
@@ -200,12 +211,36 @@ class GtsElementTypes {
                 return node.firstChildNode ?: PsiWhiteSpaceImpl("")
             }
         }
+        val GJS_FILE_NODE_TYPE = object : IFileElementType("GJS", GjsLanguage.INSTANCE) {
+            override fun equals(other: Any?): Boolean {
+                if (other == JavaScriptFileType.INSTANCE) {
+                    return true
+                }
+                return super.equals(other)
+            }
+
+            override fun hashCode(): Int {
+                return JavaScriptFileType.INSTANCE.hashCode()
+            }
+
+            override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
+                val project = psi.project
+                val languageForParser = getLanguageForParser(psi)
+                val builder = PsiBuilderFactory.getInstance().createBuilder(project, chameleon, null, languageForParser, chameleon.chars)
+                val parser = GjsParserDefinition().createParser(project)
+                val node = parser.parse(this, builder)
+                return node.firstChildNode ?: PsiWhiteSpaceImpl("")
+            }
+        }
     }
 }
 
-class GtsParserDefinition : TypeScriptParserDefinition() {
+open class GtsParserDefinition(val isJS: Boolean = false) : TypeScriptParserDefinition() {
 
     override fun getFileNodeType(): IFileElementType {
+        if (isJS) {
+            return GtsElementTypes.GJS_FILE_NODE_TYPE
+        }
         return GtsElementTypes.GTS_FILE_NODE_TYPE
     }
 
@@ -228,10 +263,14 @@ class GtsParserDefinition : TypeScriptParserDefinition() {
     }
 
     override fun createFile(viewProvider: FileViewProvider): JSFile {
-        return GtsFile(viewProvider)
+        if (viewProvider.baseLanguage.id == GjsLanguage.INSTANCE.id) {
+            return GtsFile(viewProvider, true)
+        }
+        return GtsFile(viewProvider, isJS)
     }
-
 }
+
+class GjsParserDefinition: GtsParserDefinition(true)
 
 
 internal object GtsIcons {
@@ -336,14 +375,50 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
     }
 }
 
+class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
+
+    override fun equals(other: Any?): Boolean {
+        if (other == JavaScriptFileType.INSTANCE) {
+            return true
+        }
+        return super.equals(other)
+    }
+
+    companion object {
+        val INSTANCE = GjsFileType()
+    }
+
+    override fun getName(): String {
+        return "Gjs File"
+    }
+
+    override fun getDescription(): String {
+        return "Gjs file type"
+    }
+
+    override fun getDefaultExtension(): String {
+        return "gjs"
+    }
+
+    override fun getIcon(): Icon {
+        return GtsIcons.icon
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
+    }
+}
+
 class GtsFileViewProviderFactory: FileViewProviderFactory {
     override fun createFileViewProvider(file: VirtualFile, language: Language?, manager: PsiManager, eventSystemEnabled: Boolean): FileViewProvider {
-        return GtsFileViewProvider(manager, file, eventSystemEnabled)
+        return (language as? GtsLanguage)
+                ?.let { GtsFileViewProvider(manager, file, eventSystemEnabled, it) }
+                ?: GtsFileViewProvider(manager, file, eventSystemEnabled)
     }
 
 }
 
-class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
+class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean, private val baseLang: GtsLanguage = GtsLanguage.INSTANCE) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
 
 
     override fun findElementAt(offset: Int): PsiElement? {
@@ -355,10 +430,13 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
     }
 
     override fun getBaseLanguage(): Language {
-        return GtsLanguage.INSTANCE
+        return baseLang
     }
 
     override fun getLanguages(): MutableSet<Language> {
+        if (baseLang == GjsLanguage.INSTANCE) {
+            return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, JavascriptLanguage.INSTANCE, GjsLanguage.INSTANCE)
+        }
         return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, TS, GtsLanguage.INSTANCE)
     }
 
@@ -367,15 +445,23 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
     }
 
     override fun cloneInner(virtualFile: VirtualFile): MultiplePsiFilesPerDocumentFileViewProvider {
-        return GtsFileViewProvider(this.manager, virtualFile, false)
+        return GtsFileViewProvider(this.manager, virtualFile, false, baseLang)
     }
 
     override fun createFile(lang: Language): PsiFile? {
         if (lang.id == GtsLanguage.INSTANCE.id) {
             return GtsParserDefinition().createFile(this)
         }
+        if (lang.id == GjsLanguage.INSTANCE.id) {
+            return GjsParserDefinition().createFile(this)
+        }
         if (lang.id == TS.id) {
             val f = TypeScriptParserDefinition().createFile(this)
+            (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
+            return f
+        }
+        if (lang.id == JavascriptLanguage.INSTANCE.id) {
+            val f = JavascriptParserDefinition().createFile(this)
             (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
             return f
         }
@@ -839,9 +925,9 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
 
         var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
         if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0) {
-            element = formattingContext.containingFile.viewProvider.getPsi(TS)
+            element = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
         }
-        val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS)
+        val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
         val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
         val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null))
         if (element.language is JSLanguageDialect) {
