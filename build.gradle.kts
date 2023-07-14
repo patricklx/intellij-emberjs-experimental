@@ -12,7 +12,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2023.1.51"
+version = "2023.1.52"
 
 // Configure project's dependencies
 repositories {
@@ -22,6 +22,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.23.1")
     implementation(kotlin("test"))
+    implementation("org.codehaus.jettison:jettison:1.5.4")
 }
 
 // Configure gradle-intellij-plugin plugin.
@@ -31,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2023.1.1")
+    version.set("2023.1.4")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
