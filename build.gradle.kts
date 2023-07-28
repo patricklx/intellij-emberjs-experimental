@@ -12,7 +12,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2023.1.52"
+version = "2023.1.53"
 
 // Configure project's dependencies
 repositories {
@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2023.1.4")
+    version.set("2023.2.0")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
