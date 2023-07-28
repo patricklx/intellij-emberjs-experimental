@@ -32,7 +32,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("2023.2.0")
+    version.set("2023.2")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
