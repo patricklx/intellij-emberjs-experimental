@@ -11,57 +11,25 @@ import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
-import com.intellij.lsp.LanguageServerConnector
-import com.intellij.lsp.LanguageServerConnectorStdio
-import com.intellij.lsp.LspServer
-import com.intellij.lsp.api.LspServerDescriptor
-import com.intellij.lsp.api.LspServerManager
-import com.intellij.lsp.api.LspServerSupportProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ex.ApplicationInfoEx
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.platform.lsp.api.LspServerDescriptor
+import com.intellij.platform.lsp.api.LspServerManager
+import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class GlintLspSupportProvider : LspServerSupportProvider {
+    var willStart = false
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        ApplicationManager.getApplication().invokeLater {
-            val descriptor = getGlintDescriptor(project)
-            descriptor.ensureStarted()
-        }
-    }
-}
-
-
-class GlintLanguageServerConnectorStdio(val server: LspServer, processHandler: OSProcessHandler) : LanguageServerConnectorStdio(server, processHandler) {
-
-
-    override fun getFilePath(file: VirtualFile): String {
-        var path = super.getFilePath(file)
-        if (!path.startsWith("/")) {
-            path = "/$path"
-        }
-        return URLEncoder.encode(path, "utf-8")
-                .replace("%2F", "/")
-                .replace("%253A", ":")
-                .replace("%3A", ":")
-    }
-
-    override fun initializeServer() {
-        super.initializeServer()
-        DaemonCodeAnalyzer.getInstance(server.project).restart()
-        ApplicationManager.getApplication().invokeLater {
-            ApplicationManager.getApplication().runWriteAction {
-                FileContentUtil.reparseOpenedFiles()
-            }
-        }
+        serverStarter.ensureServerStarted(getGlintDescriptor(project))
     }
 }
 
@@ -95,7 +63,18 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun ensureStarted() {
         if (!isAvailable) return
-        lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, this)
+        lspServerManager.startServersIfNeeded(GlintLspSupportProvider::class.java)
+    }
+
+    override fun startServerProcess(): OSProcessHandler {
+        val r = super.startServerProcess()
+        ApplicationManager.getApplication().invokeLater {
+            DaemonCodeAnalyzer.getInstance(project).restart()
+            ApplicationManager.getApplication().runWriteAction {
+                FileContentUtil.reparseOpenedFiles()
+            }
+        }
+        return r
     }
 
     override fun createCommandLine(): GeneralCommandLine {
@@ -124,10 +103,15 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return commandLine
     }
 
-    override fun createServerConnector(lspServer: LspServer): LanguageServerConnector {
-        val startingCommandLine = createCommandLine()
-        LOG.debug("$this: starting server process using: $startingCommandLine")
-        return GlintLanguageServerConnectorStdio(this.server!!, OSProcessHandler(startingCommandLine))
+    override fun getFilePath(file: VirtualFile): String {
+        var path = super.getFilePath(file)
+        if (!path.startsWith("/")) {
+            path = "/$path"
+        }
+        return URLEncoder.encode(path, "utf-8")
+                .replace("%2F", "/")
+                .replace("%253A", ":")
+                .replace("%3A", ":")
     }
 
     override fun createInitializationOptions(): Any {
@@ -149,8 +133,8 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 file.fileType is JavaScriptFileType
     }
 
-    override val handlePublishDiagnostics = ApplicationInfoEx.getInstanceEx().fullVersion == "2023.1"
-    override val useGenericNavigation = false
+    override val lspDiagnosticsSupport = null
+    override val lspGoToDefinitionSupport = false
     override val lspCompletionSupport = null
 
     override fun dispose() {}

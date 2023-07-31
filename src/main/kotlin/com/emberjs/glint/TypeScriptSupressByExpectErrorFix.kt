@@ -17,7 +17,7 @@ import com.intellij.psi.util.PsiUtilCore
 
 class TypeScriptSupressByExpectErrorFix(private val myHolderClass: Class<out JSSuppressionHolder?>) : BaseIntentionAction(), LowPriorityAction, TypeScriptServiceRelatedAction {
     override fun getFamilyName(): String {
-        return JavaScriptBundle.message("intention.family.name.suppress.with.ts.ignore", *arrayOfNulls(0))
+        return JavaScriptBundle.message("intention.family.name.suppress.with.ts.ignore", *arrayOfNulls(0)).replace("@ts-ignore", "@ts-expect-error")
     }
 
     override fun getText(): String {

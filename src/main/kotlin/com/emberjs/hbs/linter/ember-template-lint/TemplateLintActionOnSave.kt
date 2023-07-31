@@ -1,5 +1,5 @@
+
 import com.intellij.ide.actionsOnSave.impl.ActionsOnSaveFileDocumentManagerListener.ActionOnSave
-import com.intellij.lang.javascript.linter.eslint.standardjs.StandardJSConfiguration
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -8,12 +8,12 @@ import com.intellij.openapi.roots.ProjectFileIndex
 class TemplateLintActionOnSave : ActionOnSave() {
     override fun isEnabledForProject(project: Project): Boolean = isFixOnSaveEnabled(project)
 
-    override fun processDocuments(project: Project, documents: Array<out Document>) {
+    override fun processDocuments(project: Project, documents: Array<Document?>) {
         if (!this.isEnabledForProject(project)) return
 
         val manager = FileDocumentManager.getInstance()
         val fileIndex = ProjectFileIndex.getInstance(project)
-        val files = documents
+        val files = documents.filterNotNull()
                 .mapNotNull { manager.getFile(it) }
                 .filter { it.isInLocalFileSystem && fileIndex.isInContent(it) }
                 .toTypedArray()

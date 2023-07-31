@@ -120,8 +120,8 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
         return initialInfo
     }
 
-    override fun doAnnotate(collectedInfo: InitialInfo): AnnotationResult? {
-        if (collectedInfo.file == null) {
+    override fun doAnnotate(collectedInfo: InitialInfo?): AnnotationResult? {
+        if (collectedInfo?.file == null) {
             return null
         }
         val result = AnnotationResult()

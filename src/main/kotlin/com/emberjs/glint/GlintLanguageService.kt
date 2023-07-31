@@ -24,31 +24,32 @@ import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceCompletionEntry
 import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScriptSuppressByCommentFix
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptCompletionResponse
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptSymbolDisplayPart
-import com.intellij.lsp.LspServer
-import com.intellij.lsp.api.LspServerManager
-import com.intellij.lsp.methods.HoverMethod
-import com.intellij.openapi.Disposable
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptQuickInfoResponse
+import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
+import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.util.text.HtmlBuilder
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiDocumentManager
+import com.intellij.platform.lsp.api.LspServerManager
+import com.intellij.platform.lsp.impl.LspServerImpl
+import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
+import com.intellij.platform.lsp.util.convertMarkupContentToHtml
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.xml.XmlElement
 import com.intellij.ui.EditorNotifications
+import com.intellij.util.containers.toMutableSmartList
+import com.intellij.util.text.SemVer
 import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.MarkupContent
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
@@ -66,13 +67,16 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 
 
 
-class GlintTypeScriptService(private val project: Project) : TypeScriptService, Disposable {
+class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(project, GlintLspSupportProvider::class.java) {
     var currentlyChecking: PsiElement? = null
+    val lspServerManager = LspServerManager.getInstance(project)
 
     companion object {
         private val LOG = Logger.getInstance(GlintTypeScriptService::class.java)
         fun getInstance(project: Project): GlintTypeScriptService = project.getService(GlintTypeScriptService::class.java)
     }
+
+    val server by lazy { lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull() as? LspServerImpl }
 
     fun getDescriptor(virtualFile: VirtualFile): GlintLspServerDescriptor? {
         return if (getDescriptor()?.isSupportedFile(virtualFile) == true)
@@ -85,9 +89,9 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         return if (project.guessProjectDir()?.emberRoot != null) getGlintDescriptor(project) else null
     }
 
-    private fun <T> withServer(action: LspServer.() -> T): T? = getDescriptor()!!.server?.action()
-
     override val name = "Glint TypeScript LSP"
+    override val serverVersion: SemVer = SemVer("1.0.0", 1, 0,0)
+
     override fun isServiceCreated() = withServer { isRunning || isMalfunctioned } ?: false
 
     override fun showStatusBar() = withServer { isServiceCreated() } ?: false
@@ -100,31 +104,17 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
         }
     }
 
-    override fun openEditor(file: VirtualFile) {
-
-    }
-
-    override fun closeLastEditor(file: VirtualFile) {
-
+    override fun createQuickInfoResponse(markupContent: MarkupContent): TypeScriptQuickInfoResponse {
+        return TypeScriptQuickInfoResponse().apply {
+            val html = HtmlBuilder().appendRaw(convertMarkupContentToHtml(markupContent)).toString()
+            displayString = html.removeSurrounding("<pre>", "</pre>")
+        }
     }
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
         return TypeScriptLanguageServiceUtil.getCompletionMergeStrategy(parameters, file, context)
     }
 
-    override fun updateAndGetCompletionItems(virtualFile: VirtualFile, parameters: CompletionParameters): Future<List<TypeScriptService.CompletionEntry>?>? {
-        val descriptor = getDescriptor(virtualFile) ?: return null
-        return withServer {
-            val items = completedFuture(descriptor.server!!.getCompletionItems(parameters)).get().toList().map { GlintCompletionEntry(it) }
-            val file = PsiManager.getInstance(project).findFile(virtualFile)!!
-            val doc = PsiDocumentManager.getInstance(project).getDocument(file)!!
-            return@withServer getDetailedCompletionItems(virtualFile, items, doc, parameters.offset)
-        }
-    }
-
-    fun isTSCompilerError(annotationError: GlintAnnotationError): Boolean {
-        return annotationError.code == "tslint"
-    }
 
     fun getSuppressActions(element: PsiElement?): List<BaseIntentionAction>? {
         if (element == null) return null
@@ -136,61 +126,15 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
     }
 
     override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): List<IntentionAction?> {
-        if (result as? GlintAnnotationError == null) {
-            return emptyList()
-        }
-
-        val descriptor = getDescriptor(file.virtualFile) ?: return emptyList()
-        descriptor.server?.let {
-            val codeActionMethod = GlintCodeActionMethod.create(it, file, result.diagnostic) { command, _ ->
-                return@create command == "x"
-            }
-            val actions = it.invokeSynchronously(codeActionMethod)?.toMutableList() ?: emptyList<IntentionAction?>().toMutableList()
-            val isSuggestion = "hide" == result.category
-            val isTSCompilerError = isTSCompilerError(result)
-            if (!isTSCompilerError && file.virtualFile != null) {
-                if (!isSuggestion || isTSCompilerError) {
-                    val suppressByCommentFix = this.getSuppressActions(element)
-                    if (suppressByCommentFix != null) {
-                        actions.addAll(suppressByCommentFix)
-                    }
-                }
-                return actions.toList()
-            }
-            return emptyList()
-        } ?: return emptyList()
+        val list = ((result as? LspAnnotationError)?.quickFixes ?: emptyList()).toMutableSmartList()
+        list.addAll(getSuppressActions(element)!!)
+        return list
     }
 
-    override fun getDetailedCompletionItems(virtualFile: VirtualFile,
-                                            items: List<TypeScriptService.CompletionEntry>,
-                                            document: Document,
-                                            positionInFileOffset: Int): Future<List<TypeScriptService.CompletionEntry>?>? {
-        val descriptor = getDescriptor(virtualFile) ?: return null
-        return withServer {
-            val entries = items.filterIsInstance<TypeScriptServerServiceCompletionEntry>()
-            return@withServer completedFuture(items.filterIsInstance<GlintCompletionEntry>().map { descriptor.server!!.getResolvedCompletionItem((it as GlintCompletionEntry).item) }
-                    .map { descriptor.server!!.getResolvedCompletionItem(it) }
-                    .map {
-                        val detail = TypeScriptCompletionResponse.CompletionEntryDetail()
-                        detail.name = it.label
-                        detail.kind = it.kind.name
-                        val doc = TypeScriptSymbolDisplayPart()
-                        doc.text = it.documentation?.left ?: ""
-                        doc.kind = "text"
-                        val disp = TypeScriptSymbolDisplayPart()
-                        disp.kind = it.kind?.name
-                        disp.text = it.detail
-                        detail.documentation = arrayOf(doc)
-                        detail.displayParts = arrayOf(disp)
-                        TypeScriptServerServiceCompletionEntry(detail)
-                    } + entries)
-        }
-    }
-
-    fun getNavigationFor(document: Document, elem: PsiElement, includeOther: Boolean): Array<PsiElement>? {
+    fun getNavigationFor(document: Document, elem: PsiElement, includeOther: Boolean): Array<PsiElement> {
         var sourceElement: PsiElement = elem
         if (!includeOther && (sourceElement is XmlElement || sourceElement.containingFile is HbPsiFile)) {
-            return null
+            return emptyArray()
         }
         var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
         if (currentlyChecking == null && element.containingFile is HbPsiFile) {
@@ -200,7 +144,7 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             }
             if (element.reference is HbReference || element.references.find { it is HbReference } != null) {
                 currentlyChecking = null
-                return null
+                return emptyArray()
             }
             currentlyChecking = null
         }
@@ -223,47 +167,27 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
             elem = DelegateElement(elem, element, document)
         }
 
-        return getDescriptor()?.server?.getElementDefinitions(elem as PsiElement)?.toTypedArray()
+        return super.getNavigationFor(document, elem as PsiElement)
     }
 
-    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement>? {
+    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement> {
         return getNavigationFor(document, elem, false)
     }
 
 
     override fun getSignatureHelp(file: PsiFile, context: CreateParameterInfoContext): Future<Stream<JSFunctionType>?>? = null
 
-    fun quickInfo(element: PsiElement): String? {
-        val server = getDescriptor()?.server
-        val raw = server?.invokeSynchronously(HoverMethod.create(server, element)) ?: return null
-        LOG.info("Quick info for $element : $raw")
-        return raw.substring("<html><body><pre>".length, raw.length - "</pre></body></html>".length)
-    }
-
     override fun isDisabledByContext(context: VirtualFile): Boolean {
         return getDescriptor()?.isAvailable?.not() ?: return true
     }
 
-    override fun getQuickInfoAt(element: PsiElement, originalElement: PsiElement, originalFile: VirtualFile): CompletableFuture<String?> =
-            completedFuture(quickInfo(element))
-
-    override fun restart(recreateToolWindow: Boolean) {
-        val lspServerManager = LspServerManager.getInstance(project)
-        val lspServers = lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java)
-        lspServers.forEach { lspServerManager.stopServer(it) }
-        if (!lspServers.isEmpty()) {
-            getGlintDescriptor(project).ensureStarted()
-            TypeScriptMessageBus.get(project).changed()
-        }
-    }
-
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
-        val server = getDescriptor()?.server ?: return completedFuture(emptyList())
+        val server = server ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
 
         EditorNotifications.getInstance(project).updateNotifications(virtualFile)
 
-        return completedFuture(server.getDiagnostics(virtualFile)?.map {
+        return completedFuture(server.getDiagnosticsAndQuickFixes(virtualFile).map {
             GlintAnnotationError(it, virtualFile.canonicalPath)
         })
     }
@@ -277,10 +201,6 @@ class GlintTypeScriptService(private val project: Project) : TypeScriptService, 
                                                    file.fileType is TypeScriptFileType ||
                                                    file.fileType is GtsFileType ||
                                                    file.fileType is JavaScriptFileType
-
-    override fun dispose() {
-        return
-    }
 }
 
 class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntry {
@@ -292,7 +212,9 @@ class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptServic
             .withInsertHandler(JSInsertHandler.DEFAULT)
 }
 
-class GlintAnnotationError(val diagnostic: Diagnostic, private val path: String?) : JSAnnotationError {
+class GlintAnnotationError(val diagFixes: DiagnosticAndQuickFixes, private val path: String?) : JSAnnotationError {
+    val diagnostic = diagFixes.diagnostic
+    public val fixes = diagFixes.quickFixes
     override fun getLine() = diagnostic.range.start.line
     val endLine = diagnostic.range.end.line
     val endColumn = diagnostic.range.end.character

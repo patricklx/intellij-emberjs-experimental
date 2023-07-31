@@ -11,14 +11,14 @@ import com.intellij.psi.PsiManager
 class EsLintActionOnSave : ActionOnSave() {
     override fun isEnabledForProject(project: Project): Boolean = isFixOnSaveEnabled(project)
 
-    override fun processDocuments(project: Project, documents: Array<out Document>) {
+    override fun processDocuments(project: Project, documents: Array<Document?>) {
         if (!this.isEnabledForProject(project)) return
 
         val manager = FileDocumentManager.getInstance()
         val psiManager = PsiManager.getInstance(project)
         val fileIndex = ProjectFileIndex.getInstance(project)
         val action = GtsEsLintFixAction()
-        val files = documents
+        val files = documents.filterNotNull()
                 .mapNotNull { manager.getFile(it) }
                 .filter { it.isInLocalFileSystem && fileIndex.isInContent(it) && action.isFileAccepted(project, it) }
                 .toTypedArray()

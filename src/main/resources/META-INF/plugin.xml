@@ -34,11 +34,12 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="222.2964.55"/>
+    <idea-version since-build="232.8453.116"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.platform</depends>
     <depends>JavaScript</depends>
     <depends>com.intellij.css</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
@@ -88,7 +89,7 @@
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
         <moduleBuilder builderClass="com.emberjs.cli.EmberCLIProjectModuleBuilder"/>
-        <lsp.serverSupportProvider implementation="com.emberjs.glint.GlintLspSupportProvider"/>
+        <platform.lsp.serverSupportProvider implementation="com.emberjs.glint.GlintLspSupportProvider"/>
         <lang.findUsagesProvider language="Handlebars"
                                  implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
 
