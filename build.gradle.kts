@@ -70,3 +70,6 @@ tasks.test {
 tasks.buildSearchableOptions {
     enabled = false
 }
+
+
+tasks.register("printVersion") { println(version) }

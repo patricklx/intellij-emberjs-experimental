@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@v1
         with:
           submodules: true
+          token: ${{ github.token }}
 
       - uses: actions/setup-java@v2.3.1
         with:
@@ -38,6 +39,31 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew assemble
       - run: ./gradlew check
+      - name: create changelog and tag
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_COMMIT: ${{ github.sha }}
+        run: |
+          version=$(sh ./gradlew -q printVersion)
+          git fetch --unshallow
+          git fetch --all --tags
+          TAG=v$version
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "tag exists";
+          else
+            export GITHUB_AUTH=$GITHUB_TOKEN
+            export changelog=$(npx lerna-changelog --next-version=$version)
+            sed -i src/main/resources/META-INF/plugin.xml "s/CHANGELOG_PLACEHOLDER/$changelog"
+            echo -e "# Changelog\n\n$changelog\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
+            git add CHANGELOG.md
+            git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
+            git config --local user.name "$GITHUB_ACTOR"
+            git commit -m "update changelog"
+            git tag $TAG
+            git push
+            git push --tags
+          fi
   upload:
     name: Upload
     runs-on: ubuntu-latest
