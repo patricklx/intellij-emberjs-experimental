@@ -45,6 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_COMMIT: ${{ github.sha }}
+          GITHUB_REPO: ${{ github.repositoryUrl }}
         run: |
           version=$(sh ./gradlew -q printVersion)
           git fetch --unshallow
@@ -54,7 +55,7 @@ jobs:
             echo "tag exists";
           else
             export GITHUB_AUTH=$GITHUB_TOKEN
-            export changelog=$(npx lerna-changelog --next-version=$version)
+            export changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$version)
             sed -i src/main/resources/META-INF/plugin.xml "s/CHANGELOG_PLACEHOLDER/$changelog"
             echo -e "# Changelog\n\n$changelog\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
             git add CHANGELOG.md
