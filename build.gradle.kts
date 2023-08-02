@@ -78,6 +78,10 @@ tasks.register("printVersion") { println(version) }
 
 tasks.register("updateChangelog") {
     var input = generateSequence(::readLine).joinToString("\n")
+    input = input.replace(":rocket:", "🚀")
+    input = input.replace(":bug:", "🐛")
+    input = input.replace(":documentation:", "📝")
+    input = input.replace(":breaking:", "💥")
     input += "\nsee <a href=\"https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md\">https://github.com/patricklx/intellij-emberjs-experimental/</a> for more"
     val f = File("./src/main/resources/META-INF/plugin.xml")
     var content = f.readText()
