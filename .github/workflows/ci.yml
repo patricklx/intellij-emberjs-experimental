@@ -76,7 +76,8 @@ jobs:
       - name: create changelog
         id: changelog
         env:
-          TAG_EXISTS: ${{ tag-exists.outputs.exists }}
+          TAG_EXISTS: ${{ steps.tag-exists.outputs.exists }}
+          GITHUB_AUTH: ${{ github.token }}
         run: |
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version
@@ -91,7 +92,7 @@ jobs:
 
       - name: create tag
         id: tag
-        if: tag-exists.outputs.exists == 'false'
+        if: steps.tag-exists.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -101,8 +102,7 @@ jobs:
         run: |
           set -e
           version=$(sh ./gradlew -q printVersion)
-          TAG=v$version
-          export GITHUB_AUTH=$GITHUB_TOKEN            
+          TAG=v$version                      
           echo -e "# Changelog\n\n$CHANGELOG\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
           git add CHANGELOG.md
           git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
