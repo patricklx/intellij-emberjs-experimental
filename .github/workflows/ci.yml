@@ -39,6 +39,19 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew assemble
       - run: ./gradlew check
+  update:
+    name: Update Changelog and create Tag
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          token: ${{ github.token }}
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
       - name: create changelog and tag
         if: github.ref == 'refs/heads/main'
         env:
