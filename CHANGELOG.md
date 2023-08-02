@@ -1,5 +1,19 @@
 # Changelog
 
+
+## v2023.1.54 (2023-08-02)
+
+#### :rocket: Enhancement
+* [#47](https://github.com/patricklx/intellij-emberjs-experimental/pull/47) improve in repo addon resolutions ([@patricklx](https://github.com/patricklx))
+* [#49](https://github.com/patricklx/intellij-emberjs-experimental/pull/49) correctly mark used imports ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#48](https://github.com/patricklx/intellij-emberjs-experimental/pull/48) do not start glint lsp if glint is not available ([@patricklx](https://github.com/patricklx))
+* [#46](https://github.com/patricklx/intellij-emberjs-experimental/pull/46) fix wrong unresolved symbol in hbs hash ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
 Error: Command failed with exit code 128: git describe --abbrev=0 --tags
 fatal: No names found, cannot describe anything.
     at makeError (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/execa/lib/error.js:60:11)
