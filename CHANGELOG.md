@@ -1,4 +1,18 @@
-Changelog
+# Changelog
+
+Error: Command failed with exit code 128: git describe --abbrev=0 --tags
+fatal: No tags can describe 'e3ecc2b0eccaa47f0a75e88bc9fe5b8462a4bb20'.
+Try --always, or create some tags.
+    at makeError (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/execa/lib/error.js:60:11)
+    at module.exports.sync (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/execa/index.js:194:17)
+    at Object.lastTag (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/git.js:31:18)
+    at Changelog.<anonymous> (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/changelog.js:31:56)
+    at Generator.next (<anonymous>)
+    at /home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/changelog.js:8:71
+    at new Promise (<anonymous>)
+    at __awaiter (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/changelog.js:4:12)
+    at Changelog.createMarkdown (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/changelog.js:30:16)
+    at Object.<anonymous> (/home/runner/.npm/_npx/9dd7fac956786ded/node_modules/lerna-changelog/lib/cli.js:77:64)
 
 
 ===============================================================================
