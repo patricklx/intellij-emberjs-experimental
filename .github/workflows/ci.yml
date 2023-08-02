@@ -48,7 +48,6 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
         run: |
           version=$(sh ./gradlew -q printVersion)
-          git fetch --unshallow
           git fetch --all --tags
           TAG=v$version
           if git rev-parse "$TAG" >/dev/null 2>&1; then
