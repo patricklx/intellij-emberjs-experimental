@@ -2,10 +2,7 @@ package com.emberjs.gts
 
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
-import com.dmarcotte.handlebars.psi.HbData
-import com.dmarcotte.handlebars.psi.HbMustache
-import com.dmarcotte.handlebars.psi.HbPsiElement
-import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.dmarcotte.handlebars.psi.*
 import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.hbs.HbReference
@@ -218,6 +215,7 @@ class HbLintAnnotator() : Annotator {
         if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && !element.references.any { (it is HbReference || it is HbsModuleReference) && it.resolve() != null })) {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
             if (insideImport) return
+            if (element.parent is HbHash) return
             val name = element.text
             val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
             val candidates = tsFile?.let { getCandidates(element.containingFile, name) }
