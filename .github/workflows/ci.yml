@@ -85,7 +85,7 @@ jobs:
         run: |
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version
-          if [[ "$TAG_EXISTS" == "true"]]; then
+          if [[ "$TAG_EXISTS" == "true" ]]; then
             from=$(git tag --sort=-creatordate | grep -A 1 $TAG | tail -n 1)
             changelog=$(npx lerna-changelog --repo $GITHUB_REPO from="$from" --to="$TAG")
             echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
