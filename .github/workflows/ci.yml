@@ -68,7 +68,7 @@ jobs:
           else
             export GITHUB_AUTH=$GITHUB_TOKEN
             export changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$version)
-            sed -i src/main/resources/META-INF/plugin.xml "s/CHANGELOG_PLACEHOLDER/$changelog"
+            echo "$changelog" | sh ./gradlew updateChangelog
             echo -e "# Changelog\n\n$changelog\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
             git add CHANGELOG.md
             git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"

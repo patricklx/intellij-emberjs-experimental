@@ -29,7 +29,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
-      CHANGELOG_PLACEHOLDER
+      see <a href="https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md">https://github.com/patricklx/intellij-emberjs-experimental/</a>
     ]]>
     </change-notes>
 
@@ -79,9 +79,11 @@
                 implementationClass="com.emberjs.gts.GtsSyntaxHighlighterFactory"/>
         <lang.ast.factory language="Gts" implementationClass="com.emberjs.gts.GtsAstFactory" />
         <lang.formatter language="Gts" implementationClass="com.emberjs.gts.GtsFormattingModelBuilder" />
-        <referencesSearch implementation="com.emberjs.gts.GtsReferenceSearcher" />
         <editorNotificationProvider implementation="com.emberjs.glint.GlintEditorNotificationsProvider"/>
         <editorFactoryListener implementation="com.emberjs.hbs.HbMustacheNameSynchronizer$MyEditorFactoryListener"/>
+
+        <lang.inspectionSuppressor language="TypeScript" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
+        <lang.inspectionSuppressor language="Gts" implementationClass="com.emberjs.gts.EmberInspectionSuppressor"/>
         <typedHandler implementation="com.emberjs.gts.GtsTypeHandler" order="before xmlSlash"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliProjectGenerator"/>
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
