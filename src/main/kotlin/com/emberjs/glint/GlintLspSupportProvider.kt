@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
+        if (!getGlintDescriptor(project).isAvailable) return
         serverStarter.ensureServerStarted(getGlintDescriptor(project))
     }
 }
