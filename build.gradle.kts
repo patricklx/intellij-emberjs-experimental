@@ -76,10 +76,10 @@ tasks.register("printVersion") { println(version) }
 
 
 tasks.register("updateChangelog") {
-    val input = generateSequence(::readLine).joinToString("\n")
+    var input = generateSequence(::readLine).joinToString("\n")
+    input += "\nsee <a href=\"https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md\">https://github.com/patricklx/intellij-emberjs-experimental/</a> for more"
     val f = File("./src/main/resources/META-INF/plugin.xml")
     var content = f.readText()
     content = content.replace("CHANGELOG_PLACEHOLDER", input)
-    content += "\nsee <a href=\"https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md\">https://github.com/patricklx/intellij-emberjs-experimental/</a> for more"
     f.writeText(content)
 }

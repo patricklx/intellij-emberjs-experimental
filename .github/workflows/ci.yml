@@ -60,6 +60,7 @@ jobs:
           GITHUB_COMMIT: ${{ github.sha }}
           GITHUB_REPO: ${{ github.repository }}
         run: |
+          set -e
           version=$(sh ./gradlew -q printVersion)
           git fetch --all --tags
           TAG=v$version
