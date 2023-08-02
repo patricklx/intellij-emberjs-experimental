@@ -89,10 +89,10 @@ jobs:
           if [[ "$TAG_EXISTS" == "true" ]]; then
             from=$(git tag --sort=-creatordate | grep -A 1 $TAG | tail -n 1)
             changelog=$(npx lerna-changelog --repo $GITHUB_REPO --from="$from" --to="$TAG")
-            echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+            echo "$changelog" > new_changelog.txt
           else            
             changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$TAG)
-            echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+            echo "$changelog" > new_changelog.txt
           fi          
 
       - name: create tag
@@ -103,9 +103,10 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_COMMIT: ${{ github.sha }}
           GITHUB_REPO: ${{ github.repository }}
-          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+
         run: |
           set -e
+          CHANGELOG=$(cat new_changelog.txt)
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version                      
           echo -e "# Changelog\n\n$CHANGELOG\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
@@ -122,9 +123,10 @@ jobs:
       - if: (steps.tag.outputs.tag == 'created' || steps.tag-exists.outputs.exists == 'true') && steps.already-published.outputs.exists == 'false'
         env:
           ORG_GRADLE_PROJECT_intellijPublishToken: ${{ secrets.ORG_GRADLE_PROJECT_intellijPublishToken }}
-          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+
         run: |          
           chmod +x ./gradlew
+          CHANGELOG=$(cat new_changelog.txt)
           echo "$CHANGELOG" | sh ./gradlew updateChangelog
           ./gradlew buildPlugin
           ./gradlew publishPlugin
