@@ -910,16 +910,23 @@ class EmberUtils {
             val appScope = file.parentEmberModule?.findDirectory("app")
             val testScope = file.parentEmberModule?.findDirectory("tests")
             val nodeModules = file.parentEmberModule?.findDirectory("node_modules")
+            val inRepoAddonDirs = file.parentEmberModule?.inRepoAddonDirs
 
             if (nodeModules != null) {
                 validParents.add(nodeModules)
             }
 
+            if (inRepoAddonDirs != null && inRepoAddonDirs.any { file.parents.contains(it) }) {
+                validParents.add(file.parents.find { inRepoAddonDirs.any { inr -> inr == it } }!!)
+            }
+
             if (addonScope != null && file.parents.contains(addonScope)) {
                 validParents.add(addonScope)
+                inRepoAddonDirs?.let { validParents.addAll(it) }
             }
             if (appScope != null && file.parents.contains(appScope)) {
                 addonScope?.let { validParents.add(it) }
+                inRepoAddonDirs?.let { validParents.addAll(it) }
                 validParents.add(appScope)
             }
             if (testScope != null && file.parents.contains(testScope)) {

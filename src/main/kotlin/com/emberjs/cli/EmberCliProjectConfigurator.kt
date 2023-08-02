@@ -1,33 +1,23 @@
 package com.emberjs.cli
 
-import com.emberjs.settings.EmberApplicationOptions
-import com.emberjs.utils.*
+import com.emberjs.utils.emberRoot
+import com.emberjs.utils.findMainPackageJson
+import com.emberjs.utils.inRepoAddonDirs
+import com.emberjs.utils.isEmber
 import com.intellij.ide.projectView.actions.MarkRootActionBase
-import com.intellij.javascript.nodejs.PackageJsonDependency
 import com.intellij.lang.javascript.dialects.JSLanguageLevel
 import com.intellij.lang.javascript.library.JSLibraryManager
-import com.intellij.lang.javascript.modules.NodeJSModulesSearcher
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.RootsChangeRescanningInfo
-import com.intellij.openapi.project.RootsChangeRescanningInfo.TOTAL_RESCAN
 import com.intellij.openapi.roots.ContentEntry
-import com.intellij.openapi.roots.ModifiableRootModel
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.impl.libraries.LibraryEx
-import com.intellij.openapi.roots.impl.libraries.LibraryImpl
-import com.intellij.openapi.roots.libraries.LibraryDetectionManager
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.DirectoryProjectConfigurator
 import com.intellij.util.PlatformUtils
-import com.intellij.webcore.ScriptingFrameworkDescriptor
-import com.intellij.webcore.libraries.ScriptingLibraryModel
-import com.intellij.webcore.libraries.ScriptingLibraryModel.LibraryLevel.PROJECT
-import com.intellij.workspaceModel.ide.impl.legacyBridge.library.LibraryBridgeImpl
 import org.jetbrains.jps.model.JpsElement
 import org.jetbrains.jps.model.java.JavaResourceRootType.RESOURCE
 import org.jetbrains.jps.model.java.JavaSourceRootType.SOURCE
@@ -87,7 +77,7 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
 
         fun inRepoAddons(baseDir: VirtualFile): List<VirtualFile> {
             // assume the location of in-repo addons; it would be better to parse package.json
-            return baseDir.findChild("lib")?.children.orEmpty().filter { it.isInRepoAddon }
+            return baseDir.inRepoAddonDirs
         }
 
         private fun setupModule(entry: ContentEntry, baseDir: VirtualFile) {

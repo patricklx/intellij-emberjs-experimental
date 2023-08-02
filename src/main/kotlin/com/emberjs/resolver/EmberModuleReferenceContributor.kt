@@ -1,6 +1,5 @@
 package com.emberjs.resolver
 
-import com.emberjs.cli.EmberCliProjectConfigurator
 import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.utils.*
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
@@ -133,18 +132,19 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
                 ?: return emptyArray()
 
         val nodeModules = NodeModuleManager.getInstance(host.project).collectVisibleNodeModules(host.originalVirtualFile)
-        val modules = if (getAppName(hostPackageRoot) == packageName) {
-            // local import from this app/addon
-            listOf(hostPackageRoot) + EmberCliProjectConfigurator.inRepoAddons(hostPackageRoot)
-        } else {
-            // check node_modules
-            val first = nodeModules.find { it.name == packageName }
-            listOfNotNull(first?.virtualFile)
-        }
+        val first = nodeModules.find { it.name == packageName }
+        val modules = listOf(hostPackageRoot) + hostPackageRoot.inRepoAddonDirs + listOfNotNull(first?.virtualFile)
+
 
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
         val roots = modules
-                .flatMap { listOfNotNull(it.findChild("addon"), it.findChild("app"), it.findChild("addon-test-support")) }
+                .flatMap {
+                    listOfNotNull(
+                            it.findChild("addon"),
+                            it.findChild("app"),
+                            it.findChild("addon-test-support"),
+                    )
+                } + (host.containingFile.originalVirtualFile?.parentEmberModule?.inRepoAddonDirs ?: emptyList())
 
         val exts = arrayOf(".ts", ".js", ".hbs", ".gts", ".gjs")
         return roots.map { root ->
