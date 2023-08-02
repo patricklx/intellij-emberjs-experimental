@@ -44,7 +44,10 @@ class FakeVirtualVile(val virtualFile: VirtualFile): VirtualFile() {
     override fun getExtension() = "ts"
     override fun getName() = virtualFile.name
     override fun getFileSystem() = virtualFile.fileSystem
-    override fun getPath() = virtualFile.path.replace(".gts", ".ts").replace(".hbs", ".ts")
+    override fun getPath() = virtualFile.path
+            .replace(".gjs", ".js")
+            .replace(".gts", ".ts")
+            .replace(".hbs", ".ts")
     override fun isWritable() = virtualFile.isWritable
     override fun isDirectory() = virtualFile.isDirectory
     override fun isValid() = virtualFile.isValid
