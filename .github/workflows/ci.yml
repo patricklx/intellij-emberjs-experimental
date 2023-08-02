@@ -82,6 +82,7 @@ jobs:
         env:
           TAG_EXISTS: ${{ steps.tag-exists.outputs.exists }}
           GITHUB_AUTH: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
         run: |
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version
