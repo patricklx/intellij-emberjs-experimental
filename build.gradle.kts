@@ -20,7 +20,7 @@ repositories {
 }
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.assertj:assertj-core:3.23.1")
+    testImplementation("org.assertj:assertj-core:3.24.2")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.4")
 }
