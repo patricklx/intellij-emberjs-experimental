@@ -116,7 +116,7 @@ jobs:
 
         run: |
           set -e
-          CHANGELOG=$(cat new_changelog.txt | markdown)
+          CHANGELOG=$(cat new_changelog.txt)
           echo "$CHANGELOG"
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version                      
@@ -137,7 +137,7 @@ jobs:
 
         run: |          
           chmod +x ./gradlew
-          CHANGELOG=$(cat new_changelog.txt)
+          CHANGELOG=$(cat new_changelog.txt | markdown)
           echo "$CHANGELOG" | sh ./gradlew updateChangelog
           ./gradlew buildPlugin
           ./gradlew publishPlugin
