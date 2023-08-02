@@ -93,7 +93,10 @@ jobs:
           else            
             changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$TAG)
             echo "$changelog" > new_changelog.txt
-          fi          
+          fi
+          echo "$changelog"
+          html=$(echo "$changelog" | markdown)
+          echo "$html"
 
       - name: create tag
         id: tag
@@ -106,7 +109,8 @@ jobs:
 
         run: |
           set -e
-          CHANGELOG=$(cat new_changelog.txt)
+          CHANGELOG=$(cat new_changelog.txt | markdown)
+          echo "$CHANGELOG"
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version                      
           echo -e "# Changelog\n\n$CHANGELOG\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
