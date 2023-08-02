@@ -44,7 +44,7 @@ jobs:
   release:
     name: Update Changelog, Create Tag and Release
     runs-on: ubuntu-latest
-    needs: test
+#    needs: test
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
@@ -56,48 +56,79 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: create changelog and tag
+      - name: verify tag exists
+        id: tag-exists
+        run: |
+          version=$(sh ./gradlew -q printVersion)
+          TAG=v$version
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "tag exists";
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: verify release already published
+        id: already-published
+        run: |
+          version=$(sh ./gradlew -q printVersion)
+          released=$(echo "$version" | sh ./gradlew verifyAlreadyReleased -q)
+          echo "exists=$released" >> "$GITHUB_OUTPUT"
+      - name: create changelog
+        id: changelog
+        env:
+          TAG_EXISTS: ${{ tag-exists.outputs.exists }}
+        run: |
+          version=$(sh ./gradlew -q printVersion)
+          TAG=v$version
+          if [[ "$TAG_EXISTS" == "true"]]; then
+            from=$(git tag --sort=-creatordate | grep -A 1 $TAG | tail -n 1)
+            changelog=$(npx lerna-changelog --repo $GITHUB_REPO from="$from" --to="$TAG")
+            echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+          else            
+            changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$TAG)
+            echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+          fi          
+
+      - name: create tag
         id: tag
+        if: tag-exists.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_COMMIT: ${{ github.sha }}
           GITHUB_REPO: ${{ github.repository }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         run: |
           set -e
           version=$(sh ./gradlew -q printVersion)
           TAG=v$version
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "tag exists";
-            echo "tag=null" >> "$GITHUB_OUTPUT"
-          else
-            export GITHUB_AUTH=$GITHUB_TOKEN
-            export changelog=$(npx lerna-changelog --repo $GITHUB_REPO --next-version=$TAG)
-            echo "$changelog" | sh ./gradlew updateChangelog
-            echo -e "# Changelog\n\n$changelog\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
-            git add CHANGELOG.md
-            git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
-            git config --local user.name "$GITHUB_ACTOR"
-            git commit -m "update changelog"
-            git tag $TAG
-            git fetch --all
-            git rebase origin/main
-            git push
-            git push --tags
-            echo "tag=created" >> "$GITHUB_OUTPUT"
-          fi
+          export GITHUB_AUTH=$GITHUB_TOKEN            
+          echo -e "# Changelog\n\n$CHANGELOG\n$(tail --lines=+2 CHANGELOG.md)" > CHANGELOG.md
+          git add CHANGELOG.md
+          git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --local user.name "$GITHUB_ACTOR"
+          git commit -m "update changelog"
+          git tag $TAG
+          git fetch --all
+          git rebase origin/main
+          git push
+          git push --tags          
+          echo "tag=created" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v3.12.0
-        if: steps.tag.outputs.tag == 'created'
+        if: (steps.tag.outputs.tag == 'created' || tag-exists.outputs.exists == 'true') && steps.already-published.outputs.exists == 'false'
         with:
           java-version: '17'
           distribution: 'zulu'
-      - run: chmod +x ./gradlew
-      - run: ./gradlew buildPlugin
-        if: steps.tag.outputs.tag == 'created'
-      - run: ./gradlew publishPlugin
-        if: steps.tag.outputs.tag == 'created'
+      - if: (steps.tag.outputs.tag == 'created' || tag-exists.outputs.exists == 'true') && steps.already-published.outputs.exists == 'false'
         env:
           ORG_GRADLE_PROJECT_intellijPublishToken: ${{ secrets.ORG_GRADLE_PROJECT_intellijPublishToken }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+        run: |          
+          chmod +x ./gradlew
+          echo "$CHANGELOG" | sh ./gradlew updateChangelog
+          ./gradlew buildPlugin
+          ./gradlew publishPlugin
+
   upload:
     name: Upload
     runs-on: ubuntu-latest

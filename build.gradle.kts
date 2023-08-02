@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.net.URL
 
 
 plugins {
@@ -82,4 +83,19 @@ tasks.register("updateChangelog") {
     var content = f.readText()
     content = content.replace("CHANGELOG_PLACEHOLDER", input)
     f.writeText(content)
+}
+
+tasks.register("listRecentReleased") {
+    val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=8").readText()
+    val obj = groovy.json.JsonSlurper().parseText(text)
+    val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
+    println(groovy.json.JsonBuilder(versions).toPrettyString())
+}
+
+tasks.register("verifyAlreadyReleased") {
+    var input = generateSequence(::readLine).joinToString("\n")
+    val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=100").readText()
+    val obj = groovy.json.JsonSlurper().parseText(text)
+    val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
+    println(versions.contains(input))
 }
