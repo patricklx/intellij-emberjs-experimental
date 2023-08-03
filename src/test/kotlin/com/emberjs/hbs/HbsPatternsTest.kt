@@ -8,8 +8,10 @@ import com.intellij.patterns.PsiElementPattern
 import com.intellij.psi.PsiElement
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Test
 
 class HbsPatternsTest : BasePlatformTestCase() {
+    @Test
     fun testSimpleMustache() = with(SIMPLE_MUSTACHE_NAME_ID) {
         test("{{foo<caret>}}")
         test("{{fo<caret>o}}")
@@ -18,6 +20,7 @@ class HbsPatternsTest : BasePlatformTestCase() {
         test("{{foo bar=(baz<caret>)}}", false)
     }
 
+    @Test
     fun testBlockMustache() = with(BLOCK_MUSTACHE_NAME_ID) {
         test("{{foo<caret>}}", false)
         test("{{fo<caret>o}}", false)
@@ -27,6 +30,7 @@ class HbsPatternsTest : BasePlatformTestCase() {
         test("{{foo bar=(baz<caret>)}}", false)
     }
 
+    @Test
     fun testSubExpression() = with(SUB_EXPR_NAME_ID) {
         test("{{foo<caret>}}", false)
         test("{{fo<caret>o}}", false)

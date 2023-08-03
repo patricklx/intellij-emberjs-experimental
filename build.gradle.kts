@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URL
 
 
@@ -22,8 +21,13 @@ repositories {
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.24.2")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.10.0")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.4")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
 }
 
 // Configure gradle-intellij-plugin plugin.
@@ -49,12 +53,11 @@ intellij {
 }
 
 tasks {
-    // Set the compatibility versions to 1.8
-    withType<JavaCompile> {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+    compileKotlin {
+        kotlinOptions.jvmTarget = "17"
     }
-    withType<KotlinCompile> {
+
+    compileTestKotlin {
         kotlinOptions.jvmTarget = "17"
     }
 
@@ -64,9 +67,6 @@ tasks {
 
 }
 
-tasks.test {
-    systemProperty("idea.force.use.core.classloader", "true")
-}
 
 tasks.buildSearchableOptions {
     enabled = false

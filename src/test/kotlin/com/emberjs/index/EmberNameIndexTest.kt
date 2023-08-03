@@ -1,12 +1,19 @@
 package com.emberjs.index
 
+import com.emberjs.project.ProjectService
 import com.emberjs.resolver.EmberName
+import com.emberjs.utils.clearVirtualCache
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.indexing.FileBasedIndex
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Test
 import java.nio.file.Paths
 
 class EmberNameIndexTest : BasePlatformTestCase() {
+
+    override fun setUp() {
+        super.setUp()
+        project.getService(ProjectService::class.java)
+    }
     override fun getTestDataPath(): String? {
         val resource = ClassLoader.getSystemResource("com/emberjs/index/fixtures")
         return Paths.get(resource.toURI()).toAbsolutePath().toString()
@@ -15,12 +22,12 @@ class EmberNameIndexTest : BasePlatformTestCase() {
     private fun doTest(vararg modules: String) {
         // Load fixture files into the project
         myFixture.copyDirectoryToProject(getTestName(true), "/")
-
-        assertThat(EmberNameIndex.getAllKeys(myFixture.project))
-                .containsOnly(*modules.map { EmberName.from(it) }.toTypedArray())
+        clearVirtualCache()
+        assertThat(EmberNameIndex.getAllKeys(myFixture.project).map { it.fullName })
+                .containsOnly(*modules.map { EmberName.from(it)?.fullName }.toTypedArray())
     }
 
-    fun testExample() = doTest(
+    @Test fun testExample() = doTest(
             "controller:application:~/controllers/application",
             "controller:user/index:~/controllers/user/index",
             "controller:user/new:~/controllers/user/new",
@@ -28,5 +35,5 @@ class EmberNameIndexTest : BasePlatformTestCase() {
             "helper-test:format-number",
             "acceptance-test:user-page")
 
-    fun testNoEmberCli() = doTest()
+    @Test fun testNoEmberCli() = doTest()
 }

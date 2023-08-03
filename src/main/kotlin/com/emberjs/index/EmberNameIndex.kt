@@ -3,7 +3,6 @@ package com.emberjs.index
 import com.emberjs.resolver.EmberName
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
@@ -18,12 +17,6 @@ import com.intellij.util.io.BooleanDataDescriptor
 
 class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
-    class IndexModificationTracker(val project: Project): ModificationTracker {
-        override fun getModificationCount(): Long {
-            return index.getIndexModificationStamp(NAME, project)
-        }
-    }
-
     override fun getName() = NAME
     override fun getVersion() = 7
     override fun getKeyDescriptor() = BooleanDataDescriptor.INSTANCE
@@ -37,7 +30,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
         val NAME: ID<Boolean, Void> = ID.create("ember.names")
         private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "gts")
 
-        private val index: FileBasedIndex get() = FileBasedIndex.getInstance()
+        val index: FileBasedIndex get() = FileBasedIndex.getInstance()
 
         fun getAllKeys(project: Project): Collection<EmberName> {
             return getAllPairs(project).map { it.first }

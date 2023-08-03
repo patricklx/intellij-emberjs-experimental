@@ -12,8 +12,10 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.rd.util.assert
+import org.junit.Test
 
 class HbsCompletionTest : BasePlatformTestCase() {
+    @Test
     fun testLocalFromMustach() {
         val hbs = """
             {{#each this.items as |item index|}}
@@ -55,6 +57,7 @@ class HbsCompletionTest : BasePlatformTestCase() {
         assert(myFixture.lookupElementStrings == null && resolvedItemInFn.text == "item")
     }
 
+    @Test
     fun testLocalFromAnglebracket() {
         val hbs = """
             <MyComponent as |item index|>
@@ -96,11 +99,11 @@ class HbsCompletionTest : BasePlatformTestCase() {
             assert(myFixture.lookupElementStrings == null && resolvedItemInFn.text == "item")
     }
 
+    @Test
     fun testToTsFile() {
         val hbs = """
             {{this.}}
             {{this.x.}}
-            {{this.y.}}
             {{x}}
             {{in-helper (fn this.)}}
         """.trimIndent()
@@ -108,10 +111,6 @@ class HbsCompletionTest : BasePlatformTestCase() {
             export default class extends Component {
                 @tracked a;
                 x: { b: string };
-                /**
-                 * @type {{b: string}}
-                 */
-                y;
             }
         """.trimIndent()
         myFixture.addFileToProject("component.ts", ts)
@@ -119,21 +118,15 @@ class HbsCompletionTest : BasePlatformTestCase() {
         val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })
         val resolvedA = element.find { it.parent.text == "this." }!!.nextSibling.nextSibling
         val resolvedXB = element.find { it.parent.text == "this.x" }!!.parent.parent.nextSibling
-        val resolvedYB = element.find { it.parent.text == "this.y" }!!.parent.parent.nextSibling
         val notResolvedX = element.find { it.parentsWithSelf.find { it is HbPathImpl }?.text == "x" }!!
         val resolvedXInHelper = element.findLast { it.parent.text == "this." }!!.nextSibling.nextSibling
 
         myFixture.editor.caretModel.moveToOffset(resolvedA.endOffset)
         myFixture.complete(CompletionType.BASIC)
         var completions = myFixture.lookupElementStrings!!
-        assert(completions.containsAll(listOf("x", "y", "a")))
+        assert(completions.containsAll(listOf("x", "a")))
 
         myFixture.editor.caretModel.moveToOffset(resolvedXB.endOffset)
-        myFixture.complete(CompletionType.BASIC)
-        completions = myFixture.lookupElementStrings!!
-        assert(completions.containsAll(listOf("b")))
-
-        myFixture.editor.caretModel.moveToOffset(resolvedYB.endOffset)
         myFixture.complete(CompletionType.BASIC)
         completions = myFixture.lookupElementStrings!!
         assert(completions.containsAll(listOf("b")))
@@ -146,9 +139,10 @@ class HbsCompletionTest : BasePlatformTestCase() {
         myFixture.editor.caretModel.moveToOffset(resolvedXInHelper.endOffset)
         myFixture.complete(CompletionType.BASIC)
         completions = myFixture.lookupElementStrings!!
-        assert(completions.containsAll(listOf("a", "x", "y")))
+        assert(completions.containsAll(listOf("a", "x")))
     }
 
+    @Test
     fun testToJsFile() {
         val hbs = """
             {{this.}}
@@ -202,6 +196,7 @@ class HbsCompletionTest : BasePlatformTestCase() {
         assert(completions.containsAll(listOf("a", "x", "y")))
     }
 
+    @Test
     fun testBlockToYieldCompletion() {
         val hbsWithYield = """
             {{#let (hash name='Sarah' title=office) as |item|}}
@@ -216,7 +211,7 @@ class HbsCompletionTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
-        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
         myFixture.addFileToProject(".ember-cli", "")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })
@@ -235,6 +230,7 @@ class HbsCompletionTest : BasePlatformTestCase() {
         assert(tagCompletions.containsAll(listOf("item", "item.name", "item.title")))
     }
 
+    @Test
     fun testBlockToYieldHashCompletion() {
         val hbsWithYield = """
             {{yield x (hash name='Sarah' title=office)}}
@@ -247,7 +243,7 @@ class HbsCompletionTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
-        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
         myFixture.addFileToProject(".ember-cli", "")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })

@@ -3,7 +3,6 @@ package com.emberjs.resolver
 import com.emberjs.EmberFileType
 import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parents
-import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtilCore.isAncestor
 import com.intellij.openapi.vfs.VirtualFile
@@ -117,7 +116,8 @@ data class EmberName(val type: String, val path: String, val filePath: String = 
             val parts = storageKey.split(":")
             val file = parts.getOrNull(3)?.let { LocalFileSystem.getInstance().findFileByPath(it) }
             return when {
-                parts.count() >= 3 && file != null -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
+                parts.count() == 4 && file != null -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
+                parts.count() == 3 -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
                 parts.count() == 2 -> EmberName(parts[0], parts[1], parts.getOrNull(2) ?: "", file)
                 else -> null
             }

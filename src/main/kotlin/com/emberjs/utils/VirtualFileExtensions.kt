@@ -28,6 +28,12 @@ val addonCache = HashMap<String, Boolean>()
 val inRepoCache = HashMap<String, List<String>>()
 val emberCache = HashMap<String, Boolean>()
 
+fun clearVirtualCache() {
+    addonCache.clear()
+    inRepoCache.clear()
+    emberCache.clear()
+}
+
 val VirtualFile.inRepoAddonPaths: List<String>
     get() {
         val out = mutableListOf<String>()

@@ -165,6 +165,7 @@
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
         <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
+        <projectService serviceImplementation="com.emberjs.project.ProjectService"/>
         <actionOnSaveInfoProvider id="TemplateLintOnSaveInfoProvider"
                                   implementation="TemplateLintOnSaveInfoProvider"
                                   order="after FormatOnSaveInfoProvider, before PrettierOnSaveInfoProvider, before BuildOnSaveInfoProvider, before FileWatcherOnSaveInfoProvider, before UploadOnSaveInfoProvider"/>

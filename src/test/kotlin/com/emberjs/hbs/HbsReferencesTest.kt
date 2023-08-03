@@ -17,8 +17,10 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.jetbrains.rd.util.assert
+import org.junit.Test
 
 class HbsReferencesTest : BasePlatformTestCase() {
+    @Test
     fun testLocalFromMustach() {
         val hbs = """
             {{#each this.items as |item index|}}
@@ -44,6 +46,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(resolvedItemInFn != null)
     }
 
+    @Test
     fun testLocalFromAngleBracket() {
         val hbs = """
             <MyComponent as |item index|>
@@ -69,6 +72,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(resolvedItemInFn != null)
     }
 
+    @Test
     fun testToTsFile() {
         val hbs = """
             {{this.a}}
@@ -107,6 +111,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(notResolvedX.isEmpty())
     }
 
+    @Test
     fun testToJsFile() {
         val hbs = """
             {{this.a}}
@@ -148,6 +153,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(notResolvedX.isEmpty())
     }
 
+    @Test
     fun testLetHelper() {
         val hbs = """
             {{#let this as |self|}}
@@ -196,6 +202,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(notResolvedX.isEmpty())
     }
 
+    @Test
     fun testLetHelper2() {
         val hbs = """
             {{#let this.x as |self|}}
@@ -247,6 +254,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
                 assert(resolvedA.first() is PsiElement && resolvedA[1] is JSField)
         }
 
+    @Test
     fun testHashHelper() {
         val hbs = """
             {{#let (hash name='Sarah' title=office) as |item|}}
@@ -260,6 +268,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(resolvedA.first() is PsiElement && resolvedA[1]?.parent is HbParam)
     }
 
+    @Test
     fun testBlockToYieldHashRef() {
         val hbsWithYield = """
             {{#let (hash name='Sarah' title=office) as |item|}}
@@ -282,6 +291,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(resolvedA.first() is EmberNamedElement && resolvedA.last() is HbHash)
     }
 
+    @Test
     fun testHtmlBlockToYieldHashRef() {
         val hbsWithYield = """
             {{#let (hash name='Sarah' title=office) as |item|}}
