@@ -16,9 +16,6 @@ class EmberIntlTest : BasePlatformTestCase() {
         // Load fixture files into the project
         myFixture.copyDirectoryToProject("ember-intl-with-base-locale", "/")
 
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberIntlIndex.NAME)
-
         val psiFile = myFixture.configureByFile("app/templates/base-locale-test.hbs")
 
         assertThat(EmberIntl.findBaseLocale(psiFile)).isEqualTo("de")

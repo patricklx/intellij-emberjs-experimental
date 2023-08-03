@@ -1,7 +1,6 @@
 package com.emberjs.translations
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.indexing.FileBasedIndex
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.entry
 import java.nio.file.Paths
@@ -37,9 +36,6 @@ class EmberI18nIndexTest : BasePlatformTestCase() {
     private fun loadFixture(fixtureName: String) {
         // Load fixture files into the project
         myFixture.copyDirectoryToProject(fixtureName, "/")
-
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberI18nIndex.NAME)
     }
 
     private fun doTest(key: String, expected: Map<String, String>, fixtureName: String = "ember-i18n") {

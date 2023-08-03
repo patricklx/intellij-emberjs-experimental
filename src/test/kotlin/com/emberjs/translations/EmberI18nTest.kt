@@ -1,7 +1,6 @@
 package com.emberjs.translations
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.indexing.FileBasedIndex
 import org.assertj.core.api.Assertions.assertThat
 import java.nio.file.Paths
 
@@ -15,9 +14,6 @@ class EmberI18nTest : BasePlatformTestCase() {
     fun testFindDefaultLocale() {
         // Load fixture files into the project
         myFixture.copyDirectoryToProject("ember-i18n", "/")
-
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberIntlIndex.NAME)
 
         val psiFile = myFixture.configureByFile("app/templates/application.hbs")
 

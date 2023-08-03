@@ -1,7 +1,6 @@
 package com.emberjs.translations
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.indexing.FileBasedIndex
 import java.nio.file.Paths
 
 class EmberIntlFoldingBuilderTest : BasePlatformTestCase() {
@@ -14,9 +13,6 @@ class EmberIntlFoldingBuilderTest : BasePlatformTestCase() {
     fun doTest(templateName: String, fixtureName: String = "ember-intl") {
         // Load fixture files into the project
         myFixture.copyDirectoryToProject(fixtureName, "/")
-
-        // Rebuild index now that the `package.json` file is copied over
-        FileBasedIndex.getInstance().requestRebuild(EmberIntlIndex.NAME)
 
         myFixture.testFoldingWithCollapseStatus(
                 "$testDataPath/$fixtureName/app/templates/$templateName-expectation.hbs",
