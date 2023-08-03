@@ -198,6 +198,9 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
                 return null
             }
             val leader = open.textRange.contains(offset).ifTrue { start } ?: end
+            if (leader.endOffset > document.text.length) {
+                return null
+            }
             return document.createRangeMarker(leader.startOffset, leader.endOffset, true)
         }
 
