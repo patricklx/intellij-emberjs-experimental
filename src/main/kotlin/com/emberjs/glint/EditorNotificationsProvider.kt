@@ -2,11 +2,6 @@ package com.emberjs.glint
 
 import com.emberjs.gts.GtsFileViewProvider
 import com.intellij.ide.util.PropertiesComponent
-import com.intellij.lang.annotation.HighlightSeverity
-import com.intellij.lang.javascript.linter.JSLinterEditorNotifications
-import com.intellij.lang.javascript.linter.JSLinterFileLevelAnnotation
-import com.intellij.lang.javascript.linter.JSLinterInspection
-import com.intellij.lang.javascript.linter.JSLinterStandardFixes
 import com.intellij.lang.typescript.tsconfig.TypeScriptConfigUtil
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.fileEditor.FileEditor
@@ -20,14 +15,21 @@ import java.awt.Color
 import java.util.function.Function
 import javax.swing.JComponent
 
+
+val cache = mutableMapOf<String, Boolean>()
+
 class GlintEditorNotificationsProvider(val project: Project): EditorNotificationProvider {
 
+    init {
+        PropertiesComponent.getInstance(project)
+    }
+
     private fun isNotificationDismissed(file: VirtualFile): Boolean {
-        return PropertiesComponent.getInstance(project).getBoolean(file.path)
+        return cache.getOrDefault(file.path, false)
     }
 
     private fun dismissNotification(file: VirtualFile) {
-        PropertiesComponent.getInstance(project).setValue(file.path, true)
+        cache[file.path] = true
         EditorNotifications.getInstance(project).updateAllNotifications()
     }
 
