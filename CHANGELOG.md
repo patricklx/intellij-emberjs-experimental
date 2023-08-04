@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.1.55 (2023-08-04)
+
+#### :bug: Bug Fix
+* [#53](https://github.com/patricklx/intellij-emberjs-experimental/pull/53) fix unused imports in gts files ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.1.54 (2023-08-02)
 
 #### :rocket: Enhancement
