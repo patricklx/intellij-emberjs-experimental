@@ -4,11 +4,10 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
-import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.JSPsiNamedElementBase
 import com.intellij.openapi.application.QueryExecutorBase
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
-import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.RequestResultProcessor
 import com.intellij.psi.search.SearchRequestCollector
 import com.intellij.psi.search.searches.ReferencesSearch
@@ -48,6 +47,9 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
                     if (resolved is EmberNamedElement) {
                         resolved = resolved.target
                     }
+                    if (resolved == myQueryParameters.elementToSearch) {
+                        return false
+                    }
                     found = (resolved as? ES6ImportSpecifier)?.let {
                         val results = it.multiResolve(false)
                         results.any { it.element == myQueryParameters.elementToSearch }
@@ -57,6 +59,9 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
                     var resolved = element.references.find { it.resolve() is ES6ImportSpecifier || it.resolve() is EmberNamedElement }?.resolve()
                     if (resolved is EmberNamedElement) {
                         resolved = resolved.target
+                    }
+                    if (resolved == myQueryParameters.elementToSearch) {
+                        return false
                     }
                     found = (resolved as? ES6ImportSpecifier)?.let {
                         val results = it.multiResolve(false)

@@ -115,6 +115,7 @@
         <fileBasedIndex implementation="com.emberjs.translations.EmberI18nIndex"/>
         <fileBasedIndex implementation="com.emberjs.translations.EmberIntlIndex"/>
 
+        <referencesSearch implementation="com.emberjs.gts.GtsReferenceSearcher" />
         <lang.refactoringSupport language="Handlebars" implementationClass="com.emberjs.refactoring.HbsRefactoringSupportProvider"/>
         <psi.referenceContributor language="JavaScript" implementation="com.emberjs.psi.EmberReferenceContributor"/>
 
