@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.1.57 (2023-08-07)
+
+#### :bug: Bug Fix
+* [#58](https://github.com/patricklx/intellij-emberjs-experimental/pull/58) use ecma6 psi instead of js5.1 ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.1.56 (2023-08-07)
 
 #### :bug: Bug Fix
