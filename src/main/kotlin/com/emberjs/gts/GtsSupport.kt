@@ -20,6 +20,7 @@ import com.intellij.lang.html.HTMLLanguage
 import com.intellij.lang.html.HTMLParserDefinition
 import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.config.JSImportResolveContext
+import com.intellij.lang.javascript.dialects.ECMA6ParserDefinition
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
 import com.intellij.lang.javascript.highlighting.JSHighlighter
@@ -83,7 +84,7 @@ import java.util.function.Predicate
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
-val JS: Language = JavaScriptSupportLoader.JAVASCRIPT.language
+val JS: JSLanguageDialect = JavaScriptSupportLoader.ECMA_SCRIPT_6
 
 
 
@@ -94,7 +95,7 @@ open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : La
     }
 }
 
-class GjsLanguage(): GtsLanguage(JavascriptLanguage.INSTANCE, "Gjs") {
+class GjsLanguage(): GtsLanguage(JS, "Gjs") {
     companion object {
         val INSTANCE = GjsLanguage()
     }
@@ -435,7 +436,7 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
 
     override fun getLanguages(): MutableSet<Language> {
         if (baseLang == GjsLanguage.INSTANCE) {
-            return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, JavascriptLanguage.INSTANCE, GjsLanguage.INSTANCE)
+            return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, JS, GjsLanguage.INSTANCE)
         }
         return mutableSetOf(HTMLLanguage.INSTANCE, HbLanguage.INSTANCE, TS, GtsLanguage.INSTANCE)
     }
@@ -460,8 +461,8 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
             (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
             return f
         }
-        if (lang.id == JavascriptLanguage.INSTANCE.id) {
-            val f = JavascriptParserDefinition().createFile(this)
+        if (lang.id == JS.id) {
+            val f = ECMA6ParserDefinition().createFile(this)
             (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
             return f
         }
