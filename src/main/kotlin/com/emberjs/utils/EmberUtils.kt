@@ -114,7 +114,7 @@ class EmberUtils {
         fun resolveDefaultExport(ffile: PsiElement?): PsiElement? {
             var file = ffile ?: return null
             if (file is GtsFile) {
-                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
             }
             var exp: PsiElement? = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
@@ -218,7 +218,7 @@ class EmberUtils {
         fun findDefaultExportClass(f: PsiFile): JSClass? {
             var file = f
             if (file is GtsFile) {
-                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
             }
             val exp = ES6PsiUtil.findDefaultExport(file)
             var cls: Any? = exp?.children?.find { it is JSClass }
@@ -245,8 +245,8 @@ class EmberUtils {
             var cls: JSElement? = null
             if (element.containingFile.viewProvider is GtsFileViewProvider) {
                 val view = element.containingFile.viewProvider
-                val JS = Language.findLanguageByID("JavaScript")!!
-                val TS = Language.findLanguageByID("TypeScript")!!
+                val JS = JavaScriptSupportLoader.ECMA_SCRIPT_6
+                val TS = JavaScriptSupportLoader.TYPESCRIPT
 
                 val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
                 cls = PsiTreeUtil.findFirstParent(inJs) { it is JSClass } as JSElement?
@@ -578,7 +578,7 @@ class EmberUtils {
             if (insideImport && element.text != "from" && element.text != "import") {
                 return null
             }
-            val hbsView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
+            val hbsView = element.containingFile.viewProvider.getPsi(HbLanguage.INSTANCE)
             val imports = PsiTreeUtil.collectElements(hbsView) { it is HbMustache && it.children[1].text == "import" }
             val ref = imports.find {
                 val names = it.children[2].text
@@ -834,7 +834,7 @@ class EmberUtils {
             if (jsTemplate is JSStringTemplateExpression) {
                 val manager = InjectedLanguageManager.getInstance(jsTemplate.project)
                 val injected = manager.findInjectedElementAt(jsTemplate.containingFile, jsTemplate.startOffset)?.containingFile
-                jsTemplate = injected?.containingFile?.viewProvider?.getPsi(Language.findLanguageByID("Handlebars")!!)?.containingFile ?: jsTemplate
+                jsTemplate = injected?.containingFile?.viewProvider?.getPsi(HbLanguage.INSTANCE)?.containingFile ?: jsTemplate
             }
             if (jsTemplate is JSLiteralExpression) {
                 jsTemplate = jsTemplate.value

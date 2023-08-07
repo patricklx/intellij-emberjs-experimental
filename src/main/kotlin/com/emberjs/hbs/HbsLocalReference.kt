@@ -15,6 +15,7 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
@@ -128,8 +129,8 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
             if (element.containingFile.viewProvider is com.emberjs.gts.GtsFileViewProvider) {
                 val view = element.containingFile.viewProvider
-                val JS = Language.findLanguageByID("JavaScript")!!
-                val TS = Language.findLanguageByID("TypeScript")!!
+                val JS = JavaScriptSupportLoader.ECMA_SCRIPT_6
+                val TS = JavaScriptSupportLoader.TYPESCRIPT
                 val tsView = view.getPsi(TS)
                 val jsView = view.getPsi(JS)
                 f = tsView ?: jsView

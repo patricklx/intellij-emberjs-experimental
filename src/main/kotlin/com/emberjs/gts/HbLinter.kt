@@ -60,7 +60,7 @@ class FakeJsElement(val element: PsiElement): PsiElement by element {
     }
 
     override fun getContainingFile(): PsiFile {
-        return element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+        return element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
     }
 
     override fun getReference(): PsiReference {
@@ -167,7 +167,7 @@ class HbLintAnnotator() : Annotator {
     fun getCandidates(file: PsiFile, name: String): MutableList<JSImportCandidate> {
         val candidates = mutableListOf<JSImportCandidate>()
             ApplicationManager.getApplication().runReadAction {
-            val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language) ?: return@runReadAction
+            val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6) ?: return@runReadAction
             val keyFilter = Predicate { n: String? -> n?.startsWith(name) == true }
             val info = JSImportPlaceInfo(tsFile)
             val providers = JSImportCandidatesProvider.getProviders(info)
@@ -185,7 +185,7 @@ class HbLintAnnotator() : Annotator {
             return
         }
 
-        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         if (element is XmlTag && element.reference?.resolve() == null) {
             val candidates = tsFile?.let { getCandidates(file, element.name) }
             val nameElement = element.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return

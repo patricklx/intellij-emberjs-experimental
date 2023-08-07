@@ -97,19 +97,19 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
 
         if (refText == "@ember/helper") {
             val project = host.project
-            val helpers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-helpers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val helpers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-helpers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/helpers-stub", JavaScriptSupportLoader.TYPESCRIPT, it.readText()) }
             val file = ProjectFile(helpers!!)
             return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
         }
         if (refText == "@ember/modifier") {
             val project = host.project
-            val modifiers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-modifiers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val modifiers = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-modifiers.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/modifiers-stub", JavaScriptSupportLoader.TYPESCRIPT, it.readText()) }
             val file = ProjectFile(modifiers!!)
             return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
         }
         if (refText == "@ember/component") {
             val project = host.project
-            val internalComponentsFile = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, it.readText()) }
+            val internalComponentsFile = TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts")?.let { PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", JavaScriptSupportLoader.TYPESCRIPT, it.readText()) }
             val file = ProjectFile(internalComponentsFile!!)
             return arrayOf(EmberInternalJSModuleReference(host, TextRange(offset, host.textLength - 1), file))
         }

@@ -38,7 +38,7 @@ class HbsInsertHandler : InsertHandler<LookupElement> {
         }
 
         if (context.file.viewProvider is GtsFileViewProvider) {
-            val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+            val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
             if (candidate != null) {
                 context.commitDocument()
                 JSImportCandidateWithExecutor(candidate, ES6AddImportExecutor(tsFile)).execute()
