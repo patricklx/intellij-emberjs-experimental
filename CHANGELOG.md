@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2023.1.56 (2023-08-07)
+
+#### :bug: Bug Fix
+* [#56](https://github.com/patricklx/intellij-emberjs-experimental/pull/56) fix formatting for templates in gts/gjs ([@patricklx](https://github.com/patricklx))
+* [#55](https://github.com/patricklx/intellij-emberjs-experimental/pull/55) use ecma script 6 for gjs ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.1.55 (2023-08-04)
 
 #### :bug: Bug Fix
