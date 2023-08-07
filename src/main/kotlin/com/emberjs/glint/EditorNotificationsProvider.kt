@@ -2,6 +2,7 @@ package com.emberjs.glint
 
 import com.emberjs.gts.GtsFileViewProvider
 import com.intellij.ide.util.PropertiesComponent
+import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.typescript.tsconfig.TypeScriptConfigUtil
 import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.fileEditor.FileEditor
@@ -39,7 +40,7 @@ class GlintEditorNotificationsProvider(val project: Project): EditorNotification
                 null
             } else {
                 val f = PsiManager.getInstance(project).findFile(file)
-                if (f != null && f.viewProvider is GtsFileViewProvider) {
+                if (f != null && f.viewProvider is GtsFileViewProvider && f.viewProvider.baseLanguage == JavaScriptSupportLoader.TYPESCRIPT) {
                     val config = TypeScriptConfigUtil.getConfigForFile(project, file)
                     if (config == null) {
                         val panel = EditorNotificationPanel(fileEditor, null as Color?, EditorColors.GUTTER_BACKGROUND, EditorNotificationPanel.Status.Warning)
