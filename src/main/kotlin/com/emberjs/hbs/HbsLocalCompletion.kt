@@ -291,8 +291,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
         if (element.containingFile.viewProvider is GtsFileViewProvider) {
             val view = element.containingFile.viewProvider
-            val JS = Language.findLanguageByID("JavaScript")!!
-            val TS = Language.findLanguageByID("TypeScript")!!
+            val JS = JavaScriptSupportLoader.ECMA_SCRIPT_6
+            val TS = JavaScriptSupportLoader.TYPESCRIPT
             val tsView = view.getPsi(TS)
             val jsView = view.getPsi(JS)
             f = tsView ?: jsView
@@ -357,7 +357,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
         val view = file.viewProvider
-        val f = view.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: view.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+        val f = view.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: view.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
             val keyFilter = Predicate { n: String? -> n != null && n.contains(name) }

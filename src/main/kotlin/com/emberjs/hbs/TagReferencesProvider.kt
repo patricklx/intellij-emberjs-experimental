@@ -19,6 +19,7 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
+import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
@@ -147,8 +148,8 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
             if (element.containingFile.viewProvider is GtsFileViewProvider) {
                 val view = element.containingFile.viewProvider
-                val JS = Language.findLanguageByID("JavaScript")!!
-                val TS = Language.findLanguageByID("TypeScript")!!
+                val JS = JavaScriptSupportLoader.ECMA_SCRIPT_6
+                val TS = JavaScriptSupportLoader.TYPESCRIPT
                 val tsView = view.getPsi(TS)
                 val jsView = view.getPsi(JS)
                 f = tsView ?: jsView
@@ -313,7 +314,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val name = tagName
                     .replace(Regex("-(.)")) { it.groupValues.last().uppercase() }
                     .replace(Regex("/(.)")) { "::" + it.groupValues.last().uppercase() }
-            val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", Language.findLanguageByID("TypeScript")!!, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
+            val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", JavaScriptSupportLoader.TYPESCRIPT, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
             val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 
             if (internalComponents.properties.map { it.name }.contains(name)) {

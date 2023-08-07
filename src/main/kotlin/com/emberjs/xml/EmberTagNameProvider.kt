@@ -243,8 +243,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
         if (element.containingFile.viewProvider is GtsFileViewProvider) {
             val view = element.containingFile.viewProvider
-            val JS = Language.findLanguageByID("JavaScript")!!
-            val TS = Language.findLanguageByID("TypeScript")!!
+            val JS = JavaScriptSupportLoader.ECMA_SCRIPT_6
+            val TS = JavaScriptSupportLoader.TYPESCRIPT
             val tsView = view.getPsi(TS)
             val jsView = view.getPsi(JS)
             f = tsView ?: jsView
@@ -264,7 +264,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
     fun forGtsFiles(tag: XmlTag, lookupElements: MutableList<LookupElement>) {
         val info = JSImportPlaceInfo(
                 tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-                        ?: tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+                        ?: tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         )
         val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
         val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.contains(tagName) }
@@ -279,7 +279,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
                         .withInsertHandler(object : InsertHandler<LookupElement> {
                             override fun handleInsert(context: InsertionContext, item: LookupElement) {
                                 val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-                                        ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.JAVASCRIPT.language)
+                                        ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
                                 val action = JSImportAction(context.editor, tag, name!!)
                                 val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
                                 if (candidateWithExecutors.size == 1) {
