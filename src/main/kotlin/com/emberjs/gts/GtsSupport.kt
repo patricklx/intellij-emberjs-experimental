@@ -850,7 +850,7 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
             val psiRef = blockRef.node!!.psi.parent
 
-            val startOffset = psiRef.textRange?.startOffset ?: return Indent.getNoneIndent()
+            val startOffset = psiRef.textRange?.startOffset ?: return forChild.ifTrue { Indent.getNormalIndent() } ?: Indent.getNoneIndent()
             val line = document.getLineNumber(startOffset)
             val lineOffset = document.getLineStartOffset(line)
             val offset = startOffset - lineOffset + ((blockRef.node!!.psi is JSClass).ifTrue { INDENT_SIZE } ?: 0)
