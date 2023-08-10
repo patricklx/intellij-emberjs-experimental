@@ -216,6 +216,8 @@ class HbLintAnnotator() : Annotator {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
             if (insideImport) return
             if (element.parent is HbHash) return
+            if (element.text == "null") return
+            if (element.text == "undefined") return
             val name = element.text
             val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
             val candidates = tsFile?.let { getCandidates(element.containingFile, name) }
