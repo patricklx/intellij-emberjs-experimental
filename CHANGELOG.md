@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.1.58 (2023-08-10)
+
+#### :bug: Bug Fix
+* [#61](https://github.com/patricklx/intellij-emberjs-experimental/pull/61) do not mark null & undefined as Unresolved symbol ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.1.57 (2023-08-07)
 
 #### :bug: Bug Fix
