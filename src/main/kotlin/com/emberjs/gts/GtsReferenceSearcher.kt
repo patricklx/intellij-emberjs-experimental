@@ -8,6 +8,7 @@ import com.intellij.lang.javascript.psi.JSPsiNamedElementBase
 import com.intellij.openapi.application.QueryExecutorBase
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
+import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.RequestResultProcessor
 import com.intellij.psi.search.SearchRequestCollector
 import com.intellij.psi.search.searches.ReferencesSearch
@@ -21,7 +22,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         if (element is JSPsiNamedElementBase) {
             val name = element.name
             if (name != null) {
-                val effectiveScope = queryParameters.effectiveSearchScope
+                val effectiveScope = LocalSearchScope(element.containingFile)
                 val collector = queryParameters.optimizer
                 collector.searchWord(name, effectiveScope, 1.toShort(), true, element, MyProcessor(queryParameters))
             }
