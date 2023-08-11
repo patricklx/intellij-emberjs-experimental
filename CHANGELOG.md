@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2023.2.0 (2023-08-11)
+
+#### :rocket: Enhancement
+* [#63](https://github.com/patricklx/intellij-emberjs-experimental/pull/63) add keywords completions: true, false, null, undefined ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#64](https://github.com/patricklx/intellij-emberjs-experimental/pull/64) fix unused template tag vars ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.1.58 (2023-08-10)
 
 #### :bug: Bug Fix
