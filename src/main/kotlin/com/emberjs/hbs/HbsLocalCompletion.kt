@@ -456,8 +456,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val refs = block.children[0].children.filter { it.elementType == HbTokenTypes.ID }
             completionResultSet.addAllElements(refs.map { LookupElementBuilder.create(it.text) })
         }
-        if ("this".startsWith(txt)) {
-            completionResultSet.addElement(LookupElementBuilder.create("this"))
+        val keywords = listOf("this", "true", "false", "null", "undefined")
+        val keyword = keywords.find { it.startsWith(txt) }
+        if (keyword != null) {
+            completionResultSet.addElement(LookupElementBuilder.create(keyword))
         }
 
         val mustache = parameters.position.parent
