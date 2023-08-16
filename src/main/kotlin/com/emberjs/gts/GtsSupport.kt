@@ -151,7 +151,7 @@ class GtsElementTypes {
 
 
             override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
-                val r = Regex("=\\s*$")
+                val r = Regex("(=|:)\\s*$")
                 return if (r.containsMatchIn(tokenText)) {
                     TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "''")
                 } else {
@@ -726,13 +726,24 @@ val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
 open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
 
+    private var cachedBlocks: MutableList<JsBlockWrapper>? = null
+    val astnode =(block as? ASTBlock)?.node
+
     init {
         this.subBlocks
     }
 
-    private var cachedBlocks: MutableList<JsBlockWrapper>? = null
-    val astnode by lazy {
-        return@lazy (block as? ASTBlock)?.node
+    override fun getWrap(): Wrap? {
+        if (parent?.subBlocks?.lastOrNull()?.block is RootBlockWrapper) {
+            return NoWrap
+        }
+        if (subBlocks.lastOrNull()?.block is RootBlockWrapper) {
+            return NoWrap
+        }
+        if (parent?.block is RootBlockWrapper.SynteticBlockWrapper) {
+            return NoWrap
+        }
+        return block.wrap
     }
 
     override fun getDebugName(): String {
@@ -773,7 +784,7 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
         val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
 
         blocks.toTypedArray().forEach {
-            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
+//            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
             if (it.block is RootBlockWrapper && !it.block.patched) {
                 it.block.parent = this
             }
@@ -785,10 +796,6 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
                 val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
                 if (outerLanguageBlock != null) {
-                    blocks.add(JSAstBlockWrapper(outerLanguageBlock, this, hbsBlock))
-                    outerLanguageBlock.parent?.let {
-                        it.subBlocks.remove(outerLanguageBlock)
-                    }
                     outerLanguageBlock.patched = true
                     outerLanguageBlock.parent = this
                 }
@@ -822,29 +829,29 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
         return NoWrap
     }
 
-    class SynteticBlockWrapper(val subblock: Block, val blockIndent: Indent): Block by subblock {
+    class SynteticBlockWrapper(val subblock: Block, val parent: RootBlockWrapper, val index: Any, val subblocks: MutableList<Block>): Block by subblock {
 
         override fun getWrap(): Wrap? {
             return NoWrap
         }
 
         override fun getIndent(): Indent {
-            return blockIndent
+            val shouldIndent = subblock.javaClass.simpleName == "HandlebarsBlock" || subblock.javaClass.simpleName == "HandlebarsTagBlock"
+            var indent = parent.getBaseIndent(shouldIndent)
+            if (index == 0) {
+                indent = parent.getBaseIndent()
+            }
+            if (index == subblocks.lastIndex) {
+                indent = parent.getBaseIndent()
+            }
+            return indent!!
         }
     }
 
     override fun getSubBlocks(): MutableList<Block> {
         val subblocks = (block.parent == null).ifTrue { block.original.subBlocks } ?: block.subBlocks
         return subblocks.mapIndexed { index, it ->
-            val shouldIndent = it.javaClass.simpleName == "HandlebarsBlock"
-            var indent = getBaseIndent(shouldIndent)
-            if (index == 0) {
-                indent = getBaseIndent()
-            }
-            if (index == subblocks.lastIndex) {
-                indent = getBaseIndent()
-            }
-            SynteticBlockWrapper(it, indent!!)
+            SynteticBlockWrapper(it, this, index, subblocks)
         }.toMutableList()
     }
 
@@ -855,12 +862,44 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
         val INDENT_SIZE = this.policy.settings.getIndentOptionsByDocument(project, document).INDENT_SIZE
         if (this.parent != null) {
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
-            val psiRef = blockRef.node!!.psi.parent
 
-            val startOffset = psiRef.textRange?.startOffset ?: return forChild.ifTrue { Indent.getNormalIndent() } ?: Indent.getNoneIndent()
+            var startOffset: Int? = null
+            if (blockRef.node!!.psi is JSClass) {
+                val psiRef = blockRef.node!!.psi.parent
+                startOffset = psiRef.textRange?.startOffset?.let { it + INDENT_SIZE }
+            }
+
+            if (blockRef.node!!.psi.parent is JSVarStatement) {
+                val psiRef = blockRef.node!!.psi.parent
+                startOffset = psiRef.textRange?.startOffset
+                if (startOffset != null) {
+                    val lineTpl = document.getLineNumber(this.textRange.startOffset)
+                    val parentLine = document.getLineNumber(startOffset)
+                    if (lineTpl != parentLine) {
+                        startOffset += INDENT_SIZE
+                    }
+                }
+            }
+
+            if (blockRef.node!!.psi is JSObjectLiteralExpression) {
+                val psiRef = blockRef.node!!.psi.parent.parent
+                startOffset = psiRef.textRange?.startOffset
+                if (startOffset != null) {
+                    val lineTpl = document.getLineNumber(this.textRange.startOffset)
+                    val parentLine = document.getLineNumber(startOffset)
+                    if (lineTpl != parentLine) {
+                        startOffset += INDENT_SIZE
+                    }
+                }
+            }
+
+            if (startOffset == null) {
+                return forChild.ifTrue { Indent.getNormalIndent() } ?: Indent.getNoneIndent()
+            }
+
             val line = document.getLineNumber(startOffset)
             val lineOffset = document.getLineStartOffset(line)
-            val offset = startOffset - lineOffset + ((blockRef.node!!.psi is JSClass).ifTrue { INDENT_SIZE } ?: 0)
+            val offset = startOffset - lineOffset
 
 
             return Indent.getSpaceIndent(offset + (forChild.ifTrue { INDENT_SIZE } ?: 0))
