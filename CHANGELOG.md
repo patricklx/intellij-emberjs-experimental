@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2023.2.1 (2023-08-16)
+
+#### :bug: Bug Fix
+* [#66](https://github.com/patricklx/intellij-emberjs-experimental/pull/66) fix gts formatting ([@patricklx](https://github.com/patricklx))
+* [#65](https://github.com/patricklx/intellij-emberjs-experimental/pull/65) fix unused imports again ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.0 (2023-08-11)
 
 #### :rocket: Enhancement
