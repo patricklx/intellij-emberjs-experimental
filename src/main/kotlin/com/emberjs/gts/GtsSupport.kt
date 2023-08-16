@@ -726,7 +726,11 @@ val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
 open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
 
-    private var cachedBlocks: List<JsBlockWrapper>? = null
+    init {
+        this.subBlocks
+    }
+
+    private var cachedBlocks: MutableList<JsBlockWrapper>? = null
     val astnode by lazy {
         return@lazy (block as? ASTBlock)?.node
     }
@@ -740,7 +744,7 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
     }
 
     override fun getTextRange(): TextRange {
-        val subBlocks = this.block.subBlocks
+        val subBlocks = this.subBlocks
         if (subBlocks.isEmpty()) {
             return block.textRange
         }
@@ -764,7 +768,7 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
 
     override fun getSubBlocks(): MutableList<JsBlockWrapper> {
         if (this.cachedBlocks != null) {
-            return this.cachedBlocks!!.toMutableList()
+            return this.cachedBlocks!!
         }
         val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
 
@@ -782,12 +786,15 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
                 val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
                 if (outerLanguageBlock != null) {
                     blocks.add(JSAstBlockWrapper(outerLanguageBlock, this, hbsBlock))
+                    outerLanguageBlock.parent?.let {
+                        it.subBlocks.remove(outerLanguageBlock)
+                    }
                     outerLanguageBlock.patched = true
                     outerLanguageBlock.parent = this
                 }
             }
         }
-        this.cachedBlocks = blocks.toList()
+        this.cachedBlocks = blocks
         return blocks
     }
 }
