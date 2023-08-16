@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.javascript.psi.JSPsiNamedElementBase
+import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.openapi.application.QueryExecutorBase
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
@@ -22,7 +23,11 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         if (element is JSPsiNamedElementBase) {
             val name = element.name
             if (name != null) {
-                val effectiveScope = LocalSearchScope(element.containingFile)
+                val effectiveScope = if (element is JSVariable) {
+                    LocalSearchScope(element.containingFile)
+                } else {
+                    queryParameters.effectiveSearchScope
+                }
                 val collector = queryParameters.optimizer
                 collector.searchWord(name, effectiveScope, 1.toShort(), true, element, MyProcessor(queryParameters))
             }
