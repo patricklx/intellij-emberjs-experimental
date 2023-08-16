@@ -92,6 +92,7 @@
                                  implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
 
         <applicationConfigurable
+                displayName="Ember.js"
                 id="configurable.emberjs"
                 instance="com.emberjs.settings.EmberApplicationConfigurable"/>
         <framework.detector implementation="com.emberjs.cli.EmberCliFrameworkDetector"/>

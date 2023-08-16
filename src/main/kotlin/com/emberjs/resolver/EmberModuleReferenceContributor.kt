@@ -3,7 +3,6 @@ package com.emberjs.resolver
 import com.emberjs.hbs.TagReferencesProvider
 import com.emberjs.utils.*
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
-import com.intellij.lang.Language
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.frameworks.modules.JSExactFileReference
@@ -11,6 +10,7 @@ import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.lang.javascript.psi.resolve.JSModuleReferenceContributor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.*
@@ -66,6 +66,10 @@ class ProjectFile(val psiFile: PsiFile): JSFileImpl(psiFile.viewProvider, JavaSc
 
     override fun getContainingFile(): PsiFile {
         return this
+    }
+
+    override fun getParent(): PsiDirectory? {
+        return this.project.guessProjectDir()?.let { PsiManager.getInstance(project).findDirectory(it) }
     }
 
     override fun accept(visitor: PsiElementVisitor) {
