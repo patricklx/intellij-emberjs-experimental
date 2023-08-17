@@ -3,7 +3,7 @@
               toReformat="true" toShortenFQNames="false">
         <variable name="CONDITION" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="ife" value="{{#if $CONDITION$}}&#10;$SELECTION$&#10;{{else}}&#10;$SELECTION2$&#10;{{/if}}"
@@ -11,14 +11,14 @@
         <variable name="CONDITION" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
         <variable name="SELECTION2" expression="" defaultValue="" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="unless" value="{{#unless $CONDITION$}}&#10;$SELECTION$&#10;{{/unless}}"
               description="Surround with unless block" toReformat="true" toShortenFQNames="false">
         <variable name="CONDITION" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="each" value="{{#each $ARRAY$ as |$VALUE$|}}&#10;$SELECTION$&#10;{{/each}}"
@@ -26,7 +26,7 @@
         <variable name="VALUE" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
         <variable name="ARRAY" expression="" defaultValue="&quot;array&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="eache"
@@ -36,7 +36,7 @@
         <variable name="ARRAY" expression="" defaultValue="&quot;array&quot;" alwaysStopAt="true"/>
         <variable name="SELECTION2" expression="" defaultValue="" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="eachi" value="{{#each $ARRAY$ as |$VALUE$ $INDEX$|}}&#10;$SELECTION$&#10;{{/each}}"
@@ -45,7 +45,7 @@
         <variable name="ARRAY" expression="" defaultValue="&quot;array&quot;" alwaysStopAt="true"/>
         <variable name="INDEX" expression="" defaultValue="&quot;i&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="eachin" value="{{#each-in $OBJECT$ as |$KEY$ $VALUE$|}}&#10;$SELECTION$&#10;{{/each-in}}"
@@ -54,7 +54,7 @@
         <variable name="KEY" expression="" defaultValue="&quot;key&quot;" alwaysStopAt="true"/>
         <variable name="VALUE" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="eachine"
@@ -65,21 +65,21 @@
         <variable name="VALUE" expression="" defaultValue="&quot;value&quot;" alwaysStopAt="true"/>
         <variable name="SELECTION2" expression="" defaultValue="" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="linkto" value="{{#link-to &quot;$TARGET$&quot;}}$SELECTION${{/link-to}}"
               description="Surround with link-to block" toReformat="true" toShortenFQNames="false">
         <variable name="TARGET" expression="" defaultValue="&quot;target&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
     <template name="ilinkto" value="{{link-to &quot;$TARGET$&quot; &quot;$SELECTION$&quot;}}"
               description="Surround with inline link-to helper" toReformat="true" toShortenFQNames="false">
         <variable name="TARGET" expression="" defaultValue="&quot;target&quot;" alwaysStopAt="true"/>
         <context>
-            <option name="Handlebars" value="true"/>
+            <option name="ember-context" value="true"/>
         </context>
     </template>
 </templateSet>

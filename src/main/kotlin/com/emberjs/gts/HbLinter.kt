@@ -94,6 +94,7 @@ class GtsImportFix(node: PsiElement, val descriptor: JSImportCandidateWithExecut
 
     override fun getPriority(): PriorityAction.Priority {
         val moduleName = descriptor.descriptor?.moduleName ?: return super.getPriority()
+        if (this.startElement == null) return super.getPriority()
         return descriptor.name.equals(this.startElement.text)
                 .and(
                         moduleName.contains("helpers") ||
