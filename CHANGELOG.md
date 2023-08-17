@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.2.2 (2023-08-17)
+
+#### :rocket: Enhancement
+* [#67](https://github.com/patricklx/intellij-emberjs-experimental/pull/67) provide live templates for gjs/gts ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.1 (2023-08-16)
 
 #### :bug: Bug Fix
