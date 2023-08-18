@@ -23,7 +23,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         if (element is JSPsiNamedElementBase) {
             val name = element.name
             if (name != null) {
-                val effectiveScope = if (element is JSVariable) {
+                val effectiveScope = if (element is JSVariable && (queryParameters.effectiveSearchScope as LocalSearchScope).scope.size == 1) {
                     LocalSearchScope(element.containingFile)
                 } else {
                     queryParameters.effectiveSearchScope
@@ -46,7 +46,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         override fun processTextOccurrence(element: PsiElement, offsetInElement: Int, consumer: Processor<in PsiReference>): Boolean {
             return if (element is HbPsiElement && element.elementType == HbTokenTypes.ID) {
                 var found = element.reference?.isReferenceTo(myQueryParameters.elementToSearch) == true || element.references.any {
-                    it.isReferenceTo(myQueryParameters.elementToSearch)
+                        it.isReferenceTo(myQueryParameters.elementToSearch)
                 }
                 if (!found) {
                     var resolved = element.reference?.resolve()
