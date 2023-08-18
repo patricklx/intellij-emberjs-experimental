@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.2.4 (2023-08-18)
+
+#### :rocket: Enhancement
+* [#70](https://github.com/patricklx/intellij-emberjs-experimental/pull/70) add let block live template ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.3 (2023-08-18)
 
 #### :bug: Bug Fix
