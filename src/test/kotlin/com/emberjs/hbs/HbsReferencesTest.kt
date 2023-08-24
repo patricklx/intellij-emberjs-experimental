@@ -58,7 +58,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", "{{yield x y}}")
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
-        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
         myFixture.addFileToProject(".ember-cli", "")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val element = PsiTreeUtil.collectElements(myFixture.file, { it is HbPathImpl })
@@ -282,7 +282,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
-        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
         myFixture.addFileToProject(".ember-cli", "")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val element = PsiTreeUtil.collectElements(myFixture.file, { it.elementType == HbTokenTypes.ID })
@@ -306,7 +306,7 @@ class HbsReferencesTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.addFileToProject("app/components/my-component/template.hbs", hbsWithYield)
         myFixture.addFileToProject("app/routes/index/template.hbs", hbs)
-        myFixture.addFileToProject("package.json", "{}")
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
         myFixture.configureByFile("app/routes/index/template.hbs")
         val htmlView = myFixture.file.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
         val element = PsiTreeUtil.collectElements(htmlView, { it.text == "header" }).first()
@@ -314,10 +314,11 @@ class HbsReferencesTest : BasePlatformTestCase() {
         assert(resolvedA is EmberNamedAttribute)
 
         val elementWithDotName = PsiTreeUtil.collectElements(htmlView, { it.text == "header.name" }).first()
-        val resolvedItem = elementWithDotName.parent.references[1].resolve()
+        val resolvedItem = elementWithDotName.parent.references[0].resolve()
         assert(resolvedItem is EmberNamedAttribute)
 
-        val resolvedItemNamed = elementWithDotName.parent.references[2].resolve()
+        val resolvedItemNamed = elementWithDotName.parent.references[1].resolve()
         assert((resolvedItemNamed as EmberNamedElement).target is HbParam)
+        assert((resolvedItemNamed).target is HbParam && resolvedItemNamed.text == "'Sarah'")
     }
 }
