@@ -45,7 +45,12 @@ class HbXmlExtension: DefaultXmlExtension() {
     }
     override fun createTagNameReference(nameElement: ASTNode?, startTagFlag: Boolean): TagNameReference? {
         if (nameElement?.psi is XmlToken && nameElement.elementType == XML_NAME && nameElement.psi.parent is XmlTag) {
-            return EmberTagNameReference(nameElement, startTagFlag)
+            if (nameElement.text.startsWith(":") || nameElement.text.firstOrNull()?.isUpperCase() == true || nameElement.text.contains(".")) {
+                return null
+            }
+            if (TagReferencesProvider.getReferencesByElement(nameElement.psi.parent).lastOrNull()?.resolve() != null) {
+                return null
+            }
         }
         return super.createTagNameReference(nameElement, startTagFlag)
     }

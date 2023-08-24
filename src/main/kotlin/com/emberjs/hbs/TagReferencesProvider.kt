@@ -1,5 +1,6 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
@@ -14,7 +15,6 @@ import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
-import com.intellij.injected.editor.DocumentWindow
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
@@ -24,18 +24,13 @@ import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
-import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
-import com.intellij.lang.javascript.psi.impl.JSOuterLanguageElementExpressionImpl
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
-import com.intellij.psi.impl.source.xml.TagNameReference
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.*
 import com.intellij.psi.xml.XmlAttribute
@@ -103,7 +98,15 @@ class TagReference(val element: XmlTag, val fullName: String, val range: TextRan
 class TagReferencesProvider : PsiReferenceProvider() {
 
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<TagReference> {
-        return Companion.getReferencesByElement(element)
+        if (element.containingFile.viewProvider is HbFileViewProvider || element.containingFile.viewProvider is GtsFileViewProvider) {
+            val refs = Companion.getReferencesByElement(element)
+            val name = (element as XmlTag).name
+            if (name.first().isLowerCase() && refs.firstOrNull()?.resolve() == null) {
+                return emptyArray()
+            }
+            return refs
+        }
+        return emptyArray()
     }
 
     companion object {
@@ -126,12 +129,12 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
                 val range = TextRange(offset, offset + s.length)
                 val ref = TagReference(tag, fullName, range)
-                ref.resolve()?.let { ref }
+                ref
             }
             return references.filterNotNull().toTypedArray()
         }
 
-        fun resolveToLocalJs(element: XmlTag): PsiElement? {
+        fun resolveToLocalJs(element: XmlTag, fullName: String): PsiElement? {
             var tpl: Any? = null
             var f: PsiFile? = null
             if (element.originalVirtualFile is VirtualFileWindow) {
@@ -160,7 +163,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 return null
             }
 
-            val parts = element.name.split(".")
+            val parts = fullName.split(".")
             var current: PsiElement? = null
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
@@ -284,19 +287,22 @@ class TagReferencesProvider : PsiReferenceProvider() {
             return ref
         }
 
-        fun fromImports(tag: XmlTag): PsiElement? {
+        fun fromImports(tag: XmlTag, fullName: String): PsiElement? {
+            if (fullName.contains(".")) {
+                return null
+            }
             return EmberUtils.referenceImports(tag, tag.name.split(".").first())
         }
 
         fun forTag(tag: XmlTag?, fullName: String): PsiElement? {
             if (tag == null) return null
-            val local = fromLocalBlock(tag, fullName) ?: fromImports(tag)
+            val local = fromLocalBlock(tag, fullName) ?: fromImports(tag, fullName)
             if (local != null) {
                 return local
             }
 
-            return resolveToLocalJs(tag)
-                    ?: forTagName(tag)
+            return resolveToLocalJs(tag, fullName)
+                    ?: forTagName(tag, fullName)
                     ?: let {
                         val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
                         var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
@@ -305,7 +311,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                     }
         }
 
-        fun forTagName(tag: XmlTag): PsiElement? {
+        fun forTagName(tag: XmlTag, fullName: String): PsiElement? {
             if (tag.containingFile.viewProvider is GtsFileViewProvider) {
                 return null
             }
