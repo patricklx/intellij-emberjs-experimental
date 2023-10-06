@@ -1,12 +1,10 @@
 package com.emberjs.cli
 
 import com.emberjs.utils.emberRoot
-import com.emberjs.utils.findMainPackageJson
 import com.emberjs.utils.inRepoAddonDirs
 import com.emberjs.utils.isEmber
 import com.intellij.ide.projectView.actions.MarkRootActionBase
 import com.intellij.lang.javascript.dialects.JSLanguageLevel
-import com.intellij.lang.javascript.library.JSLibraryManager
 import com.intellij.lang.javascript.settings.JSRootConfiguration
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
@@ -43,10 +41,12 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
             val entry = MarkRootActionBase.findContentEntry(model, baseDir)
             System.out.println("setupEmber $entry $baseDir $model")
             if (entry != null) {
-                ApplicationManager.getApplication().runWriteAction {
-                    setupEmber(project, entry, baseDir)
-                    model.commit()
-                    project.save()
+                ApplicationManager.getApplication().invokeLater {
+                    ApplicationManager.getApplication().runWriteAction() {
+                        setupEmber(project, entry, baseDir)
+                        model.commit()
+                        project.scheduleSave()
+                    }
                 }
             } else {
                 model.dispose()
@@ -69,10 +69,6 @@ class EmberCliProjectConfigurator : DirectoryProjectConfigurator {
         }
 
         private fun setupLibraries(project: Project, entry: ContentEntry, root: VirtualFile) {
-            val pkg = findMainPackageJson(root)
-            val allDependencies = pkg?.allDependencyEntries ?: mapOf()
-            val nodeModules = root.findChild("node_modules")
-            val libraryManager = JSLibraryManager.getInstance(project)
         }
 
         fun inRepoAddons(baseDir: VirtualFile): List<VirtualFile> {
