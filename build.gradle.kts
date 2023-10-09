@@ -1,3 +1,4 @@
+
 import java.net.URL
 
 
@@ -12,7 +13,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2023.2.5"
+version = "2023.2.6"
 
 // Configure project's dependencies
 repositories {
