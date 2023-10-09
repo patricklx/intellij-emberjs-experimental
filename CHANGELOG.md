@@ -1,6 +1,42 @@
 # Changelog
 
 
+## v2023.2.5 (2023-08-24)
+
+#### :rocket: Enhancement
+* [#73](https://github.com/patricklx/intellij-emberjs-experimental/pull/73) reduce error messages for gjs templates ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
+## v2023.2.4 (2023-08-18)
+
+#### :rocket: Enhancement
+* [#70](https://github.com/patricklx/intellij-emberjs-experimental/pull/70) add let block live template ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
+## v2023.2.3 (2023-08-18)
+
+#### :bug: Bug Fix
+* [#69](https://github.com/patricklx/intellij-emberjs-experimental/pull/69) fix unused imports for named imports ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
+## v2023.2.2 (2023-08-17)
+
+#### :rocket: Enhancement
+* [#67](https://github.com/patricklx/intellij-emberjs-experimental/pull/67) provide live templates for gjs/gts ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.1 (2023-08-16)
 
 #### :bug: Bug Fix

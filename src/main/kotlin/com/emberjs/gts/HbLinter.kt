@@ -187,31 +187,42 @@ class HbLintAnnotator() : Annotator {
         }
 
         val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
-        if (element is XmlTag && element.reference?.resolve() == null) {
-            val candidates = tsFile?.let { getCandidates(file, element.name) }
-            val nameElement = element.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return
-            val closeNameElement = element.children.findLast { it.elementType == XmlTokenType.XML_NAME }
-            val message = (((element.name.startsWith(":") || file.viewProvider is HbFileViewProvider)
-                    .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${element.name}'" }
-                    ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${element.name}'")))
-            if (closeNameElement != null && closeNameElement.textRange.endOffset == element.endOffset - 1) {
-                holder.newSilentAnnotation(HighlightSeverity.ERROR)
-                        .range(closeNameElement.textRange)
-                        .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
-                        .tooltip(message)
-                        .create()
+        val isJS = tsFile.language == JavaScriptSupportLoader.ECMA_SCRIPT_6
+        val severity = isJS.ifTrue { HighlightSeverity.WEAK_WARNING } ?: HighlightSeverity.ERROR
+        val highlightType = isJS.ifTrue { ProblemHighlightType.WEAK_WARNING } ?: ProblemHighlightType.LIKE_UNKNOWN_SYMBOL
+        if (element is XmlTag && (element.reference?.resolve() == null || element.reference?.resolve() == element)) {
+            var name: String? = element.name
+            if (isJS && name!!.contains(".")) {
+                val f = element.references.firstOrNull()
+                name = f?.let { name!!.substring(IntRange(f.rangeInElement.startOffset, f.rangeInElement.endOffset)) }
+                if (f?.resolve() != null) {
+                    name = null
+                }
             }
-            val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
-                    .range(nameElement.textRange)
-                    .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
-                    .tooltip(message)
-            candidates?.forEach { c ->
-                val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
-                val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
-                annotation.withFix(fix)
+            if (name != null) {
+                val candidates = tsFile?.let { getCandidates(file, name) }
+                val nameElement = element.children.find { it.elementType == XmlTokenType.XML_NAME } ?: return
+                val closeNameElement = element.children.findLast { it.elementType == XmlTokenType.XML_NAME }
+                val message = ((((element.name.startsWith(":") || name.first().isLowerCase() || file.viewProvider is HbFileViewProvider)
+                        .ifTrue { JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'" }
+                        ?: (JavaScriptBundle.message("js.inspection.missing.import", Object()) + " for '${name}'"))))
+                if (closeNameElement != null && closeNameElement.textRange.endOffset == element.endOffset - 1) {
+                    holder.newSilentAnnotation(severity)
+                            .range(closeNameElement.textRange)
+                            .highlightType(highlightType)
+                            .create()
+                }
+                val annotation = holder.newAnnotation(severity, message)
+                        .range(TextRange.from(nameElement.textOffset, name.length))
+                        .highlightType(highlightType)
+                candidates?.forEach { c ->
+                    val icwe = JSImportCandidateWithExecutor(c, ES6AddImportExecutor(tsFile))
+                    val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
+                    annotation.withFix(fix)
+                }
+                annotation.needsUpdateOnTyping()
+                annotation.create()
             }
-            annotation.needsUpdateOnTyping()
-            annotation.create()
         }
         if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && !element.references.any { (it is HbReference || it is HbsModuleReference) && it.resolve() != null })) {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
@@ -219,15 +230,18 @@ class HbLintAnnotator() : Annotator {
             if (element.parent is HbHash) return
             if (element.text == "null") return
             if (element.text == "undefined") return
+            val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
+                    element.prevSibling.elementType == HbTokenTypes.SEP
+            if (prevSiblingIsSep && isJS) {
+                return
+            }
             val name = element.text
             val message = JavaScriptBundle.message("javascript.unresolved.symbol.message", Object()) + " '${name}'"
             val candidates = tsFile?.let { getCandidates(element.containingFile, name) }
-            val annotation = holder.newAnnotation(HighlightSeverity.ERROR, message)
+            val annotation = holder.newAnnotation(severity, message)
                     .range(element.textRange)
-                    .highlightType(ProblemHighlightType.LIKE_UNKNOWN_SYMBOL)
+                    .highlightType(highlightType)
                     .tooltip(message)
-            val prevSiblingIsSep = element.parent.prevSibling.elementType == HbTokenTypes.SEP ||
-                    element.prevSibling.elementType == HbTokenTypes.SEP
             val isInHbData = element.parent is HbData
             if (!prevSiblingIsSep && !isInHbData) {
                 candidates?.forEach { c ->

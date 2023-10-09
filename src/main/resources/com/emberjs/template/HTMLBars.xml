@@ -1,4 +1,12 @@
 <templateSet group="Ember.js - Templates">
+    <template name="let" value="{{#let $INPUT$ as |$OUTPUT$|}}&#10;$SELECTION$&#10;{{/let}}"
+              description="Surround with let block" toReformat="true" toShortenFQNames="false">
+        <variable name="OUTPUT" expression="" defaultValue="&quot;output&quot;" alwaysStopAt="true"/>
+        <variable name="INPUT" expression="" defaultValue="&quot;input&quot;" alwaysStopAt="true"/>
+        <context>
+            <option name="ember-context" value="true"/>
+        </context>
+    </template>
     <template name="if" value="{{#if $CONDITION$}}&#10;$SELECTION$&#10;{{/if}}" description="Surround with if block"
               toReformat="true" toShortenFQNames="false">
         <variable name="CONDITION" expression="" defaultValue="&quot;condition&quot;" alwaysStopAt="true"/>
