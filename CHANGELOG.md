@@ -1,6 +1,17 @@
 # Changelog
 
 
+## v2023.2.7 (2023-10-20)
+
+#### :bug: Bug Fix
+* [#85](https://github.com/patricklx/intellij-emberjs-experimental/pull/85) fix ember intln not showing preview ([@patricklx](https://github.com/patricklx))
+* [#84](https://github.com/patricklx/intellij-emberjs-experimental/pull/84) fix new ember files ([@patricklx](https://github.com/patricklx))
+* [#80](https://github.com/patricklx/intellij-emberjs-experimental/pull/80) fix new ember project in webstorm ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.6 (2023-10-09)
 
 #### :bug: Bug Fix
