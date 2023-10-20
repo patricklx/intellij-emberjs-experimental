@@ -50,7 +50,9 @@ class EmberIntlFoldingBuilder : FoldingBuilder {
 
         val translation = translations?.get(baseLocale) ?:
                 translations?.get("en-us") ?:
-                translations?.get("en")
+                translations?.get("en") ?:
+                translations?.values?.firstOrNull()
+
 
         return translation?.fillPlaceholders(node) ?: "Missing translation: ${node.text.unquote()}"
     }
