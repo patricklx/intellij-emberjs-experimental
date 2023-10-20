@@ -1,6 +1,24 @@
 # Changelog
 
 
+## v2023.2.6 (2023-10-09)
+
+#### :bug: Bug Fix
+* [#80](https://github.com/patricklx/intellij-emberjs-experimental/pull/80) fix new ember project in webstorm ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
+## v2023.2.5 (2023-08-24)
+
+#### :rocket: Enhancement
+* [#73](https://github.com/patricklx/intellij-emberjs-experimental/pull/73) reduce error messages for gjs templates ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.4 (2023-08-18)
 
 #### :rocket: Enhancement

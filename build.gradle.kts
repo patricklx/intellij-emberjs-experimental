@@ -1,3 +1,4 @@
+
 import java.net.URL
 
 
@@ -7,12 +8,12 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.9.10"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.15.0"
+    id("org.jetbrains.intellij") version "1.16.0"
 }
 
 
 group = "com.emberjs"
-version = "2023.2.4"
+version = "2023.2.6"
 
 // Configure project's dependencies
 repositories {
