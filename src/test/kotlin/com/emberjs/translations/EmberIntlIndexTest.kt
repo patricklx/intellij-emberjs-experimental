@@ -15,6 +15,9 @@ class EmberIntlIndexTest : BasePlatformTestCase() {
     @Test fun testQuotes3() = doTest("quote-test3", mapOf("en" to "Foo\"bar"))
     @Test fun testQuotes4() = doTest("quote-test4", mapOf("en" to "Foo\"bar"))
     @Test fun testJson() = doTest("foo", mapOf("en" to "bar baz"), "ember-intl-json")
+    @Test fun testJsonFr() = doTest("foo", mapOf("fr" to "bar baz"), "ember-intl-json-fr")
+    @Test fun testFallback() = doTest("foo", mapOf("de" to "Bar Baz", "en" to "bar baz"), "ember-intl-with-fallbackLocale")
+    @Test fun testIncludeLocales() = doTest("foo", mapOf("de" to "Bar Baz", "en" to "bar baz"), "ember-intl-with-fallbackLocale")
     @Test fun testWithoutDependency() = doTest("foo", emptyMap(), "no-dependencies")
 
     @Test fun testAllKeys() {
