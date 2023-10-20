@@ -18,7 +18,7 @@ class EmberCli(val project: Project, vararg val parameters: String) {
         val interpreter = interpreterRef.resolve(project)
 
         return GeneralCommandLine(interpreter?.referenceName).also {
-            it.addParameter("$workDirectory/node_modules/.bin/ember")
+            it.addParameter("$workDirectory/node_modules/ember-cli/bin/ember")
         }
     }
 
