@@ -6,12 +6,18 @@ import com.emberjs.icons.EmberIcons
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.getIdeView
 import com.emberjs.utils.hasEmberRoot
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 
 class EmberGenerateCodeAction() :
         DumbAwareAction("Ember.js Files", "Generates new Ember.js files via ember-cli", EmberIcons.ICON_16) {
+
+
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.BGT
+    }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return

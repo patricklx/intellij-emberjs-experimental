@@ -5,4 +5,4 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 
 val Module.emberRoot: VirtualFile?
-    get() = ModuleRootManager.getInstance(this).contentRoots.find { it.isEmberFolder }
+    get() = ModuleRootManager.getInstance(this).contentRoots.find { it.isEmber }
