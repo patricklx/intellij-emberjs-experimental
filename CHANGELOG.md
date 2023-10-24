@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2023.2.8 (2023-10-24)
+
+#### :rocket: Enhancement
+* [#89](https://github.com/patricklx/intellij-emberjs-experimental/pull/89) add modifier to new files dialog ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#88](https://github.com/patricklx/intellij-emberjs-experimental/pull/88) fix template lint modal freeze ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.7 (2023-10-20)
 
 #### :bug: Bug Fix
