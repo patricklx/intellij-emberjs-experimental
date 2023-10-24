@@ -94,7 +94,9 @@ class EmberCli(val project: Project, vararg val parameters: String) {
                 "transform" to "Transform",
                 "transform-test" to "Transform Test",
                 "view" to "View",
-                "view-test" to "View Test"
+                "view-test" to "View Test",
+                "modifier" to "Modifier",
+                "modifier-test" to "Modifier Test"
         )
     }
 }
