@@ -183,6 +183,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
 
     fun fixFile(input: JSLinterInput<TemplateLintState>) {
         execute(input, true)
+        input.virtualFile.refresh(true, false)
     }
 
     private fun execute(input: JSLinterInput<TemplateLintState>, fix: Boolean): JSLinterAnnotationResult? {
