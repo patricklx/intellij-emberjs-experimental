@@ -79,6 +79,8 @@ class EmberCli(val project: Project, vararg val parameters: String) {
                 "helper-test" to "Helper Test",
                 "initializer" to "Initializer",
                 "initializer-test" to "Initializer Test",
+                "instance-initializer" to "Insance Initializer",
+                "instance-initializer-test" to "Insance Initializer Test",
                 "mixin" to "Mixin",
                 "mixin-test" to "Mixin Test",
                 "model" to "Model",

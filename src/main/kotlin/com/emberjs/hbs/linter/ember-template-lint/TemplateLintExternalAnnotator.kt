@@ -1,8 +1,10 @@
 
-import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.dmarcotte.handlebars.file.HbFileViewProvider
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.javascript.linter.*
+import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
@@ -29,15 +31,14 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
     }
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file is HbPsiFile
+        val f = file
+        return f.viewProvider is GtsFileViewProvider || f.viewProvider is HbFileViewProvider || file is JSFile
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
         var res: JSLinterAnnotationResult? = null
         try {
-            if (input.psiFile is HbPsiFile) {
-                res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
-            }
+            res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
         } catch (ex: Exception) {
             res = null
         }

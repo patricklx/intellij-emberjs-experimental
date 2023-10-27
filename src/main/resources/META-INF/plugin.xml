@@ -156,6 +156,8 @@
                          unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="JavaScript" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="Gts" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
         <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
