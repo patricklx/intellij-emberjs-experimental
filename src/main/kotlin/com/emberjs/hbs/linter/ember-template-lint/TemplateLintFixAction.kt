@@ -1,11 +1,12 @@
 
-import com.dmarcotte.handlebars.file.HbFileType
+import com.dmarcotte.handlebars.file.HbFileViewProvider
+import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.lang.javascript.linter.JSLinterFixAction
 import com.intellij.lang.javascript.linter.JSLinterInput
+import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.fileTypes.FileTypeRegistry
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
@@ -59,7 +60,8 @@ class TemplateLintFixAction : JSLinterFixAction(
     }
 
     override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
-        return FileTypeRegistry.getInstance().isFileOfType(file, HbFileType.INSTANCE)
+        val f = PsiManager.getInstance(project).findFile(file)
+        return f?.viewProvider is GtsFileViewProvider || f?.viewProvider is HbFileViewProvider || f is JSFile
     }
 
     private fun fixFile(psiFile: PsiFile) {
