@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.2.9 (2023-10-30)
+
+#### :rocket: Enhancement
+* [#91](https://github.com/patricklx/intellij-emberjs-experimental/pull/91) check template in scripts ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.8 (2023-10-24)
 
 #### :rocket: Enhancement
