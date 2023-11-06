@@ -1,6 +1,17 @@
 # Changelog
 
 
+## v2023.2.10 (2023-11-06)
+
+#### :bug: Bug Fix
+* [#95](https://github.com/patricklx/intellij-emberjs-experimental/pull/95) fix module reference ([@patricklx](https://github.com/patricklx))
+* [#93](https://github.com/patricklx/intellij-emberjs-experimental/pull/93) chore: fix spelling of new file - instance initializer ([@matthewhartstonge](https://github.com/matthewhartstonge))
+
+#### Committers: 2
+- Matthew Hartstonge ([@matthewhartstonge](https://github.com/matthewhartstonge))
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.2.9 (2023-10-30)
 
 #### :rocket: Enhancement
