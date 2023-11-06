@@ -13,6 +13,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.findFile
 import com.intellij.psi.*
 import com.intellij.psi.search.ProjectAwareVirtualFile
 import java.util.regex.Pattern
@@ -135,9 +136,16 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
                 ?.find { it.findChild("package.json") != null && !it.isInRepoAddon }
                 ?: return emptyArray()
 
+        val modules: MutableList<VirtualFile> = mutableListOf()
+
+        if (hostPackageRoot.findFile("package.json")?.packageJsonData?.name === packageName) {
+            modules.add(hostPackageRoot)
+        }
+
         val nodeModules = NodeModuleManager.getInstance(host.project).collectVisibleNodeModules(host.originalVirtualFile)
-        val first = nodeModules.find { it.name == packageName }
-        val modules = listOf(hostPackageRoot) + hostPackageRoot.inRepoAddonDirs + listOfNotNull(first?.virtualFile)
+        nodeModules.find { it.name == packageName && it.virtualFile != null }?.let { modules.add(it.virtualFile!!) }
+
+
 
 
         /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
@@ -148,7 +156,16 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
                             it.findChild("app"),
                             it.findChild("addon-test-support"),
                     )
-                } + (host.containingFile.originalVirtualFile?.parentEmberModule?.inRepoAddonDirs ?: emptyList())
+                }.toMutableList()
+
+        if (host.containingFile.originalVirtualFile?.parentEmberModule?.inRepoAddonDirs != null) {
+            val inRepoAddon = host.containingFile.originalVirtualFile?.parentEmberModule?.inRepoAddonDirs?.find {
+                it.findChild("package.json")?.packageJsonData?.name == packageName
+            }
+            if (inRepoAddon != null) {
+                roots.add(inRepoAddon)
+            }
+        }
 
         val exts = arrayOf(".ts", ".js", ".hbs", ".gts", ".gjs")
         return roots.map { root ->
