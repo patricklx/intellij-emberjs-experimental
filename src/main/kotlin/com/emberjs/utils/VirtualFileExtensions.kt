@@ -1,12 +1,9 @@
 package com.emberjs.utils
 
-import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.google.gson.stream.JsonReader
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElement
 import com.intellij.util.text.CharSequenceReader
-import org.mozilla.javascript.ast.AstNode
 
 val VirtualFile.parents: Iterable<VirtualFile>
     get() = object : Iterable<VirtualFile> {
@@ -165,7 +162,7 @@ fun getByPath(directory: VirtualFile, path: String): VirtualFile? {
 
 val VirtualFile.inRepoAddonDirs: List<VirtualFile>
     get() = this.isEmber.ifFalse {
-       emptyList()
+        emptyList()
     } ?: inRepoAddonPaths.mapNotNull { getByPath(this, it) }
 
 val VirtualFile.isInRepoAddon: Boolean
@@ -199,11 +196,15 @@ fun findMainPackageJsonFile(file: VirtualFile) = file.emberRoot?.let { it.findCh
 
 fun findMainPackageJson(file: VirtualFile) = findMainPackageJsonFile(file)?.let { PackageJsonData.getOrCreate(it) }
 
-fun findMainProjectName(file: VirtualFile):String? {
+fun findMainProjectName(file: VirtualFile): String? {
     val json: PackageJsonData? = findMainPackageJson(file)
     return json?.name
 }
 
-fun HbParseDefinition.createElement(node: AstNode): PsiElement? {
-    return null
-}
+val VirtualFile.packageJsonData: PackageJsonData?
+    get() {
+        if (this.name === "package.json") {
+            return PackageJsonData.getOrCreate(this)
+        }
+        return null
+    }
