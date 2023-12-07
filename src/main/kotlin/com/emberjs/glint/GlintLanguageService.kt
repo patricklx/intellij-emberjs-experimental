@@ -46,7 +46,6 @@ import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.xml.XmlElement
 import com.intellij.ui.EditorNotifications
 import com.intellij.util.containers.toMutableSmartList
-import com.intellij.util.text.SemVer
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.MarkupContent
@@ -90,7 +89,6 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     override val name = "Glint TypeScript LSP"
-    override val serverVersion: SemVer = SemVer("1.0.0", 1, 0,0)
 
     override fun isServiceCreated() = withServer { isRunning || isMalfunctioned } ?: false
 
