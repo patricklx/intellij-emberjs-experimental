@@ -1,5 +1,6 @@
 package com.emberjs.glint
 
+import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.emberRoot
 import com.intellij.lang.javascript.JavaScriptBundle
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
@@ -137,7 +138,7 @@ open class GlintRestartServiceAction : AnAction("Restart Glint", "Restarts the g
         if (project != null) {
             val hasStarted = GlintLanguageServiceProvider(project).allServices.firstOrNull()?.isServiceCreated() == true
             val presentation = e.presentation
-            if (project.guessProjectDir()?.emberRoot != null) {
+            if (EmberUtils.isEnabledEmberProject(project)) {
                 presentation.isVisible = true
             }
             setEnableAndVisible(presentation, hasStarted)

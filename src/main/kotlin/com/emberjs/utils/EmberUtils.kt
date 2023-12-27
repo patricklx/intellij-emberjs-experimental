@@ -92,7 +92,7 @@ class EmberUtils {
             return project.guessProjectDir()?.isEmber ?: false
         }
         fun isEnabledEmberProject(project: Project): Boolean {
-            return FrameworkDetectionManager.getInstance(project).detectedFrameworks.find { it.detector is EmberCliFrameworkDetector && (it.detector as EmberCliFrameworkDetector).isConfigured(it.relatedFiles, project) } != null
+            return EmberCliFrameworkDetector.hasEnabledEmberFramework(project)
         }
 
         fun resolveModifier(file: PsiElement?): Array<JSFunction?> {
