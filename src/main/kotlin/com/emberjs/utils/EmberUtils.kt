@@ -250,6 +250,17 @@ class EmberUtils {
 
                 val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
                 cls = PsiTreeUtil.findFirstParent(inJs) { it is JSClass } as JSElement?
+                if (cls == null) {
+                    cls = inJs?.parent?.children?.last() as? TypeScriptVariable
+                    if (cls != null) {
+                        return cls
+                    }
+                }
+                if (cls == null) {
+                    cls = (inJs?.parent as TypeScriptAsExpression)
+                    return cls
+                }
+                return cls
             }
             if (element.originalVirtualFile is VirtualFileWindow) {
                 val offset = (element.originalVirtualFile as VirtualFileWindow).documentWindow.hostRanges[0].startOffset
@@ -275,6 +286,12 @@ class EmberUtils {
 
         fun findComponentArgsType(element: JSElement): JSRecordType? {
             var cls: PsiElement? = element
+            if (cls is TypeScriptVariable) {
+                return cls.jsType?.asRecordType()?.callSignatures?.first()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
+            }
+            if (cls is TypeScriptAsExpression) {
+                return cls.type?.jsType?.asRecordType()?.callSignatures?.first()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
+            }
             if (cls !is TypeScriptClassImpl) {
                 cls = PsiTreeUtil.findChildOfType(cls, TypeScriptClassImpl::class.java)
             }

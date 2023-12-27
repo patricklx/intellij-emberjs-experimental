@@ -384,7 +384,8 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()
                     ?: arrayListOf()
             if (items.size < 100) {
-                completionResultSet.addAllElements(items.map { it.intoLookupElement() })
+                val isData = element.parent is HbData
+                completionResultSet.addAllElements(items.map { it.intoLookupElement().withLookupString(isData.ifTrue { "@${it.name}" } ?: it.name) })
             }
         }
 
