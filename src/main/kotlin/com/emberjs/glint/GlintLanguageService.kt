@@ -4,6 +4,7 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.HbReference
+import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -61,7 +62,7 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
     override fun getService(file: VirtualFile) = allServices.firstOrNull()
 
     override fun getAllServices() =
-            if (project.guessProjectDir()?.emberRoot != null) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
+            if (EmberUtils.isEnabledEmberProject(project)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
 
 
@@ -85,7 +86,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     fun getDescriptor(): GlintLspServerDescriptor? {
-        return if (project.guessProjectDir()?.emberRoot != null) getGlintDescriptor(project) else null
+        return if (EmberUtils.isEnabledEmberProject(project)) getGlintDescriptor(project) else null
     }
 
     override val name = "Glint TypeScript LSP"

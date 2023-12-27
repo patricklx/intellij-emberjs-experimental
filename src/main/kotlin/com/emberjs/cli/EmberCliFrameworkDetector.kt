@@ -1,8 +1,4 @@
 package com.emberjs.cli
-
-
-import com.emberjs.glint.GlintLspSupportProvider
-import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.glint.getGlintDescriptor
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.isEmber
@@ -29,14 +25,20 @@ import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
 import com.intellij.webcore.libraries.ScriptingLibraryModel
 
+val detectedFrameworks = HashMap<Project, List<EmberCliFrameworkDetector.EmberFrameworkDescription>>()
+
 class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     /** Use package json keys to detect ember */
+
     override fun getFileType(): FileType = JsonFileType.INSTANCE
 
     override fun createSuitableFilePattern(): ElementPattern<FileContent> {
         return FileContentPattern.fileContent()
                 .with(object : PatternCondition<FileContent>("emberKey") {
                     override fun accepts(fileContent: FileContent, context: ProcessingContext): Boolean {
+                        if (fileContent.file.path.contains("node_modules")) {
+                            return false
+                        }
                         if (fileContent.fileName != "package.json") {
                             return false
                         }
@@ -84,19 +86,24 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
 
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
         newFiles.removeIf { !it.path.endsWith("package.json") || it.parent != it.emberRoot || !it.parent.isEmber }
-        val rootDir = newFiles.firstOrNull()?.parent
 
-        if (rootDir != null && context.project != null && !isConfigured(newFiles, context.project)) {
-            return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
-        } else if (rootDir != null) {
-            context.project?.let {
-                ApplicationManager.getApplication().invokeLaterOnWriteThread {
-                    getGlintDescriptor(it).ensureStarted()
+        val frameworkDescriptions = mutableListOf<EmberFrameworkDescription>()
+
+        newFiles.forEach {
+            val rootDir = it.parent
+            if (rootDir != null && context.project != null && !isConfigured(newFiles, context.project)) {
+                frameworkDescriptions.add(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
+            } else if (rootDir != null) {
+                context.project?.let {
+                    ApplicationManager.getApplication().invokeLaterOnWriteThread {
+                        getGlintDescriptor(it).ensureStarted()
+                    }
                 }
+                frameworkDescriptions.add(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
             }
-            return mutableListOf(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
         }
-        return mutableListOf()
+        detectedFrameworks[context.project!!] = frameworkDescriptions
+        return frameworkDescriptions
     }
 
     public fun isConfigured(files: Collection<VirtualFile>, project: Project?): Boolean {
@@ -118,23 +125,31 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         override fun hashCode() = files.hashCode()
 
         override fun canSetupFramework(allDetectedFrameworks: MutableCollection<out DetectedFrameworkDescription>): Boolean {
-            return !detector.isConfigured(files, project)
+            return !this.isConfigured()
+        }
+
+        fun isConfigured(): Boolean {
+            return detector.isConfigured(files, project)
         }
 
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
-            modulesProvider.modules
-                    .filter { ModuleRootManager.getInstance(it).contentRoots.contains(root) }
-                    .forEach { module ->
-                        val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                        val entry = MarkRootActionBase.findContentEntry(model, root)
-                        if (entry != null) {
-                            EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
-                            getGlintDescriptor(model.project).ensureStarted()
-                            modifiableModelsProvider.commitModuleModifiableModel(model)
-                        } else {
-                            modifiableModelsProvider.disposeModuleModifiableModel(model)
-                        }
-                    }
+            ModuleUtilCore.findModuleForFile(root, project)?.let { module ->
+                val model = modifiableModelsProvider.getModuleModifiableModel(module)
+                val entry = MarkRootActionBase.findContentEntry(model, root)
+                if (entry != null) {
+                    EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
+                    getGlintDescriptor(model.project).ensureStarted()
+                    modifiableModelsProvider.commitModuleModifiableModel(model)
+                } else {
+                    modifiableModelsProvider.disposeModuleModifiableModel(model)
+                }
+            }
+        }
+    }
+
+    companion object {
+        fun hasEnabledEmberFramework(project: Project): Boolean {
+            return detectedFrameworks.getOrDefault(project, emptyList()).any { it.isConfigured() }
         }
     }
 }
