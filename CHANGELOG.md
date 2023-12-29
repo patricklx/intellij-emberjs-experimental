@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2023.3.1 (2023-12-29)
+
+#### :rocket: Enhancement
+* [#106](https://github.com/patricklx/intellij-emberjs-experimental/pull/106) add ember project detection for v2 addons ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#107](https://github.com/patricklx/intellij-emberjs-experimental/pull/107) fix template only references ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 
 
 ## v2023.2.10 (2023-11-06)
