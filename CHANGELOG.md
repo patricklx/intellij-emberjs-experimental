@@ -1,6 +1,17 @@
 # Changelog
 
 
+## v2023.3.2 (2024-01-02)
+
+#### :bug: Bug Fix
+* [#116](https://github.com/patricklx/intellij-emberjs-experimental/pull/116) fix glint references ([@patricklx](https://github.com/patricklx))
+* [#115](https://github.com/patricklx/intellij-emberjs-experimental/pull/115) fix unused import when referenced by import ([@patricklx](https://github.com/patricklx))
+* [#114](https://github.com/patricklx/intellij-emberjs-experimental/pull/114) fix template js reference to functions ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.1 (2023-12-29)
 
 #### :rocket: Enhancement
