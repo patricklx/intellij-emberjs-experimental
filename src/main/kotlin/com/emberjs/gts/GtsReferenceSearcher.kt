@@ -3,17 +3,20 @@ package com.emberjs.gts
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.emberjs.psi.EmberNamedElement
+import com.emberjs.utils.ifTrue
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.javascript.psi.JSPsiNamedElementBase
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.openapi.application.QueryExecutorBase
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
+import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.search.LocalSearchScope
 import com.intellij.psi.search.RequestResultProcessor
 import com.intellij.psi.search.SearchRequestCollector
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.elementType
+import com.intellij.psi.xml.XmlToken
 import com.intellij.util.Processor
 
 
@@ -44,12 +47,14 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         }
 
         override fun processTextOccurrence(element: PsiElement, offsetInElement: Int, consumer: Processor<in PsiReference>): Boolean {
-            return if (element is HbPsiElement && element.elementType == HbTokenTypes.ID) {
-                var found = element.reference?.isReferenceTo(myQueryParameters.elementToSearch) == true || element.references.any {
-                        it.isReferenceTo(myQueryParameters.elementToSearch)
+            return if ((element is HbPsiElement && element.elementType == HbTokenTypes.ID) || (element is XmlToken && element.parent is HtmlTag)) {
+                val elem = (element is XmlToken && element.parent is HtmlTag).ifTrue { element.parent } ?: element
+                var found = elem.reference?.isReferenceTo(myQueryParameters.elementToSearch) == true || elem.references.any {
+                    it.isReferenceTo(myQueryParameters.elementToSearch)
                 }
+
                 if (!found) {
-                    var resolved = element.reference?.resolve()
+                    var resolved = elem.reference?.resolve()
                     if (resolved is EmberNamedElement) {
                         resolved = resolved.target
                     }
@@ -62,7 +67,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
                     } ?: false
                 }
                 if (!found) {
-                    var resolved = element.references.find { it.resolve() is ES6ImportSpecifier || it.resolve() is EmberNamedElement }?.resolve()
+                    var resolved = elem.references.find { it.resolve() is ES6ImportSpecifier || it.resolve() is EmberNamedElement }?.resolve()
                     if (resolved is EmberNamedElement) {
                         resolved = resolved.target
                     }
