@@ -146,9 +146,16 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
             } else {
-                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass }
+                val children = PsiTreeUtil.collectElements(f) { it is JSFunction || it is JSVariable || it is ES6ImportDeclaration || it is JSClass }
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
+                        val useScope = JSUseScopeProvider.getBlockScopeElement(it)
+                        if (useScope.isAncestor(tpl as PsiElement)) {
+                            return@mapNotNull it
+                        }
+                    }
+
+                    if (it is JSFunction && it.name?.equals(parts.first()) == true && it.parent !is JSVariable) {
                         val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                         if (useScope.isAncestor(tpl as PsiElement)) {
                             return@mapNotNull it

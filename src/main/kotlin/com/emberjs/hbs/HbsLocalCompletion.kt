@@ -303,9 +303,16 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
-        val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass}
+        val children = PsiTreeUtil.collectElements(f) { it is JSFunction || it is JSVariable || it is ES6ImportDeclaration || it is JSClass}
         children.forEach {
             if (it is JSVariable) {
+                val useScope = JSUseScopeProvider.getBlockScopeElement(it)
+                if (useScope.isAncestor(tpl)) {
+                    result.addElement(LookupElementBuilder.create(it.name!!))
+                }
+            }
+
+            if (it is JSFunction && it.parent !is JSVariable) {
                 val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                 if (useScope.isAncestor(tpl)) {
                     result.addElement(LookupElementBuilder.create(it.name!!))
