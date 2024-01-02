@@ -35,7 +35,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.HtmlBuilder
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.impl.LspServerImpl
 import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
@@ -50,6 +52,7 @@ import com.intellij.util.containers.toMutableSmartList
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.MarkupContent
+import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
@@ -166,7 +169,17 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             elem = DelegateElement(elem, element, document)
         }
 
-        return super.getNavigationFor(document, elem as PsiElement)
+        val links = withServer { requestExecutor.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset) }
+        val psiManager = PsiManager.getInstance(project)
+        return links?.map {
+            val vFile = VfsUtil.findFileByURL(URL(it.targetUri))
+            val file = vFile?.let { psiManager.findFile(it) }
+            if (file == null) return@map null
+            val doc = file.viewProvider.document
+            val startOffset = doc.getLineStartOffset(it.targetRange.start.line)
+            val offset = startOffset + it.targetRange.start.character
+            return@map file.findElementAt(offset)
+        }?.filterNotNull()?.toTypedArray() ?: emptyArray<PsiElement>()
     }
 
     override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement> {

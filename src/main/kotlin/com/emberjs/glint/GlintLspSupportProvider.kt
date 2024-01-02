@@ -25,6 +25,8 @@ import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.*
+import kotlin.concurrent.schedule
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
@@ -65,17 +67,15 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     fun ensureStarted() {
         if (!isAvailable) return
         lspServerManager.startServersIfNeeded(GlintLspSupportProvider::class.java)
-    }
-
-    override fun startServerProcess(): OSProcessHandler {
-        val r = super.startServerProcess()
-        ApplicationManager.getApplication().invokeLater {
-            DaemonCodeAnalyzer.getInstance(project).restart()
-            ApplicationManager.getApplication().runWriteAction {
-                FileContentUtil.reparseOpenedFiles()
+        Timer().schedule(5000) {
+            ApplicationManager.getApplication().invokeLater {
+                DaemonCodeAnalyzer.getInstance(project).restart()
+                ApplicationManager.getApplication().runWriteAction {
+                    FileContentUtil.reparseOpenedFiles()
+                }
             }
         }
-        return r
+
     }
 
     override fun createCommandLine(): GeneralCommandLine {
