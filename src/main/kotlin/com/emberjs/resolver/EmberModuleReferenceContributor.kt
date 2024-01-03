@@ -26,7 +26,7 @@ open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePat
 
 open class EmberInternalJSModuleReference(context: PsiElement, range: TextRange, val internalFile: PsiFile?) : EmberJSModuleReference(context, range, emptyList(), emptyArray()) {
     override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
-        return PsiElementResolveResult.createResults(internalFile)
+        return emptyArray()
     }
 }
 

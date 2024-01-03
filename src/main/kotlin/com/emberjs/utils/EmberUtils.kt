@@ -348,9 +348,9 @@ class EmberUtils {
 
             if (element is ES6ImportSpecifier) {
                 val results = element.multiResolve(false)
-                val internal = (element.parent.parent as ES6ImportDeclarationImpl).fromClause?.references?.find { it is EmberInternalJSModuleReference }
+                val internal = (element.parent.parent as ES6ImportDeclarationImpl).fromClause?.references?.find { it is EmberInternalJSModuleReference } as? EmberInternalJSModuleReference
                 if (internal != null) {
-                    return PsiTreeUtil.collectElements(internal.resolve()) { (it is JSElementBase) && it.isExported && it.name == element.name }.firstOrNull()
+                    return PsiTreeUtil.collectElements(internal.internalFile) { (it is JSElementBase) && it.isExported && it.name == element.name }.firstOrNull()
                 }
 
                 return results.find { it.element?.containingFile is ProjectFile }?.element ?: results.firstOrNull()?.element
