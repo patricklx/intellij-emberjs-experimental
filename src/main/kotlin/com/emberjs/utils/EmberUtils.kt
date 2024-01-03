@@ -287,10 +287,10 @@ class EmberUtils {
         fun findComponentArgsType(element: JSElement): JSRecordType? {
             var cls: PsiElement? = element
             if (cls is TypeScriptVariable) {
-                return cls.jsType?.asRecordType()?.callSignatures?.first()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
+                return cls.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
             if (cls is TypeScriptAsExpression) {
-                return cls.type?.jsType?.asRecordType()?.callSignatures?.first()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
+                return cls.type?.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
             if (cls !is TypeScriptClassImpl) {
                 cls = PsiTreeUtil.findChildOfType(cls, TypeScriptClassImpl::class.java)

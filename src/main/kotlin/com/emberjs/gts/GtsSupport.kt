@@ -50,6 +50,7 @@ import com.intellij.openapi.editor.highlighter.EditorHighlighter
 import com.intellij.openapi.fileTypes.*
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -73,6 +74,7 @@ import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
+import com.intellij.psi.tree.IStubFileElementType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTokenType
@@ -89,6 +91,20 @@ val JS: JSLanguageDialect = JavaScriptSupportLoader.ECMA_SCRIPT_6
 
 
 open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : Language(lang, id) {
+    public var fileElementType: JSFileElementType? = null
+    override fun <T : Any?> getUserData(key: Key<T>): T? {
+        if (key.toString() == "js.file.element.type") {
+            return fileElementType as T?
+        }
+        return super.getUserData(key)
+    }
+
+    override fun <T : Any?> putUserDataIfAbsent(key: Key<T>, value: T & Any): T & Any {
+        if (key.toString() == "js.file.element.type") {
+            return value
+        }
+        return super.putUserDataIfAbsent(key, value)
+    }
 
     companion object {
         val INSTANCE = GtsLanguage()
@@ -116,6 +132,10 @@ class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
 
 class GtsFileElementType(language: Language?) : JSFileElementType(language) {
 
+    init {
+        (language as GtsLanguage).fileElementType = this
+    }
+
     override fun parseContents(chameleon: ASTNode): ASTNode? {
         return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
     }
@@ -125,7 +145,22 @@ class GtsFileElementType(language: Language?) : JSFileElementType(language) {
     }
 
     companion object {
-        val INSTANCE = GtsFileElementType(TS)
+        val INSTANCE = GtsFileElementType(GtsLanguage.INSTANCE)
+    }
+}
+
+class GjsFileElementType(language: Language?) : JSFileElementType(language) {
+
+    override fun parseContents(chameleon: ASTNode): ASTNode? {
+        return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
+    }
+
+    override fun getExternalId(): String {
+        return GjsLanguage.INSTANCE.toString() + ":" + this
+    }
+
+    companion object {
+        val INSTANCE = GjsFileElementType(GjsLanguage.INSTANCE)
     }
 }
 
@@ -238,11 +273,11 @@ class GtsElementTypes {
 
 open class GtsParserDefinition(val isJS: Boolean = false) : TypeScriptParserDefinition() {
 
-    override fun getFileNodeType(): IFileElementType {
+    override fun getFileNodeType(): JSFileElementType {
         if (isJS) {
-            return GtsElementTypes.GJS_FILE_NODE_TYPE
+            return GjsFileElementType.INSTANCE
         }
-        return GtsElementTypes.GTS_FILE_NODE_TYPE
+        return GtsFileElementType.INSTANCE
     }
 
     override fun createLexer(project: Project?): Lexer {
@@ -632,7 +667,7 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
             exports.add(Info("default", getComponentName(virtualFile), GtsIcons.icon, virtualFile))
         }
 
-        val namedExports = PsiTreeUtil.collectElements(file) { (it as? JSElementBase)?.isExported == true && !it.isExportedWithDefault}.map { it as JSElementBase }
+        val namedExports = PsiTreeUtil.collectElements(file) { (it as? JSElementBase)?.isExported == true}.map { it as JSElementBase }
         namedExports.forEach {
             exports.add(Info("named", it.name!!, GtsIcons.icon, virtualFile))
         }
