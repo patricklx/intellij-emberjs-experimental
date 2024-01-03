@@ -74,7 +74,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
                     if (resolved == myQueryParameters.elementToSearch) {
                         return false
                     }
-                    found = (resolved as? ES6ImportSpecifier)?.let {
+                     found = (resolved as? ES6ImportSpecifier)?.let {
                         val results = it.multiResolve(false)
                         results.any { it.element == myQueryParameters.elementToSearch }
                     } ?: false
