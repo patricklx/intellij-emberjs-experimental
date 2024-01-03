@@ -67,15 +67,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     fun ensureStarted() {
         if (!isAvailable) return
         lspServerManager.startServersIfNeeded(GlintLspSupportProvider::class.java)
-        Timer().schedule(5000) {
-            ApplicationManager.getApplication().invokeLater {
-                DaemonCodeAnalyzer.getInstance(project).restart()
-                ApplicationManager.getApplication().runWriteAction {
-                    FileContentUtil.reparseOpenedFiles()
-                }
-            }
-        }
-
     }
 
     override fun createCommandLine(): GeneralCommandLine {
@@ -102,6 +93,19 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
                 .configure(commandLine)
         return commandLine
+    }
+
+    override fun startServerProcess(): OSProcessHandler {
+        val r = super.startServerProcess()
+        Timer().schedule(5000) {
+            ApplicationManager.getApplication().invokeLater {
+                DaemonCodeAnalyzer.getInstance(project).restart()
+                ApplicationManager.getApplication().runWriteAction {
+                    FileContentUtil.reparseOpenedFiles()
+                }
+            }
+        }
+        return r;
     }
 
     override fun getFilePath(file: VirtualFile): String {
