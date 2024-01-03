@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.3 (2024-01-03)
+
+#### :bug: Bug Fix
+* [#117](https://github.com/patricklx/intellij-emberjs-experimental/pull/117) fix gts imports marked as not found ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.2 (2024-01-02)
 
 #### :bug: Bug Fix
