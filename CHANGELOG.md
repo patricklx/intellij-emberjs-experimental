@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.4 (2024-01-03)
+
+#### :bug: Bug Fix
+* [#119](https://github.com/patricklx/intellij-emberjs-experimental/pull/119) fix more imports marked as unused ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.3 (2024-01-03)
 
 #### :bug: Bug Fix
