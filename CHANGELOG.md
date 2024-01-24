@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.5 (2024-01-24)
+
+#### :bug: Bug Fix
+* [#123](https://github.com/patricklx/intellij-emberjs-experimental/pull/123) fix null exception ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.4 (2024-01-03)
 
 #### :bug: Bug Fix
