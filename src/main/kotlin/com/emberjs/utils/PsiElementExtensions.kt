@@ -6,11 +6,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.patterns.PsiElementPattern
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiFilter
-import java.util.*
 
 
 val PsiElement.originalVirtualFile: VirtualFile?
-    get() = containingFile.originalFile.virtualFile
+    get() = containingFile?.originalFile?.virtualFile
 
 val PsiElement.module: Module?
     get() = originalVirtualFile?.let { findModuleForFile(it, project) }
