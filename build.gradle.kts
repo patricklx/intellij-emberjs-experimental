@@ -21,7 +21,7 @@ repositories {
 }
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.assertj:assertj-core:3.25.2")
+    testImplementation("org.assertj:assertj-core:3.25.3")
     testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.4")
