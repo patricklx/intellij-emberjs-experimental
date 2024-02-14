@@ -74,7 +74,6 @@ import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
-import com.intellij.psi.tree.IStubFileElementType
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTokenType
@@ -150,6 +149,10 @@ class GtsFileElementType(language: Language?) : JSFileElementType(language) {
 }
 
 class GjsFileElementType(language: Language?) : JSFileElementType(language) {
+
+    init {
+        (language as GjsLanguage).fileElementType = this
+    }
 
     override fun parseContents(chameleon: ASTNode): ASTNode? {
         return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
@@ -456,7 +459,6 @@ class GtsFileViewProviderFactory: FileViewProviderFactory {
 
 class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean, private val baseLang: GtsLanguage = GtsLanguage.INSTANCE) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
 
-
     override fun findElementAt(offset: Int): PsiElement? {
         val element = super.findElementAt(offset)
         if (element.elementType == HbTokenTypes.CONTENT) {
@@ -498,7 +500,7 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
         }
         if (lang.id == JS.id) {
             val f = ECMA6ParserDefinition().createFile(this)
-            (f as PsiFileImpl).contentElementType = GtsFileElementType.INSTANCE
+            (f as PsiFileImpl).contentElementType = GjsFileElementType.INSTANCE
             return f
         }
         if (lang.id == HTMLLanguage.INSTANCE.id) {

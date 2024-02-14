@@ -43,6 +43,10 @@ class ResolvedReference(element: PsiElement, private val resolved: PsiElement): 
     override fun resolve(): PsiElement? {
         return resolved
     }
+
+    override fun getRangeInElement(): TextRange {
+        return resolved.textRange
+    }
 }
 
 /**
