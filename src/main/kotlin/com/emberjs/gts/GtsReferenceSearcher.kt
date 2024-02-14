@@ -2,6 +2,7 @@ package com.emberjs.gts
 
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbPsiElement
+import com.emberjs.hbs.ResolvedReference
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.ifTrue
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
@@ -47,6 +48,10 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
         }
 
         override fun processTextOccurrence(element: PsiElement, offsetInElement: Int, consumer: Processor<in PsiReference>): Boolean {
+            if (myQueryParameters.elementToSearch.containingFile is GtsFile) {
+                consumer.process(ResolvedReference(myQueryParameters.elementToSearch, myQueryParameters.elementToSearch))
+                return false
+            }
             return if ((element is HbPsiElement && element.elementType == HbTokenTypes.ID) || (element is XmlToken && element.parent is HtmlTag)) {
                 val elem = (element is XmlToken && element.parent is HtmlTag).ifTrue { element.parent } ?: element
                 var found = elem.reference?.isReferenceTo(myQueryParameters.elementToSearch) == true || elem.references.any {

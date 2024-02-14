@@ -45,8 +45,13 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     companion object {
 
+        var isCheckingRef = false
+
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
+            if (isCheckingRef) return null
+            isCheckingRef = true
             val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement
+            isCheckingRef = false
             if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase() || res is FakePsiElement) {
                 return null
             }
