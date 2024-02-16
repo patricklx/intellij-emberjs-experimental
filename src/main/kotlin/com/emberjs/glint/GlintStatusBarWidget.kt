@@ -1,14 +1,10 @@
 package com.emberjs.glint
 
 import com.emberjs.utils.EmberUtils
-import com.emberjs.utils.emberRoot
-import com.intellij.lang.javascript.JavaScriptBundle
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptMessageBus
-import com.intellij.lang.typescript.tsconfig.TypeScriptStatusBarWidget
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.JBPopupFactory.ActionSelectionAid
 import com.intellij.openapi.ui.popup.ListPopup

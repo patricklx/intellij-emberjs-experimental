@@ -5,6 +5,7 @@ import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
+import com.emberjs.hbs.EmberReference
 import com.emberjs.icons.EmberIcons
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
@@ -66,6 +67,7 @@ import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.html.HtmlDocumentImpl
+import com.intellij.psi.impl.source.resolve.reference.impl.PsiMultiReference
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
@@ -465,6 +467,15 @@ class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSy
             return super.findElementAt(offset, HTMLLanguage.INSTANCE)
         }
         return element
+    }
+
+    override fun findReferenceAt(offset: Int): PsiReference? {
+        val ref = super.findReferenceAt(offset)
+        if (ref is PsiMultiReference) {
+            val r = ref.references.find { it is EmberReference && it.resolve() != null }
+            if (r !== null) return r
+        }
+        return ref
     }
 
     override fun getBaseLanguage(): Language {

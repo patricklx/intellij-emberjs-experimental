@@ -3,9 +3,8 @@ package com.emberjs.glint
 import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
-import com.emberjs.hbs.HbReference
+import com.emberjs.hbs.EmberReference
 import com.emberjs.utils.EmberUtils
-import com.emberjs.utils.emberRoot
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
@@ -32,12 +31,10 @@ import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.text.HtmlBuilder
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.impl.LspServerImpl
 import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
@@ -144,7 +141,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             if (element is LeafPsiElement) {
                 element = element.parent!!
             }
-            if (element.reference is HbReference || element.references.find { it is HbReference } != null) {
+            if (element.reference is EmberReference || element.references.find { it is EmberReference } != null) {
                 currentlyChecking = null
                 return emptyArray()
             }

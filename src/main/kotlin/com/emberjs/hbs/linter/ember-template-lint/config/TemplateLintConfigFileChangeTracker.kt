@@ -1,7 +1,6 @@
 
 import TemplateLintUtil.Companion.isTemplateLintConfigFile
 import com.intellij.lang.javascript.linter.JSLinterConfigChangeTracker
-import com.intellij.lang.javascript.linter.JSLinterConfiguration
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 

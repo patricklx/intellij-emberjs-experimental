@@ -1,5 +1,3 @@
-import com.emberjs.glint.GlintAnnotationError
-import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.icons.EmberIcons
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine

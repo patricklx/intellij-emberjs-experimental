@@ -1,14 +1,10 @@
 package com.emberjs.navigation
 
 import com.emberjs.EmberTestFixtures.FIXTURES_PATH
-import com.emberjs.index.EmberNameIndex
-import com.emberjs.resolver.EmberName
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.utils.use
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.indexing.FileBasedIndex
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.SoftAssertions
 import org.junit.Test
 

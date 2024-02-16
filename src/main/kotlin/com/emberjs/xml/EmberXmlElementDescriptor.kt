@@ -2,6 +2,7 @@ package com.emberjs.xml
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
+import com.emberjs.hbs.EmberReference
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.ComponentReferenceData
 import com.emberjs.utils.EmberUtils
@@ -21,7 +22,7 @@ import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
 
 
-class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem) {
+class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem), EmberReference {
     override fun resolve(): PsiElement? {
         val psiFile = PsiManager.getInstance(elem.project).findFile(elem.originalVirtualFile!!)
         val document = PsiDocumentManager.getInstance(elem.project).getDocument(psiFile!!)!!
@@ -48,10 +49,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
         var isCheckingRef = false
 
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
-            if (isCheckingRef) return null
-            isCheckingRef = true
             val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement
-            isCheckingRef = false
             if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase() || res is FakePsiElement) {
                 return null
             }

@@ -7,7 +7,7 @@ import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.emberjs.gts.GtsFileViewProvider
-import com.emberjs.hbs.HbReference
+import com.emberjs.hbs.EmberReference
 import com.emberjs.icons.EmberIconProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.lookup.EmberLookupInternalElementBuilder
@@ -22,7 +22,6 @@ import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.completion.PrioritizedLookupElement
 import com.intellij.codeInsight.completion.XmlTagInsertHandler
 import com.intellij.codeInsight.lookup.LookupElement
-import com.intellij.codeInsight.lookup.LookupElementBuilder as LookupElementBuilderIntelij
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.lang.Language
@@ -46,9 +45,9 @@ import com.intellij.psi.util.parents
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
-import com.intellij.util.containers.ContainerUtil
 import com.intellij.xml.XmlTagNameProvider
 import java.util.function.Predicate
+import com.intellij.codeInsight.lookup.LookupElementBuilder as LookupElementBuilderIntelij
 
 
 class LookupElementBuilder() {
@@ -87,12 +86,12 @@ class EmberTagNameProvider : XmlTagNameProvider {
             return
         }
 
-        if (anything.references.find { it is HbReference } != null) {
-            resolve(anything.references.find { it is HbReference }!!.resolve(), path, result, visited)
+        if (anything.references.find { it is EmberReference } != null) {
+            resolve(anything.references.find { it is EmberReference }!!.resolve(), path, result, visited)
             return
         }
 
-        if (anything.reference is HbReference && !visited.contains(anything.reference?.resolve())) {
+        if (anything.reference is EmberReference && !visited.contains(anything.reference?.resolve())) {
             resolve(anything.reference?.resolve(), path, result, visited)
             return
         }

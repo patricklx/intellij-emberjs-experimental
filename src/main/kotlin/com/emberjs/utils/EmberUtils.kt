@@ -9,10 +9,7 @@ import com.emberjs.cli.EmberCliFrameworkDetector
 import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFile
 import com.emberjs.gts.GtsFileViewProvider
-import com.emberjs.hbs.HbReference
-import com.emberjs.hbs.HbsLocalReference
-import com.emberjs.hbs.HbsModuleReference
-import com.emberjs.hbs.ImportNameReference
+import com.emberjs.hbs.*
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
 import com.emberjs.psi.EmberNamedElement
@@ -26,6 +23,7 @@ import com.intellij.application.options.CodeStyle
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.psi.ES6ExportSpecifierAlias
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
@@ -326,6 +324,10 @@ class EmberUtils {
 
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
+            if (element is ES6ExportSpecifierAlias) {
+                return followReferences(element.parent.reference?.resolve())
+            }
+
             if (element is ES6ImportedBinding) {
                 var ref:PsiReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
                 if (ref == null) {
@@ -350,10 +352,10 @@ class EmberUtils {
                 val results = element.multiResolve(false)
                 val internal = (element.parent.parent as ES6ImportDeclarationImpl).fromClause?.references?.find { it is EmberInternalJSModuleReference } as? EmberInternalJSModuleReference
                 if (internal != null) {
-                    return PsiTreeUtil.collectElements(internal.internalFile) { (it is JSElementBase) && it.isExported && it.name == element.name }.firstOrNull()
+                    return followReferences(PsiTreeUtil.collectElements(internal.internalFile) { (it is JSElementBase) && it.isExported && it.name == element.name }.firstOrNull())
                 }
 
-                return results.find { it.element?.containingFile is ProjectFile }?.element ?: results.firstOrNull()?.element
+                return followReferences(results.find { it.element?.containingFile is ProjectFile }?.element ?: results.firstOrNull()?.element)
             }
 
             if (element is EmberNamedElement) {
@@ -722,7 +724,7 @@ class EmberUtils {
                 val asAttr = tag.attributes.find { it.name == "as" }!!
                 val yields = tag.attributes.map { it.text }.joinToString(" ").split("|")[1]
                 val idx = yields.split(" ").indexOf(name)
-                val ref = asAttr.references.find { it is HbReference }
+                val ref = asAttr.references.find { it is EmberReference }
                 if (ref is HbPathImpl) {
                     val params = ref.children.filter { it is HbParam }
                     return params.getOrNull(idx)
@@ -783,12 +785,14 @@ class EmberUtils {
             }
 
             val tsFile = possibleFiles.firstNotNullOfOrNull { getFileByPath(parentModule, it) } ?:containingFile
-            var cls = findDefaultExportClass(tsFile)
-                    ?: findDefaultExportClass(containingFile)
-                    ?: file
+            var cls: PsiElement
 
             if (f is JSElement && f !is PsiFile) {
                 cls = f
+            } else {
+                cls = findDefaultExportClass(tsFile)
+                        ?: findDefaultExportClass(containingFile)
+                        ?: file
             }
 
             if (cls is PsiFile && cls.name == "intellij-emberjs/internal/components-stub") {
@@ -796,10 +800,6 @@ class EmberUtils {
             }
             var jsTemplate: Any? = null
             if (cls is JSElement) {
-
-                val scope = ProjectScope.getAllScope(cls.project)
-                val emberName = EmberNameIndex.getFilteredPairs(scope) { it.type == "component" }.find { it.second == cls.containingFile }?.first
-
                 jsTemplate = cls as? JSStringTemplateExpression ?: PsiTreeUtil.findChildOfType(cls, JSStringTemplateExpression::class.java)
 
                 if (cls is JSClass) {

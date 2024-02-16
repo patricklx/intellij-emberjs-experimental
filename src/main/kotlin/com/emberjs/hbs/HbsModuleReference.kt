@@ -7,7 +7,6 @@ import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
-import com.intellij.lang.Language
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
 import com.intellij.lang.javascript.psi.JSReferenceExpression
@@ -17,7 +16,7 @@ import com.intellij.psi.PsiElementResolveResult.createResults
 import com.intellij.psi.search.ProjectScope
 
 open class HbsModuleReference(element: PsiElement, val moduleType: String) :
-        PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true) {
+        PsiPolyVariantReferenceBase<PsiElement>(element, TextRange(0, element.textLength), true), EmberReference {
 
     val project = element.project
     private val scope = ProjectScope.getAllScope(project)

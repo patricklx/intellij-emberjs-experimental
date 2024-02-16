@@ -1,9 +1,5 @@
 package com.emberjs.glint
 
-import com.emberjs.gts.GtsFileType
-import com.intellij.lang.javascript.service.JSLanguageServiceProvider
-import com.intellij.lang.typescript.compiler.TypeScriptService
-import com.intellij.lang.typescript.compiler.languageService.TypeScriptServerServiceImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile

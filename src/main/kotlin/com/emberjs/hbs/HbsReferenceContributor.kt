@@ -10,7 +10,6 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedElement
 import com.emberjs.translations.EmberTranslationHbsReferenceProvider
 import com.emberjs.utils.*
-import com.intellij.lang.Language
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.JSElementBase
 import com.intellij.lang.javascript.psi.JSLiteralExpression

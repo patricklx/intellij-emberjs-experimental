@@ -4,7 +4,6 @@ import com.emberjs.icons.EmberIconProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.dasherize
-import com.intellij.codeHighlighting.Pass
 import com.intellij.codeInsight.daemon.DefaultGutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.lang.annotation.AnnotationHolder

@@ -5,7 +5,9 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
+import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbOpenBlockMustacheImpl
+import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
 import com.emberjs.xml.EmberAttrDec
 import com.emberjs.xml.EmberXmlElementDescriptor
 import com.emberjs.glint.GlintLanguageServiceProvider
@@ -13,6 +15,8 @@ import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
+import com.emberjs.refactoring.SimpleNodeFactory
+import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
@@ -31,23 +35,140 @@ import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
+import com.intellij.psi.impl.source.xml.TagNameReference
+import com.intellij.psi.impl.source.xml.XmlAttributeReference
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.util.*
 import com.intellij.psi.xml.XmlAttribute
 import com.intellij.psi.xml.XmlAttributeDecl
 import com.intellij.psi.xml.XmlTag
+import com.intellij.refactoring.rename.BindablePsiReference
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 
-class ResolvedReference(element: PsiElement, private val resolved: PsiElement): PsiReferenceBase<PsiElement>(element) {
+class ResolvedReference(element: PsiElement, private val resolved: PsiElement): HbReference(element), EmberReference {
     override fun resolve(): PsiElement? {
         return resolved
     }
 
     override fun getRangeInElement(): TextRange {
-        return resolved.textRange
+        return TextRange(0, element.textLength)
+    }
+
+    override fun isReferenceTo(other: PsiElement): Boolean {
+        var res = resolve()
+        if (res is EmberNamedElement) {
+            res = res.target
+        }
+        return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }
 }
+
+class XmlResolvedReference(element: XmlAttribute, private val resolved: PsiElement): XmlAttributeReference(element), EmberReference {
+    override fun resolve(): PsiElement? {
+        return resolved
+    }
+
+    override fun getRangeInElement(): TextRange {
+        return TextRange(0, element.textLength)
+    }
+
+    override fun isReferenceTo(other: PsiElement): Boolean {
+        var res = resolve()
+        if (res is EmberNamedElement) {
+            res = res.target
+        }
+        return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
+    }
+}
+
+open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?, val range: TextRange): XmlAttributeReference(element), BindablePsiReference, EmberReference {
+    private var targetRef: PsiReference? = null
+
+    override fun isReferenceTo(other: PsiElement): Boolean {
+        var res = resolve()
+        if (res is EmberNamedElement) {
+            res = res.target
+        }
+        return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
+    }
+
+    val target by lazy {
+        if (targetPsi != null) {
+            return@lazy targetPsi
+        }
+        return@lazy targetRef?.resolve()
+    }
+
+
+    private val named: EmberNamedElement? by lazy {
+        target?.let { EmberNamedElement(it) }
+    }
+    private val namedXml: EmberNamedAttribute? by lazy {
+        if (target is XmlAttribute && (target as XmlAttribute).descriptor?.declaration is EmberAttrDec) {
+            return@lazy (target as XmlAttribute).let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+        }
+        return@lazy null
+    }
+
+    override fun resolve(): PsiElement? {
+        if (target is XmlAttribute) {
+            return namedXml
+        }
+        return named
+    }
+
+    override fun getRangeInElement(): TextRange {
+        return range
+    }
+
+    val isImportFrom by lazy {
+        element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith("{{import ") == true && target is PsiFile
+    }
+
+    override fun bindToElement(newElement: PsiElement): PsiElement {
+        if (isImportFrom) {
+            var newFileLocation = newElement as? PsiFile
+            if (newElement is PsiDirectory) {
+                newFileLocation = newElement.findFile((target as PsiFile).name)
+            }
+            val importPath = newFileLocation?.let { EmberName.from(newFileLocation.virtualFile)?.importPath } ?: return super.bindToElement(newElement)
+            val node = SimpleNodeFactory.createTextNode(newElement.project, importPath)
+            return element.replace(node)
+        }
+        return super.bindToElement(newElement)
+    }
+
+    override fun handleElementRename(newElementName: String): PsiElement {
+        if (element is XmlAttribute) {
+            val attr = element as XmlAttribute
+            var newName = ""
+            if (attr.name.startsWith("|")) {
+                newName = "|"
+            }
+            newName += newElementName
+            if (attr.name.endsWith("|")) {
+                newName += "|"
+            }
+            attr.name = newName
+            return element
+        }
+        if (element is HbStatementsImpl) {
+            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
+            tag.name = newElementName
+            return tag
+        }
+        val target = this.target as? PsiFile
+        if (isImportFrom) {
+            val text = EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target?.originalVirtualFile }.firstOrNull()?.first?.importPath ?: return element
+            val node = SimpleNodeFactory.createTextNode(element.project, text)
+            return element.replace(node)
+        }
+        return super.handleElementRename(newElementName)
+    }
+}
+
 
 /**
  * this is just to remove leading and trailing `|` from attribute references
@@ -65,30 +186,38 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
         if (name.endsWith("|")) {
             range = TextRange(range.startOffset, range.endOffset - 1)
         }
-        return RangedReference(target, target, range)
+        return XmlRangedReference(target, target, range)
     }
     val psiFile = PsiManager.getInstance(target.project).findFile(target.originalVirtualFile!!)
     val document = PsiDocumentManager.getInstance(target.project).getDocument(psiFile!!)!!
     val service = GlintLanguageServiceProvider(target.project).getService(target.originalVirtualFile!!)
     val resolved = service?.getNavigationFor(document, target, true)?.firstOrNull()
     return resolved?.let {
-        ResolvedReference(target, resolved)
+        XmlResolvedReference(target, resolved)
     }
 }
 
 
-class TagReference(val element: XmlTag, val fullName: String, val range: TextRange) : HbReference(element) {
+class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: TextRange) : TagNameReference(element.node.firstChildNode, true), EmberReference {
 
-    init {
-        rangeInElement = range
+    override fun getRangeInElement(): TextRange {
+        return rangeInElem
+    }
+
+    override fun isReferenceTo(other: PsiElement): Boolean {
+        var res = resolve()
+        if (res is EmberNamedElement) {
+            res = res.target
+        }
+        return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }
 
     override fun resolve(): PsiElement? {
         val t = TagReferencesProvider.forTag(element, fullName)
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
-            return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+            return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(rangeInElem.startOffset, rangeInElem.endOffset)) }
         }
-        return t?.let { EmberNamedElement(it, IntRange(range.startOffset, range.endOffset-1)) }
+        return t?.let { EmberNamedElement(it, IntRange(rangeInElem.startOffset, rangeInElem.endOffset-1)) }
     }
 
     override fun handleElementRename(newElementName: String): PsiElement {

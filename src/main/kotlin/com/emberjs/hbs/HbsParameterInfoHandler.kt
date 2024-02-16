@@ -3,10 +3,12 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbParam
 import com.dmarcotte.handlebars.psi.HbPsiElement
-import com.emberjs.utils.*
-import com.intellij.codeInsight.hints.InlayInfo
+import com.emberjs.utils.EmberUtils
 import com.intellij.codeInsight.lookup.LookupElement
-import com.intellij.lang.javascript.psi.*
+import com.intellij.lang.javascript.psi.JSFunction
+import com.intellij.lang.javascript.psi.JSParameterListElement
+import com.intellij.lang.javascript.psi.JSRecordType
+import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptCallSignature
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptVariable
 import com.intellij.lang.javascript.psi.types.JSArrayType
@@ -15,7 +17,6 @@ import com.intellij.lang.parameterInfo.*
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
-import com.intellij.refactoring.suggested.startOffset
 
 
 class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
