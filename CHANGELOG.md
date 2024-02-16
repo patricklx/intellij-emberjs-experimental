@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.7 (2024-02-16)
+
+#### :bug: Bug Fix
+* [#133](https://github.com/patricklx/intellij-emberjs-experimental/pull/133) fix issue with references of html tags and attributes ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.6 (2024-02-14)
 
 #### :bug: Bug Fix
