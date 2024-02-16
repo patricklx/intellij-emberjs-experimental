@@ -5,7 +5,6 @@ import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.lang.javascript.validation.UnusedImportsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import junit.framework.TestCase
 import org.junit.Test

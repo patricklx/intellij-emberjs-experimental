@@ -349,7 +349,7 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
             // as html tag
             val htmlView = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
-            val angleBracketBlocks = PsiTreeUtil.collectElements(htmlView, { it is XmlAttribute && it.text.startsWith("|") })
+            val angleBracketBlocks = PsiTreeUtil.collectElements(htmlView) { it is XmlAttribute && it.text.startsWith("|") }
                     .filter{ (it.parent as HtmlTag).attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|")) }
                     .map { it.parent }
 

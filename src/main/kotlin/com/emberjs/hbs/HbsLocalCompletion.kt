@@ -105,7 +105,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (anything is PsiElement && anything.references.find { it is HbsLocalReference } != null) {
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolved as? PropertySignature, result)
-            resolve(anything.references.find { it is HbReference }!!.resolve(), result)
+            resolve(anything.references.find { it is EmberReference }!!.resolve(), result)
         }
 
         if (anything is PsiElement && anything.reference is HbsLocalReference) {
@@ -312,7 +312,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 }
             }
 
-            if (it is JSFunction && it.parent !is JSVariable) {
+            if (it is JSFunction && it.parent !is JSVariable && it.name != null) {
                 val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                 if (useScope.isAncestor(tpl)) {
                     result.addElement(LookupElementBuilder.create(it.name!!))

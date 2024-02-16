@@ -5,8 +5,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintTypeScriptService
-import com.emberjs.hbs.HbReference
-import com.emberjs.hbs.HbsModuleReference
+import com.emberjs.hbs.EmberReference
 import com.emberjs.utils.ifTrue
 import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.codeInspection.ProblemHighlightType
@@ -224,7 +223,7 @@ class HbLintAnnotator() : Annotator {
                 annotation.create()
             }
         }
-        if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && !element.references.any { (it is HbReference || it is HbsModuleReference) && it.resolve() != null })) {
+        if (element is HbPsiElement && element.elementType == HbTokenTypes.ID && (element.reference?.resolve() == null && !element.references.any { it is EmberReference && it.resolve() != null })) {
             val insideImport = element.parents(false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
             if (insideImport) return
             if (element.parent is HbHash) return

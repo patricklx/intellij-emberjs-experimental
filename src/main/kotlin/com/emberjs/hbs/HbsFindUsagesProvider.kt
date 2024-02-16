@@ -9,7 +9,6 @@ import com.intellij.lang.findUsages.FindUsagesProvider
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.psi.PsiElement
-import com.intellij.psi.css.CssFileType
 import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.elementType
 

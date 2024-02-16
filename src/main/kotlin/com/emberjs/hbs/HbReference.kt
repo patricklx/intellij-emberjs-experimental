@@ -25,7 +25,10 @@ import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.rename.BindablePsiReference
 
 
-abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
+interface EmberReference {}
+
+
+abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(element), EmberReference {
     override fun isReferenceTo(other: PsiElement): Boolean {
         var res = resolve()
         if (res is EmberNamedElement) {
@@ -88,19 +91,6 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
     }
 
     override fun handleElementRename(newElementName: String): PsiElement {
-        if (element is XmlAttribute) {
-            val attr = element as XmlAttribute
-            var newName = ""
-            if (attr.name.startsWith("|")) {
-                newName = "|"
-            }
-            newName += newElementName
-            if (attr.name.endsWith("|")) {
-                newName += "|"
-            }
-            attr.name = newName
-            return element
-        }
         if (element is HbStatementsImpl) {
             val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
             tag.name = newElementName

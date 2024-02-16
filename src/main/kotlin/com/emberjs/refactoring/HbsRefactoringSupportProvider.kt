@@ -1,11 +1,8 @@
 package com.emberjs.refactoring
 
-import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.emberjs.psi.EmberNamedElement
 import com.intellij.lang.refactoring.RefactoringSupportProvider
 import com.intellij.psi.PsiElement
-import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.util.elementType
 
 class HbsRefactoringSupportProvider : RefactoringSupportProvider() {
     override fun isSafeDeleteAvailable(element: PsiElement): Boolean {
