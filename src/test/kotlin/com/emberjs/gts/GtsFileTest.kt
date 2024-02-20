@@ -4,6 +4,7 @@ import com.emberjs.gts.GjsFileType
 import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
+import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import junit.framework.TestCase
@@ -32,21 +33,29 @@ class GtsFileTest : BasePlatformTestCase() {
             const bar = () => null;
             
             const Baz = {};
+            const grault = {};
+            
+            function corge() {};
+            function corge2() {};
+            
             
             export default <template>
                 <Foo />
                 <Baz />
                 {{x}}
                 {{y}}
+                {{corge}}
                 {{bar}}
             </template>
         """.trimIndent()
         myFixture.configureByText(GjsFileType.INSTANCE, gts)
-        myFixture.enableInspections(ES6UnusedImportsInspection())
-        val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" }
-        TestCase.assertEquals(2, highlightInfos.size);
-        TestCase.assertTrue(highlightInfos.first().description.contains("quux"));
-        TestCase.assertTrue(highlightInfos.last().description.contains("qux"));
+        myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection())
+        val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
+        TestCase.assertEquals(4, highlightInfos.size)
+        TestCase.assertTrue(highlightInfos[0].description.contains("quux"))
+        TestCase.assertTrue(highlightInfos[1].description.contains("qux"))
+        TestCase.assertTrue(highlightInfos[2].description.contains("grault"))
+        TestCase.assertTrue(highlightInfos[3].description.contains("corge2"))
     }
 
     @Test
@@ -72,8 +81,8 @@ class GtsFileTest : BasePlatformTestCase() {
         myFixture.configureByText(GtsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection())
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" }
-        TestCase.assertEquals(highlightInfos.size, 2);
-        TestCase.assertTrue(highlightInfos.first().description.contains("quux"));
-        TestCase.assertTrue(highlightInfos.last().description.contains("qux"));
+        TestCase.assertEquals(highlightInfos.size, 2)
+        TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
+        TestCase.assertTrue(highlightInfos.last().description.contains("qux"))
     }
 }
