@@ -35,9 +35,7 @@ import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiManager
+import com.intellij.psi.*
 import com.intellij.psi.css.CssRulesetList
 import com.intellij.psi.css.CssSelector
 import com.intellij.psi.css.impl.CssRulesetImpl
@@ -368,7 +366,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
             val keyFilter = Predicate { n: String? -> n != null && n.contains(name) }
-            val info = JSImportPlaceInfo(f)
+            val info = JSImportPlaceInfo(f, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
             JSImportCompletionUtil.processExportedElements(f, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
                 candidates.addAll(elements.filterNotNull())
@@ -387,18 +385,21 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val service = languageService.getService(element.originalVirtualFile!!)
         val txt = (element.parents.find { it is HbPathImpl || it is HbStringLiteral }?.text ?: element.text).replace("IntellijIdeaRulezzz", "")
 
+        val psiFile = PsiManager.getInstance(parameters.position.project).findFile(parameters.position.originalVirtualFile!!)
+        val document = PsiDocumentManager.getInstance(parameters.position.project).getDocument(psiFile!!)!!
+
         if(parameters.isExtendedCompletion) {
-            val items = languageService.getService(element.originalVirtualFile!!)?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()
+            val items = languageService.getService(element.originalVirtualFile!!)?.getCompletionItems(element.originalVirtualFile!!, document, parameters.offset, parameters)?.get()
                     ?: arrayListOf()
             if (items.size < 100) {
                 val isData = element.parent is HbData
-                completionResultSet.addAllElements(items.map { it.intoLookupElement().withLookupString(isData.ifTrue { "@${it.name}" } ?: it.name) })
+                completionResultSet.addAllElements(items.map { (it.createLookupElement() as LookupElementBuilder).withLookupString(isData.ifTrue { "@${it.name}" } ?: it.name) })
             }
         }
 
         if (element.containingFile.fileType is HtmlFileType) {
             if (!parameters.isExtendedCompletion) return
-            val results = service?.updateAndGetCompletionItems(element.originalVirtualFile!!, parameters)?.get()?.map {
+            val results = service?.getCompletionItems(element.originalVirtualFile!!, document, parameters.offset, parameters)?.get()?.map {
                 if (completionResultSet.prefixMatcher.prefix == "@") {
                     LookupElementBuilder.create("@" + it.name)
                 } else {

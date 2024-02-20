@@ -1,8 +1,10 @@
 
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.javascript.nodejs.execution.NodeTargetRun
+import com.intellij.javascript.nodejs.execution.NodeTargetRunOptions
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreter
-import com.intellij.javascript.nodejs.library.yarn.YarnPnpNodePackage
+import com.intellij.javascript.nodejs.library.yarn.pnp.YarnPnpNodePackage
 import com.intellij.javascript.nodejs.util.NodePackage
 import com.intellij.openapi.project.Project
 import java.io.File
@@ -21,7 +23,8 @@ class TemplateLintPackage(
     @Throws(ExecutionException::class)
     fun addMainEntryJsFile(commandLine: GeneralCommandLine, interpreter: NodeJsInterpreter) {
         if (myPkg is YarnPnpNodePackage) {
-            myPkg.addYarnRunToCommandLine(commandLine, myProject, interpreter, TemplateLintUtil.PACKAGE_NAME)
+            val targetRun = NodeTargetRun(interpreter, myProject, null, NodeTargetRunOptions.of(false))
+            myPkg.addYarnRunToCommandLine(targetRun, TemplateLintUtil.PACKAGE_NAME, true)
         } else {
             val file = myPkg.findBinFile(TemplateLintUtil.PACKAGE_NAME, "dist${File.separator}cli.js")
                     ?: throw ExecutionException("Please specify TemplateLint package correctly: ${TemplateLintUtil.PACKAGE_NAME} binary not found")

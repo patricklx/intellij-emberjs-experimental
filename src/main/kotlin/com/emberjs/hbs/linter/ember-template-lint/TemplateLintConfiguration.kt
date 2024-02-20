@@ -1,5 +1,6 @@
 
 import com.intellij.javascript.nodejs.util.JSLinterPackage
+import com.intellij.javascript.nodejs.util.NodePackageRef
 import com.intellij.lang.javascript.linter.JSLinterConfiguration
 import com.intellij.lang.javascript.linter.JSLinterInspection
 import com.intellij.openapi.components.State
@@ -24,7 +25,7 @@ class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<Templa
     }
 
     override fun savePrivateSettings(state: TemplateLintState) {
-        this.myPackage.force(state.interpreterRef, state.templateLintPackage)
+        this.myPackage.force(NodePackageRef.create(state.interpreterRef.referenceName))
     }
 
     override fun toXml(state: TemplateLintState): Element? {

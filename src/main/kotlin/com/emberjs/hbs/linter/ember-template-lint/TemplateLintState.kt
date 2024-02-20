@@ -27,10 +27,6 @@ data class TemplateLintState(
         return this.myPackageRef
     }
 
-    override fun withInterpreterRef(interpreterRef: NodeJsInterpreterRef): TemplateLintState {
-        return copy(myInterpreterRef = interpreterRef)
-    }
-
     val templateLintPackage: NodePackage
         get() {
             return this.myTemplateLintPackage

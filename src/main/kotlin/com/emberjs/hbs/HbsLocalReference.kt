@@ -283,13 +283,6 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 return any
             }
 
-            if (any is JSRecordTypeImpl.PropertySignatureImpl) {
-                if (path.isEmpty()) {
-                    return any.jsType?.sourceElement
-                }
-                return resolveToJs(any.jsType, path)
-            }
-
             var jsType: JSType? = null
 
             if (any is JSType) {

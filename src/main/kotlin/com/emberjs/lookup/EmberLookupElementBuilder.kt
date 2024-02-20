@@ -18,6 +18,7 @@ import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.psi.PsiFile
+import com.intellij.psi.ResolveResult
 import java.util.function.Predicate
 
 object EmberLookupElementBuilderWithCandidate {
@@ -48,7 +49,7 @@ object EmberLookupElementBuilder {
         ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
             val keyFilter = Predicate { n: String? -> n == it.name }
-            val info = JSImportPlaceInfo(tsFile)
+            val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
             JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
                 candidates.addAll(elements.filterNotNull().filter { it.descriptor?.moduleName == moduleName })
@@ -81,7 +82,7 @@ object EmberLookupInternalElementBuilder {
         ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
             val keyFilter = Predicate { n: String? -> n == name }
-            val info = JSImportPlaceInfo(tsFile)
+            val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
             JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
                 candidates.addAll(elements.filterNotNull().filter { it.descriptor?.moduleName == moduleName })

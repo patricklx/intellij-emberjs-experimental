@@ -9,11 +9,14 @@ import com.intellij.codeInsight.daemon.DefaultGutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.psi.JSProperty
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
+import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.search.ProjectScope
+import java.util.function.Supplier
 
 class EmberRelationshipAnnotator : Annotator {
 
@@ -41,12 +44,15 @@ class EmberRelationshipAnnotator : Annotator {
         if (referencedFiles.isEmpty()) return
 
         // Create an annotation with a gutter icon renderer
-        holder.createInfoAnnotation(identifier, null).apply {
+        holder.newAnnotation(HighlightSeverity.INFORMATION,  "").apply {
             val navHandler = DefaultGutterIconNavigationHandler<PsiElement>(referencedFiles, name.displayName)
-            val lmi = LineMarkerInfo(identifier, identifier.textRange, icon, Pass.LINE_MARKERS,
-                    null, navHandler, GutterIconRenderer.Alignment.CENTER)
+            val lmi = LineMarkerInfo(identifier, identifier.textRange, icon, null, navHandler, GutterIconRenderer.Alignment.CENTER, object : Supplier<String> {
+                override fun get(): String {
+                    return "RelationShip"
+                }
+            })
 
-            gutterIconRenderer = LineMarkerInfo.LineMarkerGutterIconRenderer(lmi)
+            gutterIconRenderer(LineMarkerInfo.LineMarkerGutterIconRenderer(lmi))
         }
     }
 

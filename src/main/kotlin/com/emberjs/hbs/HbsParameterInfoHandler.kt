@@ -20,20 +20,6 @@ import com.intellij.psi.util.elementType
 
 
 class HbsParameterInfoHandler : ParameterInfoHandler<PsiElement, Any?> {
-    override fun couldShowInLookup(): Boolean {
-        return true
-    }
-
-    override fun getParametersForLookup(item: LookupElement?, context: ParameterInfoContext?): Array<*>? {
-        val psiElement = context?.file?.findElementAt(context.offset)
-        val helper = PsiTreeUtil.collectElements(EmberUtils.findFirstHbsParamFromParam(psiElement)) {  it is HbPsiElement && it.elementType == HbTokenTypes.ID }.firstOrNull()
-
-        val file = helper?.references?.getOrNull(0)?.resolve()?.containingFile
-        if (file == null) {
-            return null
-        }
-        return EmberUtils.resolveHelper(file)?.element?.parameters
-    }
 
     override fun findElementForParameterInfo(context: CreateParameterInfoContext): PsiElement? {
         val psiElement = context.file.findElementAt(context.offset)

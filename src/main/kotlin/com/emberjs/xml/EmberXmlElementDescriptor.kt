@@ -7,7 +7,6 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.utils.ComponentReferenceData
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
-import com.intellij.codeInsight.documentation.DocumentationManager.ORIGINAL_ELEMENT_KEY
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
 import com.intellij.psi.*
@@ -61,7 +60,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     override fun getName(context: PsiElement?): String = (context as? XmlTag)?.name ?: name
     override fun getName(): String = tag.localName
     override fun init(element: PsiElement?) {
-        element?.putUserData(ORIGINAL_ELEMENT_KEY, null)
+
     }
     override fun getQualifiedName(): String = name
     override fun getDefaultName(): String = name

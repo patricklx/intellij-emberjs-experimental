@@ -263,7 +263,8 @@ class EmberTagNameProvider : XmlTagNameProvider {
     fun forGtsFiles(tag: XmlTag, lookupElements: MutableList<LookupElement>) {
         val info = JSImportPlaceInfo(
                 tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
-                        ?: tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                        ?: tag.originalElement.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6),
+                ResolveResult.EMPTY_ARRAY
         )
         val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
         val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.contains(tagName) }

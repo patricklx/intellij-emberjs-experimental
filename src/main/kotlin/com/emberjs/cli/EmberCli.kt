@@ -3,7 +3,7 @@ package com.emberjs.cli
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.openapi.project.Project
-import org.apache.commons.lang.SystemUtils
+import org.apache.commons.lang3.SystemUtils
 import java.io.BufferedReader
 import java.util.concurrent.TimeUnit
 

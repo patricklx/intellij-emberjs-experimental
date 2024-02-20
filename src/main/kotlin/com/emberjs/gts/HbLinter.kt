@@ -169,7 +169,7 @@ class HbLintAnnotator() : Annotator {
             ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6) ?: return@runReadAction
             val keyFilter = Predicate { n: String? -> n?.startsWith(name) == true }
-            val info = JSImportPlaceInfo(tsFile)
+            val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
             JSImportCompletionUtil.processExportedElements(tsFile, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
                 candidates.addAll(elements.filterNotNull())

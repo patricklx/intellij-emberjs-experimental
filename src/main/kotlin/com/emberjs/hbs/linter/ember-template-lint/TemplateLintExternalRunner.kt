@@ -40,7 +40,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
             try {
                 val commandLine = createCommandLine(sessionData)
                 logStart(sessionData, commandLine)
-                val processHandler = KillableColoredProcessHandler(commandLine, false)
+                val processHandler = KillableColoredProcessHandler(commandLine)
                 try {
                     writeFileContentToStdin(processHandler, sessionData, commandLine.charset)
                 } catch (error: IOException) {
