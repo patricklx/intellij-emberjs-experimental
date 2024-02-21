@@ -53,6 +53,7 @@ class EmberRelationshipAnnotator : Annotator {
             })
 
             gutterIconRenderer(LineMarkerInfo.LineMarkerGutterIconRenderer(lmi))
+            create()
         }
     }
 
