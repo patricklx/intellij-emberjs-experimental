@@ -56,11 +56,11 @@ class ElementUtils {
         fun readEnv(element: Element): Map<String, String>? {
             val env = mutableMapOf<String, String>()
             val envs = element.children
-                    .find { it.name === "envs" } ?: return null
+                    .find { it.name == "envs" } ?: return null
 
             envs.let {
                 it.children
-                        .filter { it.name === "env" }
+                        .filter { it.name == "env" }
                         .forEach {
                             env[it.getAttributeValue("name")] = it.getAttributeValue("value")
                         }
@@ -71,7 +71,7 @@ class ElementUtils {
 
         fun removeEnv(element: Element) {
             element.children
-                    .find { it.name === "envs" }
+                    .find { it.name == "envs" }
                     ?.let { it.parentElement.removeContent(it) }
         }
 

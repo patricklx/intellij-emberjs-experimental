@@ -138,7 +138,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
 
         val modules: MutableList<VirtualFile> = mutableListOf()
 
-        if (hostPackageRoot.findFile("package.json")?.packageJsonData?.name === packageName) {
+        if (hostPackageRoot.findFile("package.json")?.packageJsonData?.name == packageName) {
             modules.add(hostPackageRoot)
         }
 

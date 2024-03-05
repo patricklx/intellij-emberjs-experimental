@@ -142,7 +142,7 @@ object HbMustacheNameSynchronizer : EditorFactoryListener {
             val oldLength = event.oldLength
             val fragment = event.newFragment
             val newLength = event.newLength
-            if (document.getUserData(SKIP_COMMAND) === java.lang.Boolean.TRUE) {
+            if (document.getUserData(SKIP_COMMAND) == java.lang.Boolean.TRUE) {
                 // xml completion inserts extra space after tag name to ensure correct parsing
                 // js auto-import may change beginning of the document when component is imported
                 // we need to ignore it

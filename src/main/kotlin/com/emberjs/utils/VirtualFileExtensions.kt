@@ -203,7 +203,7 @@ fun findMainProjectName(file: VirtualFile): String? {
 
 val VirtualFile.packageJsonData: PackageJsonData?
     get() {
-        if (this.name === "package.json") {
+        if (this.name == "package.json") {
             return PackageJsonData.getOrCreate(this)
         }
         return null

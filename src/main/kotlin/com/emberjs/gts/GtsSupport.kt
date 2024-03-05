@@ -567,7 +567,7 @@ class GtsSyntaxHighlighterFactory : SyntaxHighlighterFactory() {
 class GtsAstFactory : ASTFactory() {
     override fun createLeaf(type: IElementType, text: CharSequence): LeafElement? {
 
-        return (if (type === GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) OuterLanguageElementImpl(type, text) else super.createLeaf(type, text))
+        return (if (type == GtsElementTypes.GTS_OUTER_ELEMENT_TYPE) OuterLanguageElementImpl(type, text) else super.createLeaf(type, text))
     }
 }
 
