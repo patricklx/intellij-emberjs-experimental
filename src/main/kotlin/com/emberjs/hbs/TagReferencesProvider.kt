@@ -1,5 +1,6 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.HbLanguage
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
@@ -231,7 +232,7 @@ class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: T
 class TagReferencesProvider : PsiReferenceProvider() {
 
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<TagReference> {
-        if (element.containingFile.viewProvider is HbFileViewProvider || element.containingFile.viewProvider is GtsFileViewProvider) {
+        if (element.containingFile.viewProvider is HbFileViewProvider || element.containingFile.viewProvider is GtsFileViewProvider || element.containingFile.viewProvider.baseLanguage is HbLanguage) {
             val refs = Companion.getReferencesByElement(element)
             val name = (element as XmlTag).name
             if (name.first().isLowerCase() && refs.firstOrNull()?.resolve() == null) {
