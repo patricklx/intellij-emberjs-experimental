@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.8 (2024-03-06)
+
+#### :bug: Bug Fix
+* [#136](https://github.com/patricklx/intellij-emberjs-experimental/pull/136) fix resolving ember paths and some html tags ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.7 (2024-02-16)
 
 #### :bug: Bug Fix
