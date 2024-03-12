@@ -648,13 +648,13 @@ class EmberUtils {
                 }
                 return param
             }
-            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)or\\b"))) {
+            if (element is PsiElement && element.text?.contains(Regex("^(\\(|\\{\\{)or\\b")) == true) {
                 val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
                 return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 params.find { it.text.contains(Regex("^(\\(|\\{\\{)component\\b")) && !it.children.contains(handleEmberHelpers(it)) }?.let { handleEmberHelpers(it) }
             }
-            if (element is PsiElement && element.text.contains(Regex("^(\\(|\\{\\{)if\\b"))) {
+            if (element is PsiElement && element.text?.contains(Regex("^(\\(|\\{\\{)if\\b")) == true) {
                 val params = element.children.filter { it is HbParam && !it.text.startsWith("@") }.drop(1)
                 return params.find { it.children.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
                 params.find { it.children.firstOrNull()?.children?.firstOrNull()?.children?.firstOrNull()?.references?.isNotEmpty() == true } ?:
