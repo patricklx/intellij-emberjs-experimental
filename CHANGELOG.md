@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2023.3.9 (2024-03-14)
+
+#### :bug: Bug Fix
+* [#138](https://github.com/patricklx/intellij-emberjs-experimental/pull/138) Fix possible NPE when using PsiElement#getText ([@SanderKnauff](https://github.com/SanderKnauff))
+
+#### Committers: 1
+- Sander Knauff ([@SanderKnauff](https://github.com/SanderKnauff))
+
+
 ## v2023.3.8 (2024-03-06)
 
 #### :bug: Bug Fix
