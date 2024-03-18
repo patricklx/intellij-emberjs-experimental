@@ -255,7 +255,7 @@ class EmberUtils {
                     }
                 }
                 if (cls == null) {
-                    cls = (inJs?.parent as TypeScriptAsExpression)
+                    cls = (inJs?.parent as? TypeScriptAsExpression)
                     return cls
                 }
                 return cls
