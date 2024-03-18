@@ -23,6 +23,7 @@ import com.intellij.patterns.ElementPattern
 import com.intellij.patterns.PatternCondition
 import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
+import com.intellij.util.ui.EDT
 import com.intellij.webcore.libraries.ScriptingLibraryModel
 
 val detectedFrameworks = HashMap<Project, List<EmberCliFrameworkDetector.EmberFrameworkDescription>>()
@@ -118,6 +119,8 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     }
 
     public inner class EmberFrameworkDescription(val root: VirtualFile, val files: Collection<VirtualFile>, val project: Project) : DetectedFrameworkDescription() {
+        private var _isConfigured: Boolean = false;
+
         override fun getDetector() = this@EmberCliFrameworkDetector
         override fun getRelatedFiles() = files
         override fun getSetupText() = "Configure this module for Ember.js development"
@@ -129,7 +132,10 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
         }
 
         fun isConfigured(): Boolean {
-            return detector.isConfigured(files, project)
+            if (!EDT.isCurrentThreadEdt()) {
+                this._isConfigured = detector.isConfigured(files, project)
+            }
+            return _isConfigured
         }
 
         override fun setupFramework(modifiableModelsProvider: ModifiableModelsProvider, modulesProvider: ModulesProvider) {
