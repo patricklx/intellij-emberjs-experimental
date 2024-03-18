@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2023.3.10 (2024-03-18)
+
+#### :bug: Bug Fix
+* [#141](https://github.com/patricklx/intellij-emberjs-experimental/pull/141) fix possible bad cast ([@patricklx](https://github.com/patricklx))
+* [#142](https://github.com/patricklx/intellij-emberjs-experimental/pull/142) fix slow operation error ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.3.9 (2024-03-14)
 
 #### :bug: Bug Fix
