@@ -180,6 +180,7 @@
         <lang.substitutor language="JavaScript" implementationClass="TemplateLintConfigLangSubstitutor"/>
         <fileType name="JavaScript" fileNames=".template-lintrc.js"/>
         <editorFactoryDocumentListener implementation="com.emberjs.glint.GlintDocumentListener"/>
+        <virtualFileSystem key="file"  implementationClass="com.emberjs.vfs.WslVirtualFileSystem" order="first"/>
     </extensions>
 
     <projectListeners>
