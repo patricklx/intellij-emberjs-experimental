@@ -48,7 +48,7 @@ intellij {
     // Example: platformPlugins = com.intellij.java, com.jetbrains.php:203.4449.22
     //
     // com.dmarcotte.handlebars: see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
-    plugins.set(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.dmarcotte.handlebars:233.11799.172"))
+    plugins.set(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.dmarcotte.handlebars:241.14494.150"))
 
     sandboxDir.set(project.rootDir.canonicalPath + "/.sandbox")
 }
