@@ -38,7 +38,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.impl.LspServerImpl
 import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
-import com.intellij.platform.lsp.util.convertMarkupContentToHtml
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -100,13 +99,6 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             isRunning -> "Glint TypeScript LSP"
             isMalfunctioned -> "Glint LSP ⚠"
             else -> "..."
-        }
-    }
-
-    override fun createQuickInfoResponse(markupContent: MarkupContent): TypeScriptQuickInfoResponse {
-        return TypeScriptQuickInfoResponse().apply {
-            val html = HtmlBuilder().appendRaw(convertMarkupContentToHtml(markupContent)).toString()
-            displayString = html.removeSurrounding("<pre>", "</pre>")
         }
     }
 
