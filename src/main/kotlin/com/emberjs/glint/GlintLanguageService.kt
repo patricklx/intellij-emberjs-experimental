@@ -76,8 +76,6 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         fun getInstance(project: Project): GlintTypeScriptService = project.getService(GlintTypeScriptService::class.java)
     }
 
-    val server by lazy { lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull() as? LspServerImpl }
-
     fun getDescriptor(virtualFile: VirtualFile): GlintLspServerDescriptor? {
         return if (getDescriptor()?.isSupportedFile(virtualFile) == true)
             getDescriptor()
@@ -124,9 +122,9 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         return listOf(TypeScriptSuppressByCommentFix(aClass), TypeScriptSupressByExpectErrorFix(aClass))
     }
 
-    override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): List<IntentionAction?> {
+    override fun getServiceFixes(file: PsiFile, element: PsiElement?, result: JSAnnotationError): List<IntentionAction> {
         val list = ((result as? LspAnnotationError)?.quickFixes ?: emptyList()).toMutableSmartList()
-        list.addAll(getSuppressActions(element)!!)
+        getSuppressActions(element)?.apply(list::addAll)
         return list
     }
 
@@ -191,7 +189,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
-        val server = server ?: return completedFuture(emptyList())
+        val server = getServer() ?: return completedFuture(emptyList())
         val virtualFile = file.virtualFile
 
         EditorNotifications.getInstance(project).updateNotifications(virtualFile)
