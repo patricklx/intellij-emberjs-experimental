@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2023.4.0 (2024-04-08)
+
+#### :rocket: Enhancement
+* [#146](https://github.com/patricklx/intellij-emberjs-experimental/pull/146) Update plugin to be compatible with IntelliJ 2024.1 ([@SanderKnauff](https://github.com/SanderKnauff))
+
+#### Committers: 2
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+- Sander Knauff ([@SanderKnauff](https://github.com/SanderKnauff))
+
+
 ## v2023.3.10 (2024-03-18)
 
 #### :bug: Bug Fix
