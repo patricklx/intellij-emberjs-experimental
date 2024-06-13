@@ -67,6 +67,7 @@ import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
 import com.intellij.psi.impl.source.PsiFileImpl
 import com.intellij.psi.impl.source.html.HtmlDocumentImpl
+import com.intellij.psi.impl.source.html.HtmlFileImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.PsiMultiReference
 import com.intellij.psi.impl.source.tree.LeafElement
 import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
@@ -83,6 +84,7 @@ import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
+import com.intellij.xml.template.formatter.TemplateFormatUtil
 import java.util.function.Predicate
 import javax.swing.Icon
 
@@ -459,14 +461,30 @@ class GtsFileViewProviderFactory: FileViewProviderFactory {
 
 }
 
-class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean, private val baseLang: GtsLanguage = GtsLanguage.INSTANCE) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
+class GtsFileViewProvider(manager: PsiManager, virtualFile: VirtualFile, eventSystemEnabled: Boolean, public val baseLang: GtsLanguage = GtsLanguage.INSTANCE) : MultiplePsiFilesPerDocumentFileViewProvider(manager, virtualFile, eventSystemEnabled), TemplateLanguageFileViewProvider {
+
+    override fun findElementAt(offset: Int, language: Language): PsiElement? {
+        var element: PsiElement?
+        if (language == baseLang) {
+            this.languages.forEach {
+                element = super.findElementAt(offset, it)
+                if (element !is OuterLanguageElement) {
+                    return element
+                }
+            }
+        }
+        element = super.findElementAt(offset, language)
+        return element
+    }
 
     override fun findElementAt(offset: Int): PsiElement? {
-        val element = super.findElementAt(offset)
-        if (element.elementType == HbTokenTypes.CONTENT) {
-            return super.findElementAt(offset, HTMLLanguage.INSTANCE)
+        this.languages.forEach {
+            val element = super.findElementAt(offset, it)
+            if (element !is OuterLanguageElement) {
+                return element
+            }
         }
-        return element
+        return null
     }
 
     override fun findReferenceAt(offset: Int): PsiReference? {
@@ -904,17 +922,20 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
     }
 
     fun getBaseIndent(forChild: Boolean = false): Indent? {
-        val file = this.node!!.psi.containingFile.originalFile
+        val viewProvider = this.node!!.psi.containingFile.viewProvider
+        val htmlFile = viewProvider.getPsi(HTMLLanguage.INSTANCE)
+        val jsFile = viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         val project = this.node!!.psi.project
-        val document = PsiDocumentManager.getInstance(project).getDocument(file)!!
-        val INDENT_SIZE = this.policy.settings.getIndentOptionsByDocument(project, document).INDENT_SIZE
+        val document = PsiDocumentManager.getInstance(project).getDocument(htmlFile)!!
+        val INDENT_SIZE = this.policy.settings.getIndentSize(htmlFile.language.associatedFileType)
+        val JS_INDENT_SIZE = this.policy.settings.getIndentSize(jsFile.language.associatedFileType)
         if (this.parent != null) {
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
 
             var startOffset: Int? = null
             if (blockRef.node!!.psi is JSClass) {
                 val psiRef = blockRef.node!!.psi.parent
-                startOffset = psiRef.textRange?.startOffset?.let { it + INDENT_SIZE }
+                startOffset = psiRef.textRange?.startOffset?.let { it + JS_INDENT_SIZE }
             }
 
             if (blockRef.node!!.psi.parent is JSVarStatement) {
@@ -924,7 +945,7 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
                     val parentLine = document.getLineNumber(startOffset)
                     if (lineTpl != parentLine) {
-                        startOffset += INDENT_SIZE
+                        startOffset += JS_INDENT_SIZE
                     }
                 }
             }
@@ -936,7 +957,7 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
                     val parentLine = document.getLineNumber(startOffset)
                     if (lineTpl != parentLine) {
-                        startOffset += INDENT_SIZE
+                        startOffset += JS_INDENT_SIZE
                     }
                 }
             }
@@ -1011,6 +1032,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
             }
         }
     }
+
 
     override fun createModel(formattingContext: FormattingContext): FormattingModel {
 
