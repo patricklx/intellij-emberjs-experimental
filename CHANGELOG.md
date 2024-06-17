@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2023.4.2 (2024-06-17)
+
+#### :rocket: Enhancement
+* [#155](https://github.com/patricklx/intellij-emberjs-experimental/pull/155) 2024.2 EAP ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#152](https://github.com/patricklx/intellij-emberjs-experimental/pull/152) fix formatting ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.4.0 (2024-04-08)
 
 #### :rocket: Enhancement
