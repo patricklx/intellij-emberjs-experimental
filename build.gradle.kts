@@ -38,7 +38,7 @@ intellij {
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("241.18034.12-EAP-SNAPSHOT")
+    version.set("242.16677.21-EAP-SNAPSHOT")
     type.set("IU")
 
     downloadSources.set(!System.getenv().containsKey("CI"))
