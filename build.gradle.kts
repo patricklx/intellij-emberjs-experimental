@@ -1,6 +1,14 @@
-
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import java.net.URL
 
+// Configure project's dependencies
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
 
 plugins {
     // Java support
@@ -8,23 +16,32 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.9.24"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.17.4"
+    id("org.jetbrains.intellij.platform") version "2.0.0-beta7"
+    id("org.jetbrains.intellij.platform.migration") version "2.0.0-beta7"
 }
 
 
 group = "com.emberjs"
 version = "2023.4.2"
 
-// Configure project's dependencies
-repositories {
-    mavenCentral()
-}
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.26.0")
     testImplementation("org.junit.platform:junit-platform-launcher:1.10.2")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.4")
+
+    // see https://www.jetbrains.com/intellij-repository/releases/
+    // and https://www.jetbrains.com/intellij-repository/snapshots/
+    intellijPlatform {
+        plugins(listOf("com.dmarcotte.handlebars:242.16677.12"))
+        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml"))
+        pluginVerifier()
+        zipSigner()
+        instrumentationTools()
+//        testFramework(TestFrameworkType.Platform.JUnit4)
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "242.16677.21")
+    }
 }
 
 java {
@@ -33,24 +50,15 @@ java {
 
 // Configure gradle-intellij-plugin plugin.
 // Read more: https://github.com/JetBrains/gradle-intellij-plugin
-intellij {
-    pluginName.set("EmberExperimental.js")
-
-    // see https://www.jetbrains.com/intellij-repository/releases/
-    // and https://www.jetbrains.com/intellij-repository/snapshots/
-    version.set("242.16677.21-EAP-SNAPSHOT")
-    type.set("IU")
-
-    downloadSources.set(!System.getenv().containsKey("CI"))
-    updateSinceUntilBuild.set(true)
+intellijPlatform {
+    pluginConfiguration {
+        name.set("EmberExperimental.js")
+    }
 
     // Plugin Dependencies -> https://plugins.jetbrains.com/docs/intellij/plugin-dependencies.html
     // Example: platformPlugins = com.intellij.java, com.jetbrains.php:203.4449.22
     //
     // com.dmarcotte.handlebars: see https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions
-    plugins.set(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.dmarcotte.handlebars:242.16677.12"))
-
-    sandboxDir.set(project.rootDir.canonicalPath + "/.sandbox")
 }
 
 tasks {
