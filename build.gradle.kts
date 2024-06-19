@@ -82,33 +82,41 @@ tasks.buildSearchableOptions {
 }
 
 
-tasks.register("printVersion") { println(version) }
+tasks.register("printVersion") {
+    doLast { println(version) }
+}
 
 
 tasks.register("updateChangelog") {
-    var input = generateSequence(::readLine).joinToString("\n")
-    input = input.replace(":rocket:", "🚀")
-    input = input.replace(":bug:", "🐛")
-    input = input.replace(":documentation:", "📝")
-    input = input.replace(":breaking:", "💥")
-    input += "\nsee <a href=\"https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md\">https://github.com/patricklx/intellij-emberjs-experimental/</a> for more"
-    val f = File("./src/main/resources/META-INF/plugin.xml")
-    var content = f.readText()
-    content = content.replace("CHANGELOG_PLACEHOLDER", input)
-    f.writeText(content)
+    doLast {
+        var input = generateSequence(::readLine).joinToString("\n")
+        input = input.replace(":rocket:", "🚀")
+        input = input.replace(":bug:", "🐛")
+        input = input.replace(":documentation:", "📝")
+        input = input.replace(":breaking:", "💥")
+        input += "\nsee <a href=\"https://github.com/patricklx/intellij-emberjs-experimental/blob/main/CHANGELOG.md\">https://github.com/patricklx/intellij-emberjs-experimental/</a> for more"
+        val f = File("./src/main/resources/META-INF/plugin.xml")
+        var content = f.readText()
+        content = content.replace("CHANGELOG_PLACEHOLDER", input)
+        f.writeText(content)
+    }
 }
 
 tasks.register("listRecentReleased") {
-    val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=8").readText()
-    val obj = groovy.json.JsonSlurper().parseText(text)
-    val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
-    println(groovy.json.JsonBuilder(versions).toPrettyString())
+    doLast {
+        val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=8").readText()
+        val obj = groovy.json.JsonSlurper().parseText(text)
+        val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
+        println(groovy.json.JsonBuilder(versions).toPrettyString())
+    }
 }
 
 tasks.register("verifyAlreadyReleased") {
-    var input = generateSequence(::readLine).joinToString("\n")
-    val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=100").readText()
-    val obj = groovy.json.JsonSlurper().parseText(text)
-    val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
-    println(versions.contains(input))
+    doLast {
+        var input = generateSequence(::readLine).joinToString("\n")
+        val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=100").readText()
+        val obj = groovy.json.JsonSlurper().parseText(text)
+        val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
+        println(versions.contains(input))
+    }
 }
