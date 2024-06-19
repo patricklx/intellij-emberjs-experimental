@@ -17,7 +17,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.24"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
     id("org.jetbrains.intellij.platform") version "2.0.0-beta7"
-    id("org.jetbrains.intellij.platform.migration") version "2.0.0-beta7"
+//    id("org.jetbrains.intellij.platform.migration") version "2.0.0-beta7"
 }
 
 
@@ -39,7 +39,7 @@ dependencies {
         pluginVerifier()
         zipSigner()
         instrumentationTools()
-//        testFramework(TestFrameworkType.Platform.JUnit4)
+        testFramework(TestFrameworkType.Platform)
         create(IntelliJPlatformType.IntellijIdeaUltimate, "242.16677.21")
     }
 }
