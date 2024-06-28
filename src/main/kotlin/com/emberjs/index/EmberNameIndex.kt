@@ -28,7 +28,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
     companion object {
         val NAME: ID<Boolean, Void> = ID.create("ember.names")
-        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "gts")
+        private val FILE_EXTENSIONS = setOf("css", "scss", "js", "ts", "hbs", "handlebars", "gjs", "gts")
 
         val index: FileBasedIndex get() = FileBasedIndex.getInstance()
 
