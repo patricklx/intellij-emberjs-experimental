@@ -18,7 +18,7 @@ import com.intellij.util.io.BooleanDataDescriptor
 class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
     override fun getName() = NAME
-    override fun getVersion() = 7
+    override fun getVersion() = 8
     override fun getKeyDescriptor() = BooleanDataDescriptor.INSTANCE
     override fun dependsOnFileContent() = false
 
