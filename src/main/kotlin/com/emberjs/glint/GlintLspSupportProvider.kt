@@ -46,22 +46,35 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
     val lspServerManager = LspServerManager.getInstance(project)
+    var isWsl = false
+    var wslDistro = ""
 
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
-    val isAvailable by lazy {
+    val isAvailable: Boolean get() {
         val workingDir = project.guessProjectDir()!!
+        var isWsl = false
+        if (workingDir.path.contains("wsl.localhost") || workingDir.path.contains("wsl\$")) {
+            isWsl = true
+        }
+        if (isWsl) {
+            val path = "./node_modules/@glint/core/bin/glint-language-server.js"
+            val builder = ProcessBuilder().command("wsl", "--", "test", "-f", "\"$path\"", "||", "echo", "\"true\"")
+            val p = builder.start()
+            p.waitFor()
+            val out = p.inputStream.reader().readText().trim()
+            if (out == "true") {
+                return true
+            }
+        }
         val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
         if (glintPkg == null) {
-            return@lazy false
+            return false
         }
-        val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-        if (file == null) {
-            return@lazy false
-        }
-        return@lazy true
+        glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
+        return true
     }
 
     fun ensureStarted() {
@@ -72,20 +85,31 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     override fun createCommandLine(): GeneralCommandLine {
         val workingDir = myProject.guessProjectDir()!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
+        var path = workDirectory.path
+        path = path.replace("\\", "/")
+        this.isWsl = false
+        if (path.startsWith("//wsl.localhost") || path.startsWith("//wsl\$")) {
+            this.wslDistro = Regex("//wsl.localhost/([^/]+)").find(path)?.groups?.get(0)?.value ?: Regex("//wsl\\$/([^/]+)").find(path)!!.groups.get(0)!!.value
+            path = path.replace("//wsl.localhost/[^/]+".toRegex(), "")
+            path = path.replace("//wsl\\$/[^/]+".toRegex(), "")
+            this.isWsl = true
+        }
         val commandLine = GeneralCommandLine()
                 .withCharset(StandardCharsets.UTF_8)
                 .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
                 .withWorkDirectory(workDirectory)
 
         ApplicationManager.getApplication().runReadAction {
-            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-                    ?: throw RuntimeException("glint is not installed")
-            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
-                    ?: throw RuntimeException("glint lsp was not found")
+//            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
+//                    ?: throw RuntimeException("glint is not installed")
+//            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
+//                    ?: throw RuntimeException("glint lsp was not found")
             //commandLine.addParameter("--inspect-brk")
-            commandLine.addParameter(file.path)
+            commandLine.addParameter("$path/node_modules/@glint/core/bin/glint-language-server.js")
             commandLine.addParameter("--stdio")
-            commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+            if (!this.isWsl) {
+                commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+            }
         }
 
 
@@ -108,10 +132,22 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return r;
     }
 
+    override fun findFileByUri(fileUri: String): VirtualFile? {
+        if (this.isWsl) {
+            val uri = fileUri.replace("file://", "file://${this.wslDistro}")
+            return super.findFileByUri(uri)
+        }
+        return super.findFileByUri(fileUri)
+    }
+
     override fun getFilePath(file: VirtualFile): String {
         var path = super.getFilePath(file)
         if (!path.startsWith("/")) {
             path = "/$path"
+        }
+        if (path.startsWith("//wsl.localhost") || path.startsWith("//wsl\$")) {
+            path = path.replace("//wsl.localhost/[^/]+".toRegex(), "")
+            path = path.replace("//wsl\\$/[^/]+".toRegex(), "")
         }
         return URLEncoder.encode(path, "utf-8")
                 .replace("%2F", "/")
