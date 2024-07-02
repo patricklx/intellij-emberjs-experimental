@@ -34,13 +34,13 @@ dependencies {
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:242.16677.12"))
+        plugins(listOf("com.dmarcotte.handlebars:242.19533.43"))
         bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml"))
         pluginVerifier()
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "242.16677.21")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "242.19533.56")
     }
 }
 
