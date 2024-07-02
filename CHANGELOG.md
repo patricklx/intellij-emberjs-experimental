@@ -1,6 +1,17 @@
 # Changelog
 
 
+## v2023.4.3 (2024-07-02)
+
+#### :rocket: Enhancement
+* [#160](https://github.com/patricklx/intellij-emberjs-experimental/pull/160) support glint in wsl ([@patricklx](https://github.com/patricklx))
+* [#158](https://github.com/patricklx/intellij-emberjs-experimental/pull/158) include .gjs files in index ([@dwickern](https://github.com/dwickern))
+
+#### Committers: 2
+- Derek Wickern ([@dwickern](https://github.com/dwickern))
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.4.2 (2024-06-17)
 
 #### :rocket: Enhancement
