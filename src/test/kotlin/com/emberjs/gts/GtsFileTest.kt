@@ -8,6 +8,7 @@ import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.testFramework.IndexingTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import junit.framework.TestCase
 import org.junit.Test
 
@@ -51,7 +52,7 @@ class GtsFileTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText(GjsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection())
-        IndexingTestUtil.waitUntilIndexesAreReady(project);
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
         TestCase.assertEquals(4, highlightInfos.size)
         TestCase.assertTrue(highlightInfos[0].description.contains("quux"))
@@ -82,7 +83,7 @@ class GtsFileTest : BasePlatformTestCase() {
         """.trimIndent()
         myFixture.configureByText(GtsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection())
-        IndexingTestUtil.waitUntilIndexesAreReady(project);
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" }
         TestCase.assertEquals(highlightInfos.size, 2)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
