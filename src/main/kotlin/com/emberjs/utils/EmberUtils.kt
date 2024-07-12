@@ -158,7 +158,7 @@ class EmberUtils {
             if (obj is JSObjectLiteralExpression) {
                 return obj
             }
-            return ref
+            return ref as PsiElement?
         }
 
         fun resolveHelper(file: PsiElement?): Helper? {
