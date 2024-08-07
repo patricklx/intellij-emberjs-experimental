@@ -145,20 +145,20 @@ class EmberUtils {
                 return ref as PsiElement
             }
 
-            ref = ref as PsiElement? ?: exp
-            val func = ref?.children?.find { it is JSCallExpression }
+            val r = ref as PsiElement? ?: exp
+            val func = r?.children?.find { it is JSCallExpression }
             if (func is JSCallExpression) {
                 return func
             }
-            val cls = ref?.children?.find { it is JSClass }
+            val cls = r?.children?.find { it is JSClass }
             if (cls is JSClass) {
                 return cls
             }
-            val obj = ref?.children?.find { it is JSObjectLiteralExpression }
+            val obj = r?.children?.find { it is JSObjectLiteralExpression }
             if (obj is JSObjectLiteralExpression) {
                 return obj
             }
-            return ref
+            return r
         }
 
         fun resolveHelper(file: PsiElement?): Helper? {
