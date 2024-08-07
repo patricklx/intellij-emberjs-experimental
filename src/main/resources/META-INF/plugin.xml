@@ -154,6 +154,15 @@
                          level="ERROR"
                          implementationClass="TemplateLintInspection"
                          unfair="true"/>
+        <localInspection language="JavaScript,Gjs,Gts,Handlebars"
+                         bundle="com.emberjs.locale.GlintBundle"
+                         key="g.lint.inspection"
+                         groupKey="g.inspections.code.quality.tools.group"
+                         groupPath="Gts"
+                         enabledByDefault="false"
+                         level="ERROR"
+                         implementationClass="com.emberjs.gts.GlintInspection"
+                         unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="JavaScript" implementationClass="TemplateLintExternalAnnotator"/>

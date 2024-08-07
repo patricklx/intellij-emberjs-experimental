@@ -15,6 +15,7 @@ object EmberIcons {
     val SERVICE_16 = IconLoader.getIcon("/com/emberjs/icons/service16.png", EmberIcons::class.java)
 
     val TEMPLATE_LINT_16 = IconLoader.getIcon("/com/emberjs/icons/template-lint16.png", EmberIcons::class.java)
+    val GLINT_16 = IconLoader.getIcon("/com/emberjs/icons/glint.jpg", EmberIcons::class.java)
 
     val FILE_TYPE_ICONS = mapOf(
             "adapter" to ADAPTER_16,
