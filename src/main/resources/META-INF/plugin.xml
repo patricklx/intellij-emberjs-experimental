@@ -145,6 +145,12 @@
                              key="hbs.lint.configurable.name"
                              bundle="com.emberjs.locale.TemplateLintBundle"
                              order="last"/>
+        <projectConfigurable id="configurable.emberjs.glint"
+                             parentId="configurable.emberjs"
+                             instance="com.emberjs.gts.GlintConfigurable"
+                             key="g.lint.configurable.name"
+                             bundle="com.emberjs.locale.GlintBundle"
+                             order="last"/>
         <localInspection language="Handlebars"
                          bundle="com.emberjs.locale.TemplateLintBundle"
                          key="hbs.lint.inspection"
@@ -154,16 +160,28 @@
                          level="ERROR"
                          implementationClass="TemplateLintInspection"
                          unfair="true"/>
+        <localInspection language="Gts"
+                         bundle="com.emberjs.locale.GlintBundle"
+                         key="g.lint.inspection"
+                         groupKey="g.inspections.code.quality.tools.group"
+                         hasStaticDescription="true"
+                         groupPath="Glint"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.emberjs.gts.GlintInspection"
+                         unfair="true"/>
         <directoryProjectConfigurator implementation="TemplateLintEnabler"/>
         <externalAnnotator language="Handlebars" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="JavaScript" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Gts" implementationClass="TemplateLintExternalAnnotator"/>
+        <externalAnnotator language="Gts" implementationClass="com.emberjs.gts.GlintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
         <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <annotator language="HTML" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
+        <projectService serviceImplementation="com.emberjs.gts.GlintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
         <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
