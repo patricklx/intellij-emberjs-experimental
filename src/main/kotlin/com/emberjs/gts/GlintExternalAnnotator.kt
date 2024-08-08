@@ -210,7 +210,7 @@ class GlintExternalAnnotator : JSLinterExternalAnnotator<GlintState>(true) {
 
     override fun annotate(input: JSLinterInput<GlintState>): JSLinterAnnotationResult? {
         val file = input.psiFile
-        if (file.viewProvider is GtsFileViewProvider && file.fileType !is GtsFileType) {
+        if (file.viewProvider is GtsFileViewProvider && file !is GtsFile) {
             return JSLinterAnnotationResult.createLinterResult(input, listOf(), null as VirtualFile?)
         }
         var res: List<JSAnnotationError>? = null
