@@ -1,5 +1,6 @@
 package com.emberjs.gts
 
+import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.icons.EmberIcons
 import com.intellij.CommonBundle
@@ -14,6 +15,7 @@ import com.intellij.javascript.nodejs.util.NodePackageRef
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.linter.*
+import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.options.OptionsBundle
@@ -86,12 +88,12 @@ data class GlintState(
     companion object {
         val DEFAULT = GlintState(
             NodeJsInterpreterRef.createProjectRef(),
-            NodePackage(""))
+            NodePackage("@glint/core"))
     }
 }
 
 
-@State(name = "TemplateLintConfiguration", storages = [Storage("emberLinters/templatelint.xml")])
+@State(name = "GlintConfiguration", storages = [Storage("emberLinters/glint.xml")])
 class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(project) {
     private val myPackage: JSLinterPackage = JSLinterPackage(project, "@glint/core")
     override fun savePrivateSettings(state: GlintState) {
@@ -125,7 +127,7 @@ class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(p
         if (state == defaultState) {
             return null
         }
-        val parent = Element("@glint/core")
+        val parent = Element("glint/core")
         return parent
     }
 
@@ -137,7 +139,7 @@ class GlintConfigurable(project: Project, fullModeDialog: Boolean = false) :
         project, GlintConfiguration::class.java, fullModeDialog) {
 
     companion object {
-        const val ID = "configurable.emberjs.hbs.lint"
+        const val ID = "configurable.emberjs.glint"
     }
 
     constructor(project: Project) : this(project, false)
@@ -176,6 +178,11 @@ class GlintConfigurable(project: Project, fullModeDialog: Boolean = false) :
 
 
 class GlintInspection : JSLinterInspection() {
+
+    override fun getStaticDescription(): String {
+        return "Glint"
+    }
+
     override fun getExternalAnnotatorForBatchInspection(): JSLinterWithInspectionExternalAnnotator<*, *> {
         return GlintExternalAnnotator.INSTANCE_FOR_BATCH_INSPECTION
     }
@@ -183,23 +190,29 @@ class GlintInspection : JSLinterInspection() {
     override fun getSettingsPath(): List<String?> {
         return ContainerUtil.newArrayList(
             OptionsBundle.message("configurable.group.language.settings.display.name", *arrayOfNulls(0)),
-            TemplateLintBundle.message("hbs.lint.configurable.title"),
+            GLintBundle.message("g.lint.configurable.title"),
             this.displayName
         )
     }
 }
 
 
-class GlintExternalAnnotator : JSLinterExternalAnnotator<GlintState>(false) {
+class GlintExternalAnnotator : JSLinterExternalAnnotator<GlintState>(true) {
     companion object {
         val INSTANCE_FOR_BATCH_INSPECTION = GlintExternalAnnotator()
     }
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
-        return file.viewProvider is GtsFileViewProvider
+        return (file.viewProvider is GtsFileViewProvider && file.fileType is GtsFileType)
+                || (file is JSFile && file.viewProvider !is GtsFileViewProvider)
+                || file.viewProvider is HbFileViewProvider
     }
 
     override fun annotate(input: JSLinterInput<GlintState>): JSLinterAnnotationResult? {
+        val file = input.psiFile
+        if (file.viewProvider is GtsFileViewProvider && file.fileType !is GtsFileType) {
+            return JSLinterAnnotationResult.createLinterResult(input, listOf(), null as VirtualFile?)
+        }
         var res: List<JSAnnotationError>? = null
         try {
             val service = GlintTypeScriptService.getInstance(input.project)
@@ -226,7 +239,7 @@ class GlintExternalAnnotator : JSLinterExternalAnnotator<GlintState>(false) {
     }
 
     override fun getConfigurationClass(): Class<out JSLinterConfiguration<GlintState>>? {
-        return null
+        return GlintConfiguration::class.java
     }
 
     override fun getInspectionClass(): Class<out JSLinterInspection> {
