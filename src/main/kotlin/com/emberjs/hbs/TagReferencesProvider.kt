@@ -30,6 +30,7 @@ import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
@@ -48,7 +49,7 @@ import com.intellij.refactoring.rename.BindablePsiReference
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 
-class ResolvedReference(element: PsiElement, private val resolved: PsiElement): HbReference(element), EmberReference {
+class ResolvedReference(element: PsiElement, private val resolved: PsiElement) : HbReference(element), EmberReference {
     override fun resolve(): PsiElement? {
         return resolved
     }
@@ -66,7 +67,8 @@ class ResolvedReference(element: PsiElement, private val resolved: PsiElement): 
     }
 }
 
-class XmlResolvedReference(element: XmlAttribute, private val resolved: PsiElement): XmlAttributeReference(element), EmberReference {
+class XmlResolvedReference(element: XmlAttribute, private val resolved: PsiElement) : XmlAttributeReference(element),
+    EmberReference {
     override fun resolve(): PsiElement? {
         return resolved
     }
@@ -84,7 +86,8 @@ class XmlResolvedReference(element: XmlAttribute, private val resolved: PsiEleme
     }
 }
 
-open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?, val range: TextRange): XmlAttributeReference(element), BindablePsiReference, EmberReference {
+open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?, val range: TextRange) :
+    XmlAttributeReference(element), BindablePsiReference, EmberReference {
     private var targetRef: PsiReference? = null
 
     override fun isReferenceTo(other: PsiElement): Boolean {
@@ -108,7 +111,12 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
     }
     private val namedXml: EmberNamedAttribute? by lazy {
         if (target is XmlAttribute && (target as XmlAttribute).descriptor?.declaration is EmberAttrDec) {
-            return@lazy (target as XmlAttribute).let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(range.startOffset, range.endOffset)) }
+            return@lazy (target as XmlAttribute).let {
+                EmberNamedAttribute(
+                    it.descriptor!!.declaration as XmlAttributeDecl,
+                    IntRange(range.startOffset, range.endOffset)
+                )
+            }
         }
         return@lazy null
     }
@@ -125,7 +133,9 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
     }
 
     val isImportFrom by lazy {
-        element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith("{{import ") == true && target is PsiFile
+        element is HbStringLiteral && PsiTreeUtil.findFirstParent(element) { it is HbSimpleMustache }?.text?.startsWith(
+            "{{import "
+        ) == true && target is PsiFile
     }
 
     override fun bindToElement(newElement: PsiElement): PsiElement {
@@ -134,7 +144,8 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
             if (newElement is PsiDirectory) {
                 newFileLocation = newElement.findFile((target as PsiFile).name)
             }
-            val importPath = newFileLocation?.let { EmberName.from(newFileLocation.virtualFile)?.importPath } ?: return super.bindToElement(newElement)
+            val importPath = newFileLocation?.let { EmberName.from(newFileLocation.virtualFile)?.importPath }
+                ?: return super.bindToElement(newElement)
             val node = SimpleNodeFactory.createTextNode(newElement.project, importPath)
             return element.replace(node)
         }
@@ -156,13 +167,16 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
             return element
         }
         if (element is HbStatementsImpl) {
-            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
+            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+                .findElementAt(range.startOffset)!!.parent as XmlTag
             tag.name = newElementName
             return tag
         }
         val target = this.target as? PsiFile
         if (isImportFrom) {
-            val text = EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target?.originalVirtualFile }.firstOrNull()?.first?.importPath ?: return element
+            val text =
+                EmberNameIndex.getFilteredPairs(GlobalSearchScope.allScope(element.project)) { it.virtualFile == target?.originalVirtualFile }
+                    .firstOrNull()?.first?.importPath ?: return element
             val node = SimpleNodeFactory.createTextNode(element.project, text)
             return element.replace(node)
         }
@@ -199,7 +213,8 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
 }
 
 
-class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: TextRange) : TagNameReference(element.node.firstChildNode, true), EmberReference {
+class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: TextRange) :
+    TagNameReference(element.node.firstChildNode, true), EmberReference {
 
     override fun getRangeInElement(): TextRange {
         return rangeInElem
@@ -216,9 +231,14 @@ class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: T
     override fun resolve(): PsiElement? {
         val t = TagReferencesProvider.forTag(element, fullName)
         if (t is XmlAttribute && t.descriptor?.declaration is EmberAttrDec) {
-            return t.let { EmberNamedAttribute(it.descriptor!!.declaration as XmlAttributeDecl, IntRange(rangeInElem.startOffset, rangeInElem.endOffset)) }
+            return t.let {
+                EmberNamedAttribute(
+                    it.descriptor!!.declaration as XmlAttributeDecl,
+                    IntRange(rangeInElem.startOffset, rangeInElem.endOffset)
+                )
+            }
         }
-        return t?.let { EmberNamedElement(it, IntRange(rangeInElem.startOffset, rangeInElem.endOffset-1)) }
+        return t?.let { EmberNamedElement(it, IntRange(rangeInElem.startOffset, rangeInElem.endOffset - 1)) }
     }
 
     override fun handleElementRename(newElementName: String): PsiElement {
@@ -277,7 +297,8 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 val manager = InjectedLanguageManager.getInstance(element.project)
                 val templates = PsiTreeUtil.collectElements(f) { it is JSStringTemplateExpression }
                 tpl = templates.find {
-                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile ?: return@find false
+                    val injected = manager.findInjectedElementAt(f as PsiFile, it.startOffset + 1)?.containingFile
+                        ?: return@find false
                     val virtualFile = injected.virtualFile
                     return@find virtualFile is VirtualFileWindow && virtualFile == (element.originalVirtualFile as VirtualFileWindow)
                 } ?: return null
@@ -302,7 +323,8 @@ class TagReferencesProvider : PsiReferenceProvider() {
             if (parts.first() == "this") {
                 current = JSContextResolver.resolveThisReference(tpl as PsiElement)
             } else {
-                val children = PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass }
+                val children =
+                    PsiTreeUtil.collectElements(f) { it is JSVariable || it is ES6ImportDeclaration || it is JSClass }
                 current = children.mapNotNull {
                     if (it is JSVariable && it.name?.equals(parts.first()) == true) {
                         val useScope = JSUseScopeProvider.getBlockScopeElement(it)
@@ -324,7 +346,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
                                 return@mapNotNull ib
                             }
                         }
-                        it.importSpecifiers.forEach {iss ->
+                        it.importSpecifiers.forEach { iss ->
                             val name = iss.alias?.name ?: iss.name ?: ""
                             if (name == parts.first()) {
                                 return@mapNotNull iss.alias ?: iss
@@ -335,8 +357,9 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 }.firstOrNull()
             }
 
-            parts.subList(1, parts.size).forEach {part ->
-                current = (current as? JSTypeOwner)?.jsType?.asRecordType()?.properties?.find { it.memberName == part }?.jsType?.sourceElement
+            parts.subList(1, parts.size).forEach { part ->
+                current =
+                    (current as? JSTypeOwner)?.jsType?.asRecordType()?.properties?.find { it.memberName == part }?.jsType?.sourceElement
             }
 
             if (current is TypeScriptTypeofType) {
@@ -355,19 +378,34 @@ class TagReferencesProvider : PsiReferenceProvider() {
 
             if (name == "default") {
                 return tplYields
-                        .map { it.yieldBlock }
-                        .filterNotNull()
-                        .find {
-                            !it.children.any { it is HbHash && it.hashName == "to" }
-                        }
-            }
-
-            return tplYields
                     .map { it.yieldBlock }
                     .filterNotNull()
                     .find {
-                        it.children.any { it is HbHash && it.hashName == "to" && it.children.last().text.replace(Regex("\"|'"), "") == name}
+                        !it.children.any { it is HbHash && it.hashName == "to" }
+                    } ?: tplYields
+                    .map { it.yieldBlock }
+                    .filterNotNull()
+                    .find {
+                        it is TypeScriptPropertySignature && it.name == "default"
                     }
+            }
+
+            return tplYields
+                .map { it.yieldBlock }
+                .filterNotNull()
+                .find {
+                    it.children.any {
+                        it is HbHash && it.hashName == "to" && it.children.last().text.replace(
+                            Regex("\"|'"),
+                            ""
+                        ) == name
+                    }
+                } ?: tplYields
+                .map { it.yieldBlock }
+                .filterNotNull()
+                .find {
+                    it is TypeScriptPropertySignature && it.name == name
+                }
         }
 
         fun fromLocalBlock(tag: XmlTag, fullName: String): PsiElement? {
@@ -379,9 +417,10 @@ class TagReferencesProvider : PsiReferenceProvider() {
             var blockParamIdx = 0
             var refPsi: PsiElement? = null
             val angleBracketBlock: XmlTag? = tag.parentsWithSelf
-                    .find {
-                        it is XmlTag && it.attributes.map { it.text }.joinToString(" ").contains(Regex("\\|.*\\b$name\\b.*\\|"))
-                    } as XmlTag?
+                .find {
+                    it is XmlTag && it.attributes.map { it.text }.joinToString(" ")
+                        .contains(Regex("\\|.*\\b$name\\b.*\\|"))
+                } as XmlTag?
 
             if (angleBracketBlock != null) {
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
@@ -394,13 +433,14 @@ class TagReferencesProvider : PsiReferenceProvider() {
             // find mustache block |params| which has tag as a child
             val hbsView = tag.containingFile.viewProvider.getPsi(Language.findLanguageByID("Handlebars")!!)
             val hbBlockRef = PsiTreeUtil.collectElements(hbsView, { it is HbOpenBlockMustacheImpl })
-                    .filter { it.text.contains(Regex("\\|.*\\b$name\\b.*\\|")) }
-                    .map { it.parent }
-                    .find { block ->
-                        block.textRange.contains(tag.textRange)
-                    }
+                .filter { it.text.contains(Regex("\\|.*\\b$name\\b.*\\|")) }
+                .map { it.parent }
+                .find { block ->
+                    block.textRange.contains(tag.textRange)
+                }
 
-            val param = hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name}
+            val param =
+                hbBlockRef?.children?.firstOrNull()?.children?.find { it.elementType == HbTokenTypes.ID && it.text == name }
             blockParamIdx = hbBlockRef?.children?.firstOrNull()?.children?.indexOf(param) ?: blockParamIdx
             val parts = fullName.split(".")
             var ref = param ?: refPsi
@@ -436,13 +476,13 @@ class TagReferencesProvider : PsiReferenceProvider() {
             }
 
             return resolveToLocalJs(tag, fullName)
-                    ?: forTagName(tag, fullName)
-                    ?: let {
-                        val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
-                        var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
-                        val service = GlintLanguageServiceProvider(tag.project).getService(tag.originalVirtualFile!!)
-                        service?.getNavigationFor(document, tag, true)?.firstOrNull()
-                    }
+                ?: forTagName(tag, fullName)
+                ?: let {
+                    val psiFile = PsiManager.getInstance(tag.project).findFile(tag.originalVirtualFile!!)
+                    var document = PsiDocumentManager.getInstance(tag.project).getDocument(psiFile!!)!!
+                    val service = GlintLanguageServiceProvider(tag.project).getService(tag.originalVirtualFile!!)
+                    service?.getNavigationFor(document, tag, true)?.firstOrNull()
+                }
         }
 
         fun forTagName(tag: XmlTag, fullName: String): PsiElement? {
@@ -452,10 +492,15 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val tagName = tag.name
             val project = tag.project
             val name = tagName
-                    .replace(Regex("-(.)")) { it.groupValues.last().uppercase() }
-                    .replace(Regex("/(.)")) { "::" + it.groupValues.last().uppercase() }
-            val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText("intellij-emberjs/internal/components-stub", JavaScriptSupportLoader.TYPESCRIPT, TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText())
-            val internalComponents = EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
+                .replace(Regex("-(.)")) { it.groupValues.last().uppercase() }
+                .replace(Regex("/(.)")) { "::" + it.groupValues.last().uppercase() }
+            val internalComponentsFile = PsiFileFactory.getInstance(project).createFileFromText(
+                "intellij-emberjs/internal/components-stub",
+                JavaScriptSupportLoader.TYPESCRIPT,
+                TagReferencesProvider::class.java.getResource("/com/emberjs/external/ember-components.ts").readText()
+            )
+            val internalComponents =
+                EmberUtils.resolveDefaultExport(internalComponentsFile) as JSObjectLiteralExpression
 
             if (internalComponents.properties.map { it.name }.contains(name)) {
                 val prop = internalComponents.properties.find { it.name == name }
@@ -467,20 +512,24 @@ class TagReferencesProvider : PsiReferenceProvider() {
             val scope = ProjectScope.getAllScope(project)
             val psiManager: PsiManager by lazy { PsiManager.getInstance(project) }
 
-            val templates = EmberNameIndex.getFilteredFiles(scope) { it.isComponentTemplate && it.angleBracketsName == name }
+            val templates =
+                EmberNameIndex.getFilteredFiles(scope) { it.isComponentTemplate && it.angleBracketsName == name }
                     .filter { EmberUtils.isInScope(it, scopes) }
                     .mapNotNull { psiManager.findFile(it) }
 
-            val components = EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
+            val components =
+                EmberNameIndex.getFilteredFiles(scope) { it.type == "component" && it.angleBracketsName == name }
                     .filter { EmberUtils.isInScope(it, scopes) }
                     .mapNotNull { psiManager.findFile(it) }
             // find name.js first, then component.js
-            val component = components.find { !it.name.startsWith("component.") } ?: components.find { it.name.startsWith("component.") }
+            val component = components.find { !it.name.startsWith("component.") }
+                ?: components.find { it.name.startsWith("component.") }
 
             if (component != null) return EmberUtils.resolveToEmber(component)
 
             // find name.hbs first, then template.hbs
-            val componentTemplate = templates.find { !it.name.startsWith("template.") } ?: templates.find { it.name.startsWith("template.") }
+            val componentTemplate = templates.find { !it.name.startsWith("template.") }
+                ?: templates.find { it.name.startsWith("template.") }
 
             if (componentTemplate != null) return EmberUtils.resolveToEmber(componentTemplate)
 

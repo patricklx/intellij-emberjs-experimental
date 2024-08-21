@@ -337,7 +337,7 @@ class EmberUtils {
                         return ref?.resolve()
                     }
                 }
-                if (ref == null) {
+                if (ref == null || ref.resolve() == null) {
                     var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     if (tsFiles?.isEmpty() == true) {
                         tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? JSFileModuleReference)?.resolve() }
@@ -912,6 +912,15 @@ class EmberUtils {
                         tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
                     }
                 }
+                val typeArgument = (cls as? TypeScriptClassExpression)?.extendsList?.members?.get(0)?.typeArgumentsAsTypes?.get(0)
+                if (typeArgument != null) {
+                    val blocks = typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
+                    val yields = blocks?.jsType?.asRecordType()?.properties
+                    yields?.forEach {
+                        it.memberSource.singleElement?.let { tplYields.add(EmberXmlElementDescriptor.YieldReference(it)) }
+                    }
+                }
+
             }
 
             val hasSplattributes = template?.text?.contains("...attributes") ?: false

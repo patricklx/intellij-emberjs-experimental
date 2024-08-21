@@ -1,5 +1,6 @@
 package com.emberjs.xml
 import com.dmarcotte.handlebars.psi.HbHash
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.hbs.EmberReference
@@ -76,7 +77,10 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     class YieldReference(element: PsiElement): PsiReferenceBase<PsiElement>(element) {
 
         val yieldBlock by lazy {
-            element.parent.parent
+            if (element is HbPsiElement) {
+                return@lazy element.parent.parent
+            }
+            return@lazy element
         }
 
         override fun resolve(): PsiElement? {
