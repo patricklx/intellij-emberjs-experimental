@@ -377,6 +377,11 @@ class EmberUtils {
             val resYield: XmlAttributeDescriptor? = findTagYieldAttribute(element)
             if (resYield != null && resYield.declaration != null && element != null) {
                 val name = element.text.replace("|", "")
+                var types = listOf<PsiElement?>()
+                if (resYield.declaration is TypeScriptPropertySignature && (resYield.declaration as TypeScriptPropertySignature).typeDeclaration is TypeScriptTupleType) {
+                    val tuple = (resYield.declaration as TypeScriptPropertySignature).typeDeclaration?.jsType as JSTupleType
+                    types = tuple.types.map { it.source.sourceElement }
+                }
                 val yieldParams = resYield.declaration!!.children.filterIsInstance<HbParam>()
                 val angleBracketBlock = element.parent as XmlTag
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
@@ -385,7 +390,7 @@ class EmberUtils {
                     val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
                     val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
                     val blockParamIdx = params.indexOf(refPsi)
-                    return followReferences(yieldParams.getOrNull(blockParamIdx), path)
+                    return followReferences(yieldParams.getOrNull(blockParamIdx) ?: types.getOrNull(blockParamIdx), path)
                 }
             }
 
@@ -912,9 +917,20 @@ class EmberUtils {
                         tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
                     }
                 }
-                val typeArgument = (cls as? TypeScriptClassExpression)?.extendsList?.members?.get(0)?.typeArgumentsAsTypes?.get(0)
-                if (typeArgument != null) {
-                    val blocks = typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
+                val tsClass = (cls as? JSClass)
+                var blocks: JSRecordType. PropertySignature? = null
+                val supers = tsClass?.superClasses?.asList()?.toTypedArray<JSClass>()
+                val classes = mutableListOf<JSClass?>()
+                classes.add(tsClass)
+                supers?.let { classes.addAll(it) }
+                classes.forEach { s ->
+                    s?.extendsList?.members?.forEach { m->
+                        m.typeArgumentsAsTypes.forEach { typeArgument ->
+                            blocks = blocks ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
+                        }
+                    }
+                }
+                if (blocks != null) {
                     val yields = blocks?.jsType?.asRecordType()?.properties
                     yields?.forEach {
                         it.memberSource.singleElement?.let { tplYields.add(EmberXmlElementDescriptor.YieldReference(it)) }

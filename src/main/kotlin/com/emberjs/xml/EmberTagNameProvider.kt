@@ -4,6 +4,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.emberjs.gts.GtsFileViewProvider
@@ -35,6 +36,7 @@ import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
 import com.intellij.openapi.util.Key
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
@@ -187,8 +189,11 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
             for (yieldRef in tplYields) {
                 val yieldblock = yieldRef.yieldBlock
-                var namedYields = yieldblock.children.find { it is HbHash && it.hashName == "to"}?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
-                namedYields = namedYields ?: yieldblock.children.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
+                val hashYield = yieldblock.children.find { it is HbHash && it.hashName == "to"}
+                val tsProp = yieldblock as? TypeScriptPropertySignature
+                var namedYields = hashYield?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
+                namedYields = namedYields ?: (yieldblock as? HbPsiElement)?.children?.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
+                namedYields = namedYields ?: tsProp?.name
                 val names: String
 
                 // if the tag has already colon, then remove it from the lookup elements, otherwise intellij will

@@ -30,11 +30,13 @@ import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.JSTypeOwner
 import com.intellij.lang.javascript.psi.JSVariable
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptObjectType
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
 import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeofType
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.lang.javascript.psi.types.JSGenericTypeImpl
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.xml.TagNameReference
@@ -455,6 +457,18 @@ class TagReferencesProvider : PsiReferenceProvider() {
                     if (ref is HbHash) {
                         ref = ref!!.children.last()
                         ref = EmberUtils.followReferences(ref)
+                    }
+                }
+                if (ref is TypeScriptObjectType) {
+                    val prop = (ref as TypeScriptObjectType).typeMembers.find { it.name == part } as? TypeScriptPropertySignature
+                    if (prop?.typeDeclaration?.jsType is JSGenericTypeImpl) {
+                        if (prop.typeDeclaration?.jsType?.typeText?.startsWith("WithBoundArgs") == true) {
+                            val refClass = (prop.typeDeclaration?.jsType as JSGenericTypeImpl).arguments[0]
+                            ref = refClass.sourceElement
+                            if (ref is TypeScriptTypeofType) {
+                                ref = (ref as TypeScriptTypeofType).expression
+                            }
+                        }
                     }
                 }
             }

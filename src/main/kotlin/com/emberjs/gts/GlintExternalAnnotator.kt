@@ -127,7 +127,7 @@ class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(p
         if (state == defaultState) {
             return null
         }
-        val parent = Element("glint/core")
+        val parent = Element("glint-core")
         return parent
     }
 
