@@ -337,7 +337,7 @@ class EmberUtils {
                         return ref?.resolve()
                     }
                 }
-                if (ref == null) {
+                if (ref == null || ref.resolve() == null) {
                     var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     if (tsFiles?.isEmpty() == true) {
                         tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? JSFileModuleReference)?.resolve() }
@@ -377,6 +377,11 @@ class EmberUtils {
             val resYield: XmlAttributeDescriptor? = findTagYieldAttribute(element)
             if (resYield != null && resYield.declaration != null && element != null) {
                 val name = element.text.replace("|", "")
+                var types = listOf<PsiElement?>()
+                if (resYield.declaration is TypeScriptPropertySignature && (resYield.declaration as TypeScriptPropertySignature).typeDeclaration is TypeScriptTupleType) {
+                    val tuple = (resYield.declaration as TypeScriptPropertySignature).typeDeclaration?.jsType as JSTupleType
+                    types = tuple.types.map { it.source.sourceElement }
+                }
                 val yieldParams = resYield.declaration!!.children.filterIsInstance<HbParam>()
                 val angleBracketBlock = element.parent as XmlTag
                 val startIdx = angleBracketBlock.attributes.indexOfFirst { it.text.startsWith("|") }
@@ -385,7 +390,7 @@ class EmberUtils {
                     val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
                     val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
                     val blockParamIdx = params.indexOf(refPsi)
-                    return followReferences(yieldParams.getOrNull(blockParamIdx), path)
+                    return followReferences(yieldParams.getOrNull(blockParamIdx) ?: types.getOrNull(blockParamIdx), path)
                 }
             }
 
@@ -912,6 +917,36 @@ class EmberUtils {
                         tplYields.add(EmberXmlElementDescriptor.YieldReference(y))
                     }
                 }
+                val tsClass = (cls as? JSClass)
+                var blocks: JSRecordType. PropertySignature? = null
+                var args: JSRecordType. PropertySignature? = null
+                val supers = tsClass?.superClasses?.asList()?.toTypedArray<JSClass>()
+                val classes = mutableListOf<JSClass?>()
+                classes.add(tsClass)
+                supers?.let { classes.addAll(it) }
+                classes.forEach { s ->
+                    s?.extendsList?.members?.forEach { m->
+                        m.typeArgumentsAsTypes.forEach { typeArgument ->
+                            blocks = blocks ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
+                            args = args ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Args" }
+                        }
+                    }
+                }
+                if (blocks != null) {
+                    val yields = blocks?.jsType?.asRecordType()?.properties
+                    yields?.forEach {
+                        it.memberSource.singleElement?.let { tplYields.add(EmberXmlElementDescriptor.YieldReference(it)) }
+                    }
+                }
+                if (args != null) {
+                    val arguments = args?.jsType?.asRecordType()?.properties
+                    arguments?.forEach {
+                        if (it.memberSource.singleElement != null) {
+                            tplArgs.add(ArgData(it.memberName, "", AttrPsiReference(it.memberSource.singleElement!!)))
+                        }
+                    }
+                }
+
             }
 
             val hasSplattributes = template?.text?.contains("...attributes") ?: false

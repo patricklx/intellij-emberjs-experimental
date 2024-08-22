@@ -4,6 +4,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbHash
 import com.dmarcotte.handlebars.psi.HbMustache
 import com.dmarcotte.handlebars.psi.HbParam
+import com.dmarcotte.handlebars.psi.HbPsiElement
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbBlockWrapperImpl
 import com.emberjs.gts.GtsFileViewProvider
@@ -34,7 +35,11 @@ import com.intellij.lang.javascript.modules.imports.JSImportAction
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.JSImportCandidateWithExecutor
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
+import com.intellij.lang.javascript.psi.JSType
 import com.intellij.lang.javascript.psi.ecma6.ES6TaggedTemplateExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptObjectType
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
+import com.intellij.lang.javascript.psi.types.JSTupleType
 import com.intellij.openapi.util.Key
 import com.intellij.psi.*
 import com.intellij.psi.impl.source.tree.LeafPsiElement
@@ -101,6 +106,26 @@ class EmberTagNameProvider : XmlTagNameProvider {
             return
         }
 
+        if (refElement is TypeScriptObjectType) {
+            refElement.typeMembers.forEach {
+                val p = path.toMutableList()
+                if (it.name != null) {
+                    p.add(it.name!!)
+                    result.add(LookupElementBuilder.create(p.joinToString(".")))
+                }
+            }
+            return
+        }
+
+        if (refElement is JSType) {
+            refElement.asRecordType().propertyNames.forEach {
+                val p = path.toMutableList()
+                p.add(it)
+                result.add(LookupElementBuilder.create(p.joinToString(".")))
+            }
+            return
+        }
+
         if (refElement is HbParam) {
             if (refElement.children.find { it is HbParam }?.text == "hash") {
                 val names = refElement.children.filter { it.elementType == HbTokenTypes.HASH }.map { it.children[0].text }
@@ -128,7 +153,10 @@ class EmberTagNameProvider : XmlTagNameProvider {
             val params = angleBracketBlock.attributes.toList().subList(startIdx, endIdx)
             val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
             val blockParamIdx = params.indexOf(refPsi)
-            val param = dereferenceYield.declaration?.children?.filter { it is HbParam }?.getOrNull(blockParamIdx)
+            var param = dereferenceYield.declaration?.children?.filter { it is HbParam }?.getOrNull(blockParamIdx)
+            val tuple = (dereferenceYield.declaration as? TypeScriptPropertySignature)?.typeDeclaration?.jsType as JSTupleType
+            val types = tuple.types.map { it.source.sourceElement }
+            param = param ?: types.getOrNull(blockParamIdx)
             resolve(param, path, result, visited)
             return
         }
@@ -187,8 +215,11 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
             for (yieldRef in tplYields) {
                 val yieldblock = yieldRef.yieldBlock
-                var namedYields = yieldblock.children.find { it is HbHash && it.hashName == "to"}?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
-                namedYields = namedYields ?: yieldblock.children.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
+                val hashYield = yieldblock.children.find { it is HbHash && it.hashName == "to"}
+                val tsProp = yieldblock as? TypeScriptPropertySignature
+                var namedYields = hashYield?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
+                namedYields = namedYields ?: (yieldblock as? HbPsiElement)?.children?.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
+                namedYields = namedYields ?: tsProp?.name
                 val names: String
 
                 // if the tag has already colon, then remove it from the lookup elements, otherwise intellij will
