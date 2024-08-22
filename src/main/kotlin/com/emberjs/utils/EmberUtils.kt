@@ -919,6 +919,7 @@ class EmberUtils {
                 }
                 val tsClass = (cls as? JSClass)
                 var blocks: JSRecordType. PropertySignature? = null
+                var args: JSRecordType. PropertySignature? = null
                 val supers = tsClass?.superClasses?.asList()?.toTypedArray<JSClass>()
                 val classes = mutableListOf<JSClass?>()
                 classes.add(tsClass)
@@ -927,6 +928,7 @@ class EmberUtils {
                     s?.extendsList?.members?.forEach { m->
                         m.typeArgumentsAsTypes.forEach { typeArgument ->
                             blocks = blocks ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
+                            args = args ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Args" }
                         }
                     }
                 }
@@ -934,6 +936,14 @@ class EmberUtils {
                     val yields = blocks?.jsType?.asRecordType()?.properties
                     yields?.forEach {
                         it.memberSource.singleElement?.let { tplYields.add(EmberXmlElementDescriptor.YieldReference(it)) }
+                    }
+                }
+                if (args != null) {
+                    val arguments = args?.jsType?.asRecordType()?.properties
+                    arguments?.forEach {
+                        if (it.memberSource.singleElement != null) {
+                            tplArgs.add(ArgData(it.memberName, "", AttrPsiReference(it.memberSource.singleElement!!)))
+                        }
                     }
                 }
 

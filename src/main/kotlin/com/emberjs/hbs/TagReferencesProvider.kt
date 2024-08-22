@@ -192,7 +192,7 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
  */
 fun toAttributeReference(target: XmlAttribute): PsiReference? {
     val name = target.name
-    if ((name.startsWith("|") || name.endsWith("|")) && target.descriptor?.declaration != null) {
+    if (target.descriptor?.declaration != null) {
         if (name.length == 1) {
             return null
         }
@@ -469,6 +469,11 @@ class TagReferencesProvider : PsiReferenceProvider() {
                                 ref = (ref as TypeScriptTypeofType).expression
                             }
                         }
+                    }
+                    else if (prop?.typeDeclaration?.jsType is TypeScriptTypeofType) {
+                        ref = (prop.typeDeclaration!!.jsType as TypeScriptTypeofType).expression
+                    } else {
+                        ref = prop?.typeDeclaration?.jsType?.sourceElement ?: prop
                     }
                 }
             }

@@ -19,6 +19,7 @@ import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.*
 import com.intellij.lang.javascript.psi.ecma6.JSStringTemplateExpression
 import com.intellij.lang.javascript.psi.ecma6.JSTypedEntity
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptObjectType
 import com.intellij.lang.javascript.psi.ecmal4.JSClass
 import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
@@ -287,6 +288,10 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
 
             if (any is JSType) {
                 jsType = any
+            }
+
+            if (any is TypeScriptObjectType) {
+                jsType = any.jsType
             }
 
             if (any is JSTypedEntity) {
