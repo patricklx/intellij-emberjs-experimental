@@ -154,9 +154,9 @@ class EmberTagNameProvider : XmlTagNameProvider {
             val refPsi = params.find { Regex("\\|*.*\\b$name\\b.*\\|*").matches(it.text) }
             val blockParamIdx = params.indexOf(refPsi)
             var param = dereferenceYield.declaration?.children?.filter { it is HbParam }?.getOrNull(blockParamIdx)
-            val tuple = (dereferenceYield.declaration as? TypeScriptPropertySignature)?.typeDeclaration?.jsType as JSTupleType
-            val types = tuple.types.map { it.source.sourceElement }
-            param = param ?: types.getOrNull(blockParamIdx)
+            val tuple = (dereferenceYield.declaration as? TypeScriptPropertySignature?)?.typeDeclaration?.jsType as? JSTupleType
+            val types = tuple?.types?.map { it.source.sourceElement }
+            param = param ?: types?.getOrNull(blockParamIdx)
             resolve(param, path, result, visited)
             return
         }
