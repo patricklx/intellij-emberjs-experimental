@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2023.4.6 (2024-08-22)
+
+#### :rocket: Enhancement
+* [#176](https://github.com/patricklx/intellij-emberjs-experimental/pull/176) fix gts references ([@patricklx](https://github.com/patricklx))
+* [#175](https://github.com/patricklx/intellij-emberjs-experimental/pull/175) add glint inspection ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2023.4.5 (2024-07-09)
 
 #### :rocket: Enhancement
