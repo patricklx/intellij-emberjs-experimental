@@ -35,13 +35,13 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:242.20224.159"))
+        plugins(listOf("com.dmarcotte.handlebars:243.15521.24"))
         bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml"))
         pluginVerifier()
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "242.20224.159")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "243.15521.24")
     }
 }
 
