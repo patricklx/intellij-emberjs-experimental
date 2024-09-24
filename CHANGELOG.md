@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2024.3.1 (2024-09-24)
+
+#### :bug: Bug Fix
+* [#183](https://github.com/patricklx/intellij-emberjs-experimental/pull/183) run later ([@patricklx](https://github.com/patricklx))
+* [#182](https://github.com/patricklx/intellij-emberjs-experimental/pull/182) fix null ptr issues ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 
 
 ## v2023.4.6 (2024-08-22)
