@@ -5,6 +5,8 @@ import com.intellij.lang.javascript.linter.JSLinterUtil
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
@@ -21,7 +23,9 @@ import com.intellij.util.containers.ContainerUtil
 class TemplateLintEnabler : DirectoryProjectConfigurator {
     override fun configureProject(project: Project, baseDir: VirtualFile, moduleRef: Ref<Module>, newProject: Boolean) {
         StartupManager.getInstance(project).runWhenProjectIsInitialized {
-            guessTemplateLint(project)
+            ApplicationManager.getApplication().invokeLater {
+                guessTemplateLint(project)
+            }
         }
     }
 
