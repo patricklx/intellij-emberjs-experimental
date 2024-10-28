@@ -22,7 +22,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2024.3.2"
+version = "2024.3.2-eap"
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -35,13 +35,13 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:242.21829.3"))
+        plugins(listOf("com.dmarcotte.handlebars:243.16718.22"))
         bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml"))
         pluginVerifier()
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.2.4")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "243.16718.22")
     }
 }
 
