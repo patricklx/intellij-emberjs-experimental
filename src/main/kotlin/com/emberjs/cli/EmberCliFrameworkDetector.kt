@@ -15,6 +15,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.guessModuleDir
 import com.intellij.openapi.roots.ModifiableModelsProvider
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.ui.configuration.ModulesProvider
@@ -97,7 +98,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
             } else if (rootDir != null) {
                 context.project?.let {
                     ApplicationManager.getApplication().invokeLaterOnWriteThread {
-                        getGlintDescriptor(it).ensureStarted()
+                        getGlintDescriptor(it).ensureStarted(rootDir)
                     }
                 }
                 frameworkDescriptions.add(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
@@ -144,7 +145,9 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                 val entry = MarkRootActionBase.findContentEntry(model, root)
                 if (entry != null) {
                     EmberCliProjectConfigurator.setupEmber(model.project, entry, root)
-                    getGlintDescriptor(model.project).ensureStarted()
+                    (module.guessModuleDir() ?: entry.file)?.let {
+                        getGlintDescriptor(model.project).ensureStarted(it)
+                    }
                     modifiableModelsProvider.commitModuleModifiableModel(model)
                 } else {
                     modifiableModelsProvider.disposeModuleModifiableModel(model)

@@ -2,6 +2,7 @@ package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.gts.GtsFileType
+import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
@@ -18,11 +19,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.findPsiFile
 import com.intellij.platform.lsp.api.LspServerDescriptor
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
+import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -31,7 +34,7 @@ import kotlin.concurrent.schedule
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        if (!getGlintDescriptor(project).isAvailable) return
+        if (!getGlintDescriptor(project).isAvailable(file)) return
         serverStarter.ensureServerStarted(getGlintDescriptor(project))
     }
 }
@@ -48,24 +51,28 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     val lspServerManager = LspServerManager.getInstance(project)
     var isWsl = false
     var wslDistro = ""
+    var lastDir = project.guessProjectDir()
 
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
-    val isAvailable: Boolean get() {
-        val workingDir = project.guessProjectDir()!!
+    fun isAvailableFromDir(file: VirtualFile): Boolean {
+        val workingDir = file
         var isWsl = false
         if (workingDir.path.contains("wsl.localhost") || workingDir.path.contains("wsl\$")) {
             isWsl = true
         }
         if (isWsl) {
             val path = "./node_modules/@glint/core/bin/glint-language-server.js"
-            val builder = ProcessBuilder().command("wsl", "--", "test", "-f", "\"$path\"", "||", "echo", "\"true\"")
+            val builder = ProcessBuilder()
+                .directory(File(workingDir.path))
+                .command("wsl", "--", "test", "-f", "\"$path\"", "||", "echo", "\"true\"")
             val p = builder.start()
             p.waitFor()
             val out = p.inputStream.reader().readText().trim()
             if (out == "true") {
+                lastDir = workingDir
                 return true
             }
         }
@@ -74,16 +81,27 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             return false
         }
         glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
+        lastDir = workingDir
         return true
     }
 
-    fun ensureStarted() {
-        if (!isAvailable) return
+    fun isAvailable(vfile: VirtualFile): Boolean {
+        if (vfile.parentModule != null && isAvailableFromDir(vfile.parentModule!!)) {
+            return true
+        }
+        if (project.guessProjectDir() != null && isAvailableFromDir(project.guessProjectDir()!!)) {
+            return true
+        }
+        return false
+    }
+
+    fun ensureStarted(vfile: VirtualFile) {
+        if (!isAvailable(vfile)) return
         lspServerManager.startServersIfNeeded(GlintLspSupportProvider::class.java)
     }
 
     override fun createCommandLine(): GeneralCommandLine {
-        val workingDir = myProject.guessProjectDir()!!
+        val workingDir = lastDir!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         var path = workDirectory.path
         path = path.replace("\\", "/")

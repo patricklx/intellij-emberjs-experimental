@@ -177,7 +177,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     override fun getSignatureHelp(file: PsiFile, context: CreateParameterInfoContext): Future<Stream<JSFunctionType>?>? = null
 
     override fun isDisabledByContext(context: VirtualFile): Boolean {
-        return getDescriptor()?.isAvailable?.not() ?: return true
+        return getDescriptor()?.isAvailable(context)?.not() ?: return true
     }
 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
