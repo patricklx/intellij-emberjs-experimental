@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - eap
       - 'v*'
   pull_request: {}
   schedule:
