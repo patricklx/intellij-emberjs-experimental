@@ -41,7 +41,7 @@ dependencies {
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "243.16718.22")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "243.21155.44")
     }
 }
 
