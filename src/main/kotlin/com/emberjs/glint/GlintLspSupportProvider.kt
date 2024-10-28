@@ -51,6 +51,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     val lspServerManager = LspServerManager.getInstance(project)
     var isWsl = false
     var wslDistro = ""
+    var lastDir = project.guessProjectDir()
 
     public val server
         get() =
@@ -71,6 +72,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             p.waitFor()
             val out = p.inputStream.reader().readText().trim()
             if (out == "true") {
+                lastDir = workingDir
                 return true
             }
         }
@@ -79,6 +81,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             return false
         }
         glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
+        lastDir = workingDir
         return true
     }
 
@@ -98,7 +101,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     override fun createCommandLine(): GeneralCommandLine {
-        val workingDir = myProject.guessProjectDir()!!
+        val workingDir = lastDir!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         var path = workDirectory.path
         path = path.replace("\\", "/")
