@@ -5,6 +5,7 @@ import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
 import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
+import com.intellij.lang.javascript.inspections.JSUnusedGlobalSymbolsInspection
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.testFramework.IndexingTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -54,7 +55,7 @@ class GtsFileTest : BasePlatformTestCase() {
             </template>
         """.trimIndent()
         myFixture.configureByText(GjsFileType.INSTANCE, gts)
-        myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection())
+        myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
         TestCase.assertEquals(4, highlightInfos.size)
