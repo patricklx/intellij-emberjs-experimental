@@ -40,10 +40,13 @@ class GtsFileTest : BasePlatformTestCase() {
             function corge() {};
             function corge2() {};
             
+            export const grault = {}; 
+            export const Grault = {}; 
             
             export default <template>
                 <Foo />
                 <Baz />
+                <Grault />
                 {{x}}
                 {{y}}
                 {{corge}}
@@ -71,14 +74,16 @@ class GtsFileTest : BasePlatformTestCase() {
             
             const bar = () => null;
             
-            const Baz = {};
+            const Baz = {};           
             
             export default <template>
                 <Foo />
                 <Baz />
+                <Grault />
                 {{x}}
                 {{y}}
                 {{bar}}
+                {{grault}}
             </template>
         """.trimIndent()
         myFixture.configureByText(GtsFileType.INSTANCE, gts)
