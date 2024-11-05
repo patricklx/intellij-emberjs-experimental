@@ -57,6 +57,8 @@ class GtsFileTest : BasePlatformTestCase() {
         myFixture.configureByText(GjsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+        val unusedConstants = myFixture.doHighlighting().filter { it.description.startsWith("unused constant") }
+        TestCase.assertEquals(unusedConstants.size, 0)
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
         TestCase.assertEquals(4, highlightInfos.size)
         TestCase.assertTrue(highlightInfos[0].description.contains("quux"))
@@ -75,7 +77,10 @@ class GtsFileTest : BasePlatformTestCase() {
             
             const bar = () => null;
             
-            const Baz = {};           
+            const Baz = {};
+            
+            export const grault = {}; 
+            export const Grault = {}; 
             
             export default <template>
                 <Foo />
@@ -84,12 +89,14 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{x}}
                 {{y}}
                 {{bar}}
-                {{grault}}
+                {{grault}}q
             </template>
         """.trimIndent()
         myFixture.configureByText(GtsFileType.INSTANCE, gts)
-        myFixture.enableInspections(ES6UnusedImportsInspection())
+        myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+        val unusedConstants = myFixture.doHighlighting().filter { it.description.startsWith("unused constant") }
+        TestCase.assertEquals(unusedConstants.size, 0)
         val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" }
         TestCase.assertEquals(highlightInfos.size, 2)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
