@@ -101,7 +101,7 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{other}}
             </template>
         """.trimIndent()
-        myFixture.addFileToProject("other-component.ts", otherGts)
+        myFixture.addFileToProject("other-component.js", otherGts)
         myFixture.addFileToProject("main.gts", gts)
         myFixture.configureByFile("main.gts")
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
