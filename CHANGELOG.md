@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2024.3.3 (2024-11-06)
+
+#### :bug: Bug Fix
+* [#196](https://github.com/patricklx/intellij-emberjs-experimental/pull/196) fix unused exported vars & functions ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 
 
 ## v2024.3.1 (2024-09-24)
