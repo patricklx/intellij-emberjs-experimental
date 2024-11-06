@@ -3,6 +3,8 @@ package com.emberjs.hbs
 import com.dmarcotte.handlebars.psi.HbSimpleMustache
 import com.dmarcotte.handlebars.psi.HbStringLiteral
 import com.dmarcotte.handlebars.psi.impl.HbStatementsImpl
+import com.emberjs.gts.GjsLanguage
+import com.emberjs.gts.GtsLanguage
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.psi.EmberNamedAttribute
 import com.emberjs.psi.EmberNamedElement
@@ -11,6 +13,7 @@ import com.emberjs.resolver.EmberName
 import com.emberjs.utils.originalVirtualFile
 import com.emberjs.xml.EmberAttrDec
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiElement
@@ -33,6 +36,28 @@ abstract class HbReference(element: PsiElement): PsiReferenceBase<PsiElement>(el
         var res = resolve()
         if (res is EmberNamedElement) {
             res = res.target
+        }
+        if (res is ES6ImportSpecifier) {
+            var resolved = res.containingFile.viewProvider.findReferenceAt(res.textOffset, GtsLanguage.INSTANCE)?.resolve()
+            resolved = resolved ?: res.containingFile.viewProvider.findReferenceAt(res.textOffset, GjsLanguage.INSTANCE)?.resolve()
+            if (element.manager.areElementsEquivalent(resolved, other)) {
+                return true
+            }
+            if (element.manager.areElementsEquivalent(res.reference?.resolve(), other)) {
+                return true
+            }
+            if (res.references.any {
+                    element.manager.areElementsEquivalent(it.element, other) || super.isReferenceTo(other)
+                }) {
+                return true
+            }
+            val results = res.multiResolve(false)
+            val r = results.any {
+                element.manager.areElementsEquivalent(it.element, other) || super.isReferenceTo(other)
+            }
+            if (r) {
+                return true
+            }
         }
         return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }

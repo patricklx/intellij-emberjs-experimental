@@ -76,7 +76,8 @@ class GtsFileTest : BasePlatformTestCase() {
             export const other = 2;
         """.trimIndent()
         val gts = """
-            import { OtherComponent, other } from './other-component';
+            import { OtherComponent } from './other-component';
+            import { other } from './other-component';
             import x from "a";
             import { y, quux } from "a";
             import qux from "a";
@@ -111,7 +112,7 @@ class GtsFileTest : BasePlatformTestCase() {
         val unusedConstants = highlighting.filter { it.description?.startsWith("Unused constant") == true }
         TestCase.assertEquals(unusedConstants.toString(), 0, unusedConstants.size)
         val highlightInfos: List<HighlightInfo> = highlighting.filter { it.inspectionToolId == "ES6UnusedImports" }
-        TestCase.assertEquals(2, highlightInfos.size)
+        TestCase.assertEquals(highlightInfos.toString(), 2, highlightInfos.size)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
         TestCase.assertTrue(highlightInfos.last().description.contains("qux"))
     }
