@@ -41,7 +41,7 @@ class GtsFileTest : BasePlatformTestCase() {
             function corge() {};
             function corge2() {};
             
-            export const grault = {}; 
+            export const grault2 = {}; 
             export const Grault = {}; 
             
             export default <template>
@@ -52,15 +52,17 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{y}}
                 {{corge}}
                 {{bar}}
+                {{grault2}}
             </template>
         """.trimIndent()
         myFixture.configureByText(GjsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
-        val unusedConstants = myFixture.doHighlighting().filter { it.description.startsWith("unused constant") }
-        TestCase.assertEquals(unusedConstants.size, 0)
-        val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
-        TestCase.assertEquals(4, highlightInfos.size)
+        val highlighting = myFixture.doHighlighting()
+        val unusedConstants = highlighting.filter { it.description?.startsWith("Unused constant") == true }
+        TestCase.assertEquals(unusedConstants.toString(), 2, unusedConstants.size)
+        val highlightInfos: List<HighlightInfo> = highlighting.filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
+        TestCase.assertEquals(highlighting.toString(), 4, highlightInfos.size)
         TestCase.assertTrue(highlightInfos[0].description.contains("quux"))
         TestCase.assertTrue(highlightInfos[1].description.contains("qux"))
         TestCase.assertTrue(highlightInfos[2].description.contains("grault"))
@@ -89,15 +91,17 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{x}}
                 {{y}}
                 {{bar}}
-                {{grault}}q
+                {{grault}}
             </template>
         """.trimIndent()
         myFixture.configureByText(GtsFileType.INSTANCE, gts)
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
-        val unusedConstants = myFixture.doHighlighting().filter { it.description.startsWith("unused constant") }
-        TestCase.assertEquals(unusedConstants.size, 0)
-        val highlightInfos: List<HighlightInfo> = myFixture.doHighlighting().filter { it.inspectionToolId == "ES6UnusedImports" }
+        val highlighting = myFixture.doHighlighting()
+        System.out.println(highlighting)
+        val unusedConstants = highlighting.filter { it.description?.startsWith("Unused constant") == true }
+        TestCase.assertEquals(unusedConstants.toString(), 0, unusedConstants.size)
+        val highlightInfos: List<HighlightInfo> = highlighting.filter { it.inspectionToolId == "ES6UnusedImports" }
         TestCase.assertEquals(highlightInfos.size, 2)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
         TestCase.assertTrue(highlightInfos.last().description.contains("qux"))
