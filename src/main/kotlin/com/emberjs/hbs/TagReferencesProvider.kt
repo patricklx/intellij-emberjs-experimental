@@ -23,6 +23,7 @@ import com.emberjs.utils.originalVirtualFile
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.psi.JSObjectLiteralExpression
@@ -226,6 +227,26 @@ class TagReference(val element: XmlTag, val fullName: String, val rangeInElem: T
         var res = resolve()
         if (res is EmberNamedElement) {
             res = res.target
+            if (element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)) {
+                return true
+            }
+        }
+        if (res is ES6ImportSpecifier) {
+            if (element.manager.areElementsEquivalent(res.reference?.resolve(), other)) {
+                return true
+            }
+            if (res.references.any {
+                element.manager.areElementsEquivalent(it.element, other) || super.isReferenceTo(other)
+            }) {
+                return true
+            }
+            val results = res.multiResolve(false)
+            val r = results.any {
+                element.manager.areElementsEquivalent(it.element, other) || super.isReferenceTo(other)
+            }
+            if (r) {
+                return true
+            }
         }
         return element.manager.areElementsEquivalent(res, other) || super.isReferenceTo(other)
     }
