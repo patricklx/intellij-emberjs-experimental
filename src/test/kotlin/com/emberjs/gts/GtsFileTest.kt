@@ -71,7 +71,13 @@ class GtsFileTest : BasePlatformTestCase() {
 
     @Test
     fun testGtsImportUsed() {
+        val otherGts = """
+            export const OtherComponent = 2;
+            export const other = 2;
+        """.trimIndent()
         val gts = """
+            import { OtherComponent } from './other-component';
+            import { other } from './other-component';
             import x from "a";
             import { y, quux } from "a";
             import qux from "a";
@@ -85,6 +91,7 @@ class GtsFileTest : BasePlatformTestCase() {
             export const Grault = {}; 
             
             export default <template>
+                <OtherComponent />
                 <Foo />
                 <Baz />
                 <Grault />
@@ -92,9 +99,12 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{y}}
                 {{bar}}
                 {{grault}}
+                {{other}}
             </template>
         """.trimIndent()
-        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        myFixture.addFileToProject("other-component.js", otherGts)
+        myFixture.addFileToProject("main.gts", gts)
+        myFixture.configureByFile("main.gts")
         myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
         CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
         val highlighting = myFixture.doHighlighting()
@@ -102,7 +112,7 @@ class GtsFileTest : BasePlatformTestCase() {
         val unusedConstants = highlighting.filter { it.description?.startsWith("Unused constant") == true }
         TestCase.assertEquals(unusedConstants.toString(), 0, unusedConstants.size)
         val highlightInfos: List<HighlightInfo> = highlighting.filter { it.inspectionToolId == "ES6UnusedImports" }
-        TestCase.assertEquals(highlightInfos.size, 2)
+        TestCase.assertEquals(highlightInfos.toString(), 2, highlightInfos.size)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
         TestCase.assertTrue(highlightInfos.last().description.contains("qux"))
     }
