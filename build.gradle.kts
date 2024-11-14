@@ -22,7 +22,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2024.3.4"
+version = "2024.3.5"
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -41,7 +41,7 @@ dependencies {
         zipSigner()
         instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.2.4")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.3")
     }
 }
 
