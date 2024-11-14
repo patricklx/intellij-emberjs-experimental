@@ -20,6 +20,7 @@ import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSFunctionType
+import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
@@ -60,8 +61,8 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 
     override fun getService(file: VirtualFile) = allServices.firstOrNull()
 
-    override fun getAllServices() =
-            if (EmberUtils.isEnabledEmberProject(project)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
+    override val allServices: List<GlintTypeScriptService>
+        get() = if (EmberUtils.isEnabledEmberProject(project)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
 
 
