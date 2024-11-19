@@ -25,18 +25,15 @@ import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScriptSuppressByCommentFix
-import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptQuickInfoResponse
 import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
 import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
-import com.intellij.openapi.util.text.HtmlBuilder
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspServerManager
-import com.intellij.platform.lsp.impl.LspServerImpl
 import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -47,7 +44,6 @@ import com.intellij.ui.EditorNotifications
 import com.intellij.util.containers.toMutableSmartList
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.MarkupContent
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
@@ -87,18 +83,6 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     override val name = "Glint TypeScript LSP"
-
-    override fun isServiceCreated() = withServer { isRunning || isMalfunctioned } ?: false
-
-    override fun showStatusBar() = withServer { isServiceCreated() } ?: false
-
-    override fun getStatusText() = withServer {
-        when {
-            isRunning -> "Glint TypeScript LSP"
-            isMalfunctioned -> "Glint LSP ⚠"
-            else -> "..."
-        }
-    }
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
         return TypeScriptLanguageServiceUtil.getCompletionMergeStrategy(parameters, file, context)
@@ -156,7 +140,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             elem = DelegateElement(elem, element, document)
         }
 
-        val links = withServer { requestExecutor.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset) }
+        val links = getServer()?.requestExecutor?.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset)
         val psiManager = PsiManager.getInstance(project)
         return links?.map {
             val vFile = VfsUtil.findFileByURL(URL(it.targetUri))
@@ -202,11 +186,11 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
                                                    file.fileType is JavaScriptFileType
 }
 
-class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntry {
+class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntryBase() {
     override val name: String get() = item.label
     val detail: String? get() = item.detail
 
-    override fun intoLookupElement() = LookupElementBuilder.create(item.label)
+    override fun createLookupElement() = LookupElementBuilder.create(item.label)
             .withTypeText(item.detail, true)
             .withInsertHandler(JSInsertHandler.DEFAULT)
 }
