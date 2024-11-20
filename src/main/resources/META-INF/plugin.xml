@@ -42,6 +42,7 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>JavaScript</depends>
     <depends>com.intellij.css</depends>
+    <depends>com.intellij.modules.json</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
