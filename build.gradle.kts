@@ -36,7 +36,7 @@ dependencies {
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
         plugins(listOf("com.dmarcotte.handlebars:243.21565.122"))
-        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml"))
+        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json"))
         pluginVerifier()
         zipSigner()
         instrumentationTools()
