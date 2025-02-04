@@ -195,7 +195,7 @@ class GtsElementTypes {
 
 
             override fun appendCurrentTemplateToken(tokenEndOffset: Int, tokenText: CharSequence): TemplateDataModifications {
-                val r = Regex("(=|:)\\s*$")
+                val r = Regex("([=:,(])\\s*$")
                 return if (r.containsMatchIn(tokenText)) {
                     TemplateDataModifications.fromRangeToRemove(tokenEndOffset, "''")
                 } else {
