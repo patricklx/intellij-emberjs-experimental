@@ -11,7 +11,7 @@ import org.jdom.Element
 
 @State(name = "TemplateLintConfiguration", storages = [Storage("emberLinters/templatelint.xml")])
 class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<TemplateLintState>(project) {
-    private val myPackage: JSLinterPackage = JSLinterPackage(project, TemplateLintUtil.PACKAGE_NAME)
+    private val myPackage: JSLinterPackage = JSLinterPackage(project, TemplateLintUtil.PACKAGE_NAME, true)
 
     override fun loadPrivateSettings(state: TemplateLintState): TemplateLintState {
         this.myPackage.readOrDetect()
@@ -25,7 +25,7 @@ class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<Templa
     }
 
     override fun savePrivateSettings(state: TemplateLintState) {
-        this.myPackage.force(NodePackageRef.create(state.interpreterRef.referenceName))
+        this.myPackage.force(NodePackageRef.create(state.templateLintPackage))
     }
 
     override fun toXml(state: TemplateLintState): Element? {
