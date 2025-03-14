@@ -27,7 +27,7 @@ version = "2024.3.6"
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.27.3")
-    testImplementation("org.junit.platform:junit-platform-launcher:1.11.4")
+    testImplementation("org.junit.platform:junit-platform-launcher:1.12.1")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.4")
 
