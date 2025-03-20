@@ -6,11 +6,11 @@ import com.intellij.lang.javascript.linter.JSNpmLinterState
 
 data class TemplateLintState(
         private val myInterpreterRef: NodeJsInterpreterRef,
-        private val myTemplateLintPackage: NodePackage,
+        private val myTemplateLintPackage: NodePackage?,
         val isRunOnSave: Boolean,
 ) : JSNpmLinterState<TemplateLintState> {
 
-    private val myPackageRef: NodePackageRef = NodePackageRef.create(myTemplateLintPackage)
+    private val myPackageRef: NodePackageRef? = myTemplateLintPackage?.let { NodePackageRef.create(it) }
 
     override fun withLinterPackage(packageRef: NodePackageRef): TemplateLintState {
         val constantPackage = packageRef.constantPackage
@@ -24,12 +24,12 @@ data class TemplateLintState(
     }
 
     override fun getNodePackageRef(): NodePackageRef {
-        return this.myPackageRef
+        return this.myPackageRef!!
     }
 
     val templateLintPackage: NodePackage
         get() {
-            return this.myTemplateLintPackage
+            return this.myTemplateLintPackage!!
         }
 
     companion object {
