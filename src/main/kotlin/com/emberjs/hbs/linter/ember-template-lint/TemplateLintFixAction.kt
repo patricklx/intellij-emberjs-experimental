@@ -60,8 +60,15 @@ class TemplateLintFixAction : JSLinterFixAction(
     }
 
     override fun isFileAccepted(project: Project, file: VirtualFile): Boolean {
-        val f = PsiManager.getInstance(project).findFile(file)
-        return f?.viewProvider is GtsFileViewProvider || f?.viewProvider is HbFileViewProvider || f is JSFile
+        val f = PsiManager.getInstance(project).findFile(file) ?: return false
+        val pkg = TemplateLintConfiguration.getInstance(project).extendedState.state.templateLintPackage
+        val supportsJS = pkg.version?.let { it.major < 8 } ?: false
+        return (f.name.endsWith(".hbs")
+                || (f.name.endsWith(".js") && supportsJS)
+                || (f.name.endsWith(".ts") && supportsJS)
+                || f.name.endsWith(".gjs")
+                || f.name.endsWith(".gts"))
+                && f.name.endsWith(".d.ts")
     }
 
     private fun fixFile(psiFile: PsiFile) {

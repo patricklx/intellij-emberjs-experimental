@@ -32,7 +32,14 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
 
     override fun acceptPsiFile(file: PsiFile): Boolean {
         val f = file
-        return f.viewProvider is GtsFileViewProvider || f.viewProvider is HbFileViewProvider || file is JSFile
+        val pkg = TemplateLintConfiguration.getInstance(file.project).extendedState.state.templateLintPackage
+        val supportsJS = pkg.version?.let { it.major < 8 } ?: false
+        return (f.name.endsWith(".hbs")
+                || (f.name.endsWith(".js") && supportsJS)
+                || (f.name.endsWith(".ts") && supportsJS)
+                || f.name.endsWith(".gjs")
+                || f.name.endsWith(".gts"))
+                && f.name.endsWith(".d.ts")
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
