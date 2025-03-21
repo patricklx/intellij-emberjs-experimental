@@ -39,7 +39,7 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
                 || (f.name.endsWith(".ts") && supportsJS)
                 || f.name.endsWith(".gjs")
                 || f.name.endsWith(".gts"))
-                && f.name.endsWith(".d.ts")
+                && !f.name.endsWith(".d.ts")
     }
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {

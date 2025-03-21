@@ -68,7 +68,7 @@ class TemplateLintFixAction : JSLinterFixAction(
                 || (f.name.endsWith(".ts") && supportsJS)
                 || f.name.endsWith(".gjs")
                 || f.name.endsWith(".gts"))
-                && f.name.endsWith(".d.ts")
+                && !f.name.endsWith(".d.ts")
     }
 
     private fun fixFile(psiFile: PsiFile) {
