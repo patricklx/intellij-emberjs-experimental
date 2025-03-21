@@ -1,6 +1,19 @@
 # Changelog
 
 
+## v2024.3.7 (2025-03-21)
+
+#### :bug: Bug Fix
+* [#225](https://github.com/patricklx/intellij-emberjs-experimental/pull/225) limit ember template lint processing to correct files ([@patricklx](https://github.com/patricklx))
+
+#### :house: Internal
+* [#208](https://github.com/patricklx/intellij-emberjs-experimental/pull/208) Delete GlintStatusBarWidget ([@alexander-doroshko](https://github.com/alexander-doroshko))
+
+#### Committers: 2
+- Alexander Doroshko ([@alexander-doroshko](https://github.com/alexander-doroshko))
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 
 
 
