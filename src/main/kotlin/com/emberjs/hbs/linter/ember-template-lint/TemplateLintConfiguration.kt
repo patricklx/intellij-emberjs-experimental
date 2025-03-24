@@ -15,12 +15,10 @@ class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<Templa
 
     override fun loadPrivateSettings(state: TemplateLintState): TemplateLintState {
         this.myPackage.readOrDetect()
-        val constantPackage = myPackage.getPackage().constantPackage
-                ?: throw AssertionError("TemplateLint does not support non-constant node package refs")
 
         return state.copy(
                 myInterpreterRef = this.myPackage.interpreter,
-                myTemplateLintPackage = constantPackage
+                myTemplateLintPackage = this.myPackage.getPackage().constantPackage
         )
     }
 
