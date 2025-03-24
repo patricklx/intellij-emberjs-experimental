@@ -182,7 +182,6 @@
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <annotator language="HTML" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
-        <projectService serviceImplementation="com.emberjs.gts.GlintConfiguration"/>
         <projectService serviceImplementation="TemplateLintConfigFileChangeTracker"/>
         <projectService serviceImplementation="TemplateLintUnsavedConfigFileManager"/>
         <projectService serviceImplementation="com.emberjs.glint.GlintTypeScriptService"/>
