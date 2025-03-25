@@ -24,7 +24,7 @@ class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<Templa
 
         return state.copy(
                 myInterpreterRef = this.myPackage.interpreter,
-                myTemplateLintPackage = this.myPackage.getPackage().constantPackage
+                myTemplateLintPackage = constantPackage
         )
     }
 

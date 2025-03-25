@@ -6,7 +6,7 @@ import com.intellij.lang.javascript.linter.JSNpmLinterState
 
 data class TemplateLintState(
         private val myInterpreterRef: NodeJsInterpreterRef,
-        private val myTemplateLintPackage: NodePackage?,
+        private val myTemplateLintPackage: NodePackage,
         val isRunOnSave: Boolean,
 ) : JSNpmLinterState<TemplateLintState> {
 
@@ -23,12 +23,12 @@ data class TemplateLintState(
     }
 
     override fun getNodePackageRef(): NodePackageRef {
-        return this.myPackageRef!!
+        return this.myPackageRef
     }
 
     val templateLintPackage: NodePackage
         get() {
-            return this.myTemplateLintPackage!!
+            return this.myTemplateLintPackage
         }
 
     companion object {
