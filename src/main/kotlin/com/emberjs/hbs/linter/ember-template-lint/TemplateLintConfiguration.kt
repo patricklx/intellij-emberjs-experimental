@@ -16,9 +16,15 @@ class TemplateLintConfiguration(project: Project) : JSLinterConfiguration<Templa
     override fun loadPrivateSettings(state: TemplateLintState): TemplateLintState {
         this.myPackage.readOrDetect()
 
+        val constantPackage = this.myPackage.getPackage().constantPackage
+
+        if (constantPackage == null) {
+            return defaultState
+        }
+
         return state.copy(
                 myInterpreterRef = this.myPackage.interpreter,
-                myTemplateLintPackage = this.myPackage.getPackage().constantPackage
+                myTemplateLintPackage = constantPackage
         )
     }
 

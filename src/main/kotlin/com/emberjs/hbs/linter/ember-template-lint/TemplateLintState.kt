@@ -6,15 +6,14 @@ import com.intellij.lang.javascript.linter.JSNpmLinterState
 
 data class TemplateLintState(
         private val myInterpreterRef: NodeJsInterpreterRef,
-        private val myTemplateLintPackage: NodePackage?,
+        private val myTemplateLintPackage: NodePackage,
         val isRunOnSave: Boolean,
 ) : JSNpmLinterState<TemplateLintState> {
 
-    private val myPackageRef: NodePackageRef? = myTemplateLintPackage?.let { NodePackageRef.create(it) }
+    private val myPackageRef: NodePackageRef = myTemplateLintPackage.let { NodePackageRef.create(it) }
 
     override fun withLinterPackage(packageRef: NodePackageRef): TemplateLintState {
-        val constantPackage = packageRef.constantPackage
-                ?: throw AssertionError(this.javaClass.simpleName + " does not support non-constant package refs")
+        val constantPackage = packageRef.constantPackage ?: return DEFAULT
 
         return copy(myTemplateLintPackage = constantPackage)
     }
@@ -24,12 +23,12 @@ data class TemplateLintState(
     }
 
     override fun getNodePackageRef(): NodePackageRef {
-        return this.myPackageRef!!
+        return this.myPackageRef
     }
 
     val templateLintPackage: NodePackage
         get() {
-            return this.myTemplateLintPackage!!
+            return this.myTemplateLintPackage
         }
 
     companion object {

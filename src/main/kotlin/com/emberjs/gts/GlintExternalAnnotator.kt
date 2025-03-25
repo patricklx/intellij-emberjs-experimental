@@ -16,6 +16,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.javascript.integration.JSAnnotationError
 import com.intellij.lang.javascript.linter.*
 import com.intellij.lang.javascript.psi.JSFile
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.options.OptionsBundle
@@ -66,8 +67,7 @@ data class GlintState(
     private val myPackageRef: NodePackageRef = NodePackageRef.create(myTemplateLintPackage)
 
     override fun withLinterPackage(packageRef: NodePackageRef): GlintState {
-        val constantPackage = packageRef.constantPackage
-            ?: throw AssertionError(this.javaClass.simpleName + " does not support non-constant package refs")
+        val constantPackage = packageRef.constantPackage ?: return DEFAULT
 
         return copy(myTemplateLintPackage = constantPackage)
     }
@@ -93,6 +93,7 @@ data class GlintState(
 }
 
 
+@Service(Service.Level.PROJECT)
 @State(name = "GlintConfiguration", storages = [Storage("emberLinters/glint.xml")])
 class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(project) {
     private val myPackage: JSLinterPackage = JSLinterPackage(project, "@glint/core")
@@ -103,7 +104,10 @@ class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(p
     override fun loadPrivateSettings(state: GlintState): GlintState {
         this.myPackage.readOrDetect()
         val constantPackage = myPackage.getPackage().constantPackage
-            ?: throw AssertionError("glint does not support non-constant node package refs")
+
+        if (constantPackage == null) {
+            return defaultState
+        }
 
         return state.copy(
             myInterpreterRef = this.myPackage.interpreter,
