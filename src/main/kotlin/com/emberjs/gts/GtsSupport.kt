@@ -237,14 +237,14 @@ class GtsElementTypes {
         }
         val GTS_FILE_NODE_TYPE = object : IFileElementType("GTS", GtsLanguage.INSTANCE) {
             override fun equals(other: Any?): Boolean {
-                if (other == TypeScriptFileType.INSTANCE) {
+                if (other == TypeScriptFileType) {
                     return true
                 }
                 return super.equals(other)
             }
 
             override fun hashCode(): Int {
-                return TypeScriptFileType.INSTANCE.hashCode()
+                return TypeScriptFileType.hashCode()
             }
 
             override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
@@ -258,14 +258,14 @@ class GtsElementTypes {
         }
         val GJS_FILE_NODE_TYPE = object : IFileElementType("GJS", GjsLanguage.INSTANCE) {
             override fun equals(other: Any?): Boolean {
-                if (other == JavaScriptFileType.INSTANCE) {
+                if (other == JavaScriptFileType) {
                     return true
                 }
                 return super.equals(other)
             }
 
             override fun hashCode(): Int {
-                return JavaScriptFileType.INSTANCE.hashCode()
+                return JavaScriptFileType.hashCode()
             }
 
             override fun doParseContents(chameleon: ASTNode, psi: PsiElement): ASTNode {
@@ -389,7 +389,7 @@ class GtsLexerAdapter(baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =fal
 class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 
     override fun equals(other: Any?): Boolean {
-        if (other == TypeScriptFileType.INSTANCE) {
+        if (other == TypeScriptFileType) {
             return true
         }
         return super.equals(other)
@@ -423,7 +423,7 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
 
     override fun equals(other: Any?): Boolean {
-        if (other == JavaScriptFileType.INSTANCE) {
+        if (other == JavaScriptFileType) {
             return true
         }
         return super.equals(other)
@@ -570,7 +570,7 @@ class GtsHighlighter(val project: Project?, val virtualFile: VirtualFile?, color
 }
 
 
-class GtsSyntaxHighlighter: JSHighlighter(DialectOptionHolder.TS, false) {
+class GtsSyntaxHighlighter: JSHighlighter(DialectOptionHolder.TS) {
     override fun getHighlightingLexer(): Lexer {
         return GtsLexerAdapter()
     }

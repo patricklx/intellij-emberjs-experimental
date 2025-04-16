@@ -27,7 +27,7 @@ fun String.classify(): String {
 private val STRING_DECAMELIZE_REGEXP = Regex("([a-z\\d])([A-Z])")
 private val STRING_CAMELIZE_REGEXP = Regex("-([a-z])")
 
-fun String.decamelize(): String = replace(STRING_DECAMELIZE_REGEXP, "$1_$2").toLowerCase(Locale.ROOT)
+fun String.decamelize(): String = replace(STRING_DECAMELIZE_REGEXP, "$1_$2").lowercase(Locale.ROOT)
 
 private val STRING_DASHERIZE_REGEXP = Regex("[ _]")
 

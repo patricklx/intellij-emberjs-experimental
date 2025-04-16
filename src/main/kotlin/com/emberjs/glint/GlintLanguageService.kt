@@ -159,7 +159,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
 
-    override fun getSignatureHelp(file: PsiFile, context: CreateParameterInfoContext): Future<Stream<JSFunctionType>?>? = null
+    override fun getSignatureHelp(file: PsiFile, offset: Int): Future<Stream<JSFunctionType>?>? = null
 
     override fun isDisabledByContext(context: VirtualFile): Boolean {
         return getDescriptor()?.isAvailable(context)?.not() ?: return true

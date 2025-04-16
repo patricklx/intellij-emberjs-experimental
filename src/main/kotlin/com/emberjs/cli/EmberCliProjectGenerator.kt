@@ -1,6 +1,7 @@
 package com.emberjs.cli
 
 import com.emberjs.icons.EmberIcons
+import com.intellij.execution.filters.Filter
 import com.intellij.ide.util.projectWizard.SettingsStep
 import com.intellij.javascript.nodejs.util.NodePackage
 import com.intellij.lang.javascript.boilerplate.NpmPackageProjectGenerator
@@ -40,7 +41,7 @@ open class EmberCliProjectGenerator : NpmPackageProjectGenerator() {
                 ?: "${pkg.systemDependentPath}${File.separator}bin${File.separator}ember"
     }
 
-    override fun generatorArgs(project: Project, baseDir: VirtualFile, settings: Settings): Array<out String> {
+    override fun generatorArgs(project: Project, baseDir: VirtualFile, settings: Settings): Array<String> {
         val isAddon = settings.getUserData(CREATE_ADDON_KEY) ?: false
         val lang = settings.getUserData(USE_LANGUAGE_KEY) ?: ""
         val blueprint = settings.getUserData(USE_BLUEPRINT_KEY) ?: ""
@@ -104,7 +105,7 @@ open class EmberCliProjectGenerator : NpmPackageProjectGenerator() {
         }
     }
 
-    override fun filters(project: Project, baseDir: VirtualFile) = arrayOf(EmberCliFilter(project, baseDir.path))
+    override fun filters(project: Project, baseDir: VirtualFile): Array<Filter> = arrayOf(EmberCliFilter(project, baseDir.path))
 
     override fun customizeModule(baseDir: VirtualFile, entry: ContentEntry?) = Unit
 
