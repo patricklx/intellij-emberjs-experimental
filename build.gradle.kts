@@ -23,7 +23,7 @@ plugins {
 
 
 group = "com.emberjs"
-version = "2025.1.0"
+version = "2025.0.2"
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
