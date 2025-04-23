@@ -48,7 +48,7 @@ class ProjectAwareVirtualFile(val virtualFile: VirtualFile): VirtualFile(), Proj
     override fun getInputStream() = virtualFile.inputStream
     override fun isInProject(project: Project) = true
     override fun getFileType(): FileType {
-        return TypeScriptFileType.INSTANCE
+        return TypeScriptFileType
     }
     override fun getModificationStamp(): Long {
         return 0
@@ -59,7 +59,7 @@ class ProjectAwareVirtualFile(val virtualFile: VirtualFile): VirtualFile(), Proj
 class ProjectFile(val psiFile: PsiFile): JSFileImpl(psiFile.viewProvider, JavaScriptSupportLoader.TYPESCRIPT) {
 
     override fun getFileType(): FileType {
-        return TypeScriptFileType.INSTANCE
+        return TypeScriptFileType
     }
     override fun getVirtualFile(): VirtualFile {
         return ProjectAwareVirtualFile(psiFile.virtualFile)

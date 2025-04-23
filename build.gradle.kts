@@ -1,6 +1,7 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
-import java.net.URL
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
 
 // Configure project's dependencies
 repositories {
@@ -16,13 +17,13 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij.platform") version "2.2.1"
+    id("org.jetbrains.intellij.platform") version "2.5.0"
 //    id("org.jetbrains.intellij.platform.migration") version "2.0.0-beta7"
 }
 
 
 group = "com.emberjs"
-version = "2024.3.7"
+version = "2025.1.0"
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -35,13 +36,12 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:243.21565.122"))
+        plugins(listOf("com.dmarcotte.handlebars:251.23774.318"))
         bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json"))
         pluginVerifier()
         zipSigner()
-        instrumentationTools()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2024.3")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2025.1")
     }
 }
 
@@ -64,11 +64,11 @@ intellijPlatform {
 
 tasks {
     compileKotlin {
-        kotlinOptions.jvmTarget = "17"
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
     }
 
     compileTestKotlin {
-        kotlinOptions.jvmTarget = "17"
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
     }
 
     publishPlugin {
@@ -105,7 +105,7 @@ tasks.register("updateChangelog") {
 
 tasks.register("listRecentReleased") {
     doLast {
-        val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=8").readText()
+        val text = URI("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=8").toURL().readText()
         val obj = groovy.json.JsonSlurper().parseText(text)
         val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
         println(groovy.json.JsonBuilder(versions).toPrettyString())
@@ -115,7 +115,7 @@ tasks.register("listRecentReleased") {
 tasks.register("verifyAlreadyReleased") {
     doLast {
         var input = generateSequence(::readLine).joinToString("\n")
-        val text = URL("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=100").readText()
+        val text = URI("https://plugins.jetbrains.com/api/plugins/15499/updates?channel=&size=100").toURL().readText()
         val obj = groovy.json.JsonSlurper().parseText(text)
         val versions = (obj as ArrayList<Map<*,*>>).map { it.get("version") }
         println(versions.contains(input))
