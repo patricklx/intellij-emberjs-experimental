@@ -1,6 +1,20 @@
 # Changelog
 
 
+## v2025.0.2 (2025-04-24)
+
+#### :rocket: Enhancement
+* [#230](https://github.com/patricklx/intellij-emberjs-experimental/pull/230) Upgrade plugin to Idea 25.1 ([@SanderKnauff](https://github.com/SanderKnauff))
+
+#### :bug: Bug Fix
+* [#227](https://github.com/patricklx/intellij-emberjs-experimental/pull/227) fix empty glint config ([@patricklx](https://github.com/patricklx))
+* [#226](https://github.com/patricklx/intellij-emberjs-experimental/pull/226) fix empty ember template lint config page if package cannot be found ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 2
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+- Sander Knauff ([@SanderKnauff](https://github.com/SanderKnauff))
+
+
 ## v2024.3.7 (2025-03-21)
 
 #### :bug: Bug Fix
