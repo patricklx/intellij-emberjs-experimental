@@ -1,4 +1,5 @@
 
+import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.emberjs.gts.GtsFileViewProvider
 import com.emberjs.icons.EmberIcons
@@ -66,8 +67,8 @@ class TemplateLintFixAction : JSLinterFixAction(
         return (f.name.endsWith(".hbs")
                 || (f.name.endsWith(".js") && supportsJS)
                 || (f.name.endsWith(".ts") && supportsJS)
-                || f.name.endsWith(".gjs")
-                || f.name.endsWith(".gts"))
+                || (f.name.endsWith(".gjs") && f.fileType == HbFileType.INSTANCE)
+                || (f.name.endsWith(".gts") && f.fileType == HbFileType.INSTANCE))
                 && !f.name.endsWith(".d.ts")
     }
 
