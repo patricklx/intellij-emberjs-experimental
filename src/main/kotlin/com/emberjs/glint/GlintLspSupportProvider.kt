@@ -2,6 +2,8 @@ package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
 import com.emberjs.gts.GtsFileType
+import com.emberjs.utils.emberRoot
+import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parentModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -16,10 +18,9 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.findPsiFile
+import com.intellij.openapi.vfs.isFile
 import com.intellij.platform.lsp.api.LspServerDescriptor
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
@@ -51,7 +52,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     val lspServerManager = LspServerManager.getInstance(project)
     var isWsl = false
     var wslDistro = ""
-    var lastDir = project.guessProjectDir()
+    var lastDir: VirtualFile? = null
 
     public val server
         get() =
@@ -86,13 +87,20 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     fun isAvailable(vfile: VirtualFile): Boolean {
-        if (vfile.parentModule != null && isAvailableFromDir(vfile.parentModule!!)) {
-            return true
+        var f: VirtualFile? = vfile
+        while (true) {
+            if (f?.isFile == true) {
+                f = f.parent
+            }
+            if (f?.path?.contains("node_modules") == true) {
+                continue
+            }
+            if (f != null && isAvailableFromDir(f)) {
+                return true
+            }
+            f = f?.parentEmberModule
+            if (f == null) return false
         }
-        if (project.guessProjectDir() != null && isAvailableFromDir(project.guessProjectDir()!!)) {
-            return true
-        }
-        return false
     }
 
     fun ensureStarted(vfile: VirtualFile) {
