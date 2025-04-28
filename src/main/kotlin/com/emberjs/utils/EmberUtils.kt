@@ -285,6 +285,10 @@ class EmberUtils {
         fun findComponentArgsType(element: JSElement): JSRecordType? {
             var cls: PsiElement? = element
             if (cls is TypeScriptVariable) {
+                if (cls.jsType.toString().startsWith("TOC<") || cls.jsType.toString().startsWith("TemplateOnlyComponent<")) {
+                    val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
+                    return arg.asRecordType().properties.find { it.memberName == "Args" }?.jsType?.asRecordType()
+                }
                 return cls.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
             if (cls is TypeScriptAsExpression) {
