@@ -53,6 +53,7 @@
     </applicationListeners>
 
     <extensions defaultExtensionNs="com.intellij">
+        <multiLangCommenter implementation="com.emberjs.gts.GtsCommenter" />
         <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <lang.fileViewProviderFactory language="Gjs" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <editorHighlighterProvider filetype="Gts File" implementationClass="com.emberjs.gts.GtsHighlighterProvider"/>

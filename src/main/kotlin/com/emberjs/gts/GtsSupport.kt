@@ -2,9 +2,11 @@ package com.emberjs.gts
 
 import com.dmarcotte.handlebars.HbHighlighter
 import com.dmarcotte.handlebars.HbLanguage
+import com.dmarcotte.handlebars.editor.comments.HbCommenter
 import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
+import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.hbs.EmberReference
 import com.emberjs.icons.EmberIcons
 import com.emberjs.index.EmberNameIndex
@@ -23,6 +25,7 @@ import com.intellij.lang.javascript.*
 import com.intellij.lang.javascript.config.JSImportResolveContext
 import com.intellij.lang.javascript.dialects.ECMA6ParserDefinition
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
+import com.intellij.lang.javascript.editing.JavascriptCommenter
 import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
@@ -44,6 +47,8 @@ import com.intellij.lang.xml.XmlFormattingModel
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -78,13 +83,11 @@ import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.psi.util.elementType
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
-import com.intellij.xml.template.formatter.TemplateFormatUtil
 import java.util.function.Predicate
 import javax.swing.Icon
 
@@ -1099,5 +1102,41 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         }
         return createModel(FormattingContext.create(node.psi, settings)).rootBlock
     }
+}
 
+
+class GtsCommenter: MultipleLangCommentProvider {
+
+    protected fun findFirstElementOnLine(file: PsiFile, editor: Editor): PsiElement? {
+        val document = editor.document
+        val number = document.getLineNumber(editor.selectionModel.selectionStart)
+        val offset = document.getLineStartOffset(number)
+        val at = file.viewProvider.findElementAt(offset)
+        if (at !is PsiWhiteSpace) {
+            return at
+        } else {
+            val next = PsiTreeUtil.nextVisibleLeaf(at)
+            return if (next != null && document.getLineNumber(
+                    next.textRange.startOffset
+                ) == number
+            ) next else at
+        }
+    }
+
+    override fun getLineCommenter(
+        file: PsiFile,
+        editor: Editor,
+        p2: Language,
+        p3: Language
+    ): Commenter? {
+        val element = findFirstElementOnLine(file, editor) ?: return null
+        if (element.containingFile is HtmlFileImpl || element.containingFile is HbPsiFile || element is OuterLanguageElement) {
+            return HbCommenter()
+        }
+        return JavascriptCommenter()
+    }
+
+    override fun canProcess(p0: PsiFile, p1: FileViewProvider): Boolean {
+        return p1 is GtsFileViewProvider
+    }
 }
