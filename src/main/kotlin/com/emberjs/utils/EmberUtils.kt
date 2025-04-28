@@ -6,9 +6,11 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.gts.GjsLanguage
 import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFile
 import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.gts.GtsLanguage
 import com.emberjs.hbs.*
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.navigation.EmberGotoRelatedProvider
@@ -285,6 +287,10 @@ class EmberUtils {
         fun findComponentArgsType(element: JSElement): JSRecordType? {
             var cls: PsiElement? = element
             if (cls is TypeScriptVariable) {
+                if (cls.jsType.toString().startsWith("TOC<") || cls.jsType.toString().startsWith("TemplateOnlyComponent<")) {
+                    val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
+                    return arg.asRecordType().properties.find { it.memberName == "Args" }?.jsType?.asRecordType()
+                }
                 return cls.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
             if (cls is TypeScriptAsExpression) {
@@ -840,6 +846,12 @@ class EmberUtils {
                         }
                     }
                 }
+
+                if (cls is TypeScriptVariable) {
+                    jsTemplate = f.containingFile.viewProvider.findElementAt(cls.children[1].textOffset, JavaScriptSupportLoader.TYPESCRIPT)
+                } else if (cls is JSVariable) {
+                    jsTemplate = f.containingFile.viewProvider.findElementAt(cls.children[1].textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                }
             }
 
             template = dir?.findFile("$name.hbs") ?: dir?.findFile("template.hbs") ?: dir?.findFile("template.ts") ?: dir?.findFile("template.js")
@@ -930,6 +942,13 @@ class EmberUtils {
                             blocks = blocks ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Blocks" }
                             args = args ?: typeArgument.asRecordType().properties.toList().find { it.memberName == "Args" }
                         }
+                    }
+                }
+                if (cls is TypeScriptVariable) {
+                    if (cls.jsType.toString().startsWith("TOC<") || cls.jsType.toString().startsWith("TemplateOnlyComponent<")) {
+                        val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
+                        blocks = arg.asRecordType().properties.find { it.memberName == "Blocks" }
+                        args = arg.asRecordType().properties.find { it.memberName == "Args" }
                     }
                 }
                 if (blocks != null) {

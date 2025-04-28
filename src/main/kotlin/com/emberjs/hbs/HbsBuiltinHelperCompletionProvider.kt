@@ -1,5 +1,6 @@
 package com.emberjs.hbs
 
+import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.lookup.EmberLookupInternalElementBuilder
 import com.emberjs.utils.originalVirtualFile
@@ -9,6 +10,7 @@ import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parentsWithSelf
 import com.intellij.util.ProcessingContext
 
@@ -27,6 +29,9 @@ class HbsBuiltinHelperCompletionProvider(val helpers: List<String>) : Completion
         val useImports = hasHbsImports != null
         val path = parameters.position.parentsWithSelf.toList().find { it is HbPathImpl }
         if (path != null && path.text.contains(".")) return
+        if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
+            return
+        }
         result.addAllElements(lookupElements.map { EmberLookupInternalElementBuilder.create(parameters.originalFile, it, useImports) })
     }
 }
