@@ -1,4 +1,6 @@
 class Component {}
+class Helper {}
+class Modifier {}
 
 /**
  The `{{#each}}` helper loops over elements in a collection. It is an extension
@@ -1024,31 +1026,419 @@ declare function hasBlock(params: [blockName: string]): boolean;
  */
 declare function hasBlockParams(params: [blockName: string]);
 
+/**
+ `log` allows you to output the value of variables in the current rendering
+ context. `log` also accepts primitive types such as strings or numbers.
+
+ ```handlebars
+ {{log "myVariable:" myVariable }}
+ ```
+
+ @method log
+ @for Ember.Templates.helpers
+ @param {Array} params
+ @public
+ */
+declare function log(args: any[]);
+
+
+/**
+ The `mut` helper lets you __clearly specify__ that a child `Component` can update the
+ (mutable) value passed to it, which will __change the value of the parent component__.
+
+ To specify that a parameter is mutable, when invoking the child `Component`:
+
+ ```handlebars
+ <MyChild @childClickCount={{fn (mut totalClicks)}} />
+ ```
+
+ or
+
+ ```handlebars
+ {{my-child childClickCount=(mut totalClicks)}}
+ ```
+
+ The child `Component` can then modify the parent's value just by modifying its own
+ property:
+
+ ```javascript
+ // my-child.js
+ export default Component.extend({
+ click() {
+ this.incrementProperty('childClickCount');
+ }
+ });
+ ```
+
+ Note that for curly components (`{{my-component}}`) the bindings are already mutable,
+ making the `mut` unnecessary.
+
+ Additionally, the `mut` helper can be combined with the `fn` helper to
+ mutate a value. For example:
+
+ ```handlebars
+ <MyChild @childClickCount={{this.totalClicks}} @click-count-change={{fn (mut totalClicks))}} />
+ ```
+
+ or
+
+ ```handlebars
+ {{my-child childClickCount=totalClicks click-count-change=(fn (mut totalClicks))}}
+ ```
+
+ The child `Component` would invoke the function with the new click value:
+
+ ```javascript
+ // my-child.js
+ export default Component.extend({
+ click() {
+ this.get('click-count-change')(this.get('childClickCount') + 1);
+ }
+ });
+ ```
+
+ The `mut` helper changes the `totalClicks` value to what was provided as the `fn` argument.
+
+ The `mut` helper, when used with `fn`, will return a function that
+ sets the value passed to `mut` to its first argument. As an example, we can create a
+ button that increments a value passing the value directly to the `fn`:
+
+ ```handlebars
+ {{! inc helper is not provided by Ember }}
+ <button onclick={{fn (mut count) (inc count)}}>
+ Increment count
+ </button>
+ ```
+
+ @method mut
+ @param {Object} [attr] the "two-way" attribute that can be modified.
+ @for Ember.Templates.helpers
+ @public
+ */
+declare function mut(params: [attr: any]);
+
+
+/**
+ Use the `{{modifier}}` helper to create contextual modifier so
+ that it can be passed around as first-class values in templates.
+
+ ```handlebars
+ {{#let (modifier "click-outside" click=this.submit) as |on-click-outside|}}
+
+ {{!-- this is equivalent to `<MyComponent {{click-outside click=this.submit}} />` --}}
+ <MyComponent {{on-click-outside}} />
+
+ {{!-- this will pass the modifier itself into the component, instead of invoking it now --}}
+ <MyComponent @modifier={{modifier on-click-outside "extra" "args"}} />
+
+ {{!-- this will yield the modifier itself ("contextual modifier"), instead of invoking it now --}}
+ {{yield on-click-outside}}
+ {{/let}}
+ ```
+
+ ### Arguments
+
+ The `{{modifier}}` helper works similarly to the [`{{component}}`](./component?anchor=component) and
+ [`{{helper}}`](./helper?anchor=helper) helper:
+
+ * When passed a string (e.g. `(modifier "foo")`) as the first argument,
+ it will produce an opaque, internal "modifier definition" object
+ that can be passed around and invoked elsewhere.
+
+ * Any additional positional and/or named arguments (a.k.a. params and hash)
+ will be stored ("curried") inside the definition object, such that, when invoked,
+ these arguments will be passed along to the referenced modifier.
+
+ @method modifier
+ @for Ember.Templates.helpers
+ @public
+ @since 3.27.0
+ */
+declare function modifier(args: [modifier: string|Modifier, args: any[]], hash: {[x: string]: any}): Modifier|undefined;
+
+/**
+ Use the `{{helper}}` helper to create contextual helper so
+ that it can be passed around as first-class values in templates.
+
+ ```handlebars
+ {{#let (helper "join-words" "foo" "bar" separator=" ") as |foo-bar|}}
+
+ {{!-- this is equivalent to invoking `{{join-words "foo" "bar" separator=" "}}` --}}
+ {{foo-bar}}
+
+ {{!-- this will pass the helper itself into the component, instead of invoking it now --}}
+ <MyComponent @helper={{helper foo-bar "baz"}} />
+
+ {{!-- this will yield the helper itself ("contextual helper"), instead of invoking it now --}}
+ {{yield foo-bar}}
+ {{/let}}
+ ```
+
+ ### Arguments
+
+ The `{{helper}}` helper works similarly to the [`{{component}}`](./component?anchor=component) and
+ [`{{modifier}}`](./modifier?anchor=modifier) helper:
+
+ * When passed a string (e.g. `(helper "foo")`) as the first argument,
+ it will produce an opaque, internal "helper definition" object
+ that can be passed around and invoked elsewhere.
+
+ * Any additional positional and/or named arguments (a.k.a. params and hash)
+ will be stored ("curried") inside the definition object, such that, when invoked,
+ these arguments will be passed along to the referenced helper.
+
+
+ @method helper
+ @for Ember.Templates.helpers
+ @public
+ @since 3.27.0
+ */
+declare function helper(args: [helper: string|Helper, args: any[]], hash: {[x: string]: any}): Helper|undefined;
+
+
+/**
+ `page-title` allows you to set the title of any page in your application and
+ append additional titles for each route. For complete documentation, see
+ https://github.com/ember-cli/ember-page-title.
+
+ ```handlebars
+ {{page-title "My Page Title" }}
+ ```
+
+ @method page-title
+ @for Ember.Templates.helpers
+ @param {String} param
+ @public
+ */
+declare function pageTitle(args: [title: string]);
+
+/**
+ The `{{mount}}` helper lets you embed a routeless engine in a template.
+ Mounting an engine will cause an instance to be booted and its `application`
+ template to be rendered.
+
+ For example, the following template mounts the `ember-chat` engine:
+
+ ```handlebars
+ {{! application.hbs }}
+ {{mount "ember-chat"}}
+ ```
+
+ Additionally, you can also pass in a `model` argument that will be
+ set as the engines model. This can be an existing object:
+
+ ```
+ <div>
+ {{mount 'admin' model=userSettings}}
+ </div>
+ ```
+
+ Or an inline `hash`, and you can even pass components:
+
+ ```
+ <div>
+ <h1>Application template!</h1>
+ {{mount 'admin' model=(hash
+ title='Secret Admin'
+ signInButton=(component 'sign-in-button')
+ )}}
+ </div>
+ ```
+
+ @method mount
+ @param {String} name Name of the engine to mount.
+ @param {Object} [model] Object that will be set as
+  the model of the engine.
+ @for Ember.Templates.helpers
+ @public
+ */
+declare function mount(args: [name: string], model: any);
+
+
+/**
+ The `{{unbound}}` helper disconnects the one-way binding of a property,
+ essentially freezing its value at the moment of rendering. For example,
+ in this example the display of the variable `name` will not change even
+ if it is set with a new value:
+
+ ```handlebars
+ {{unbound this.name}}
+ ```
+
+ Like any helper, the `unbound` helper can accept a nested helper expression.
+ This allows for custom helpers to be rendered unbound:
+
+ ```handlebars
+ {{unbound (some-custom-helper)}}
+ {{unbound (capitalize this.name)}}
+ {{! You can use any helper, including unbound, in a nested expression }}
+ {{capitalize (unbound this.name)}}
+ ```
+
+ The `unbound` helper only accepts a single argument, and it return an
+ unbound value.
+
+ @method unbound
+ @for Ember.Templates.helpers
+ @public
+ */
+declare function unbound(args: [ref: any]);
+
+
+
+/**
+ The `readonly` helper let's you specify that a binding is one-way only,
+ instead of two-way.
+ When you pass a `readonly` binding from an outer context (e.g. parent component),
+ to to an inner context (e.g. child component), you are saying that changing that
+ property in the inner context does not change the value in the outer context.
+
+ To specify that a binding is read-only, when invoking the child `Component`:
+
+ ```app/components/my-parent.js
+ export default Component.extend({
+ totalClicks: 3
+ });
+ ```
+
+ ```app/templates/components/my-parent.hbs
+ {{log totalClicks}} // -> 3
+ <MyChild @childClickCount={{readonly totalClicks}} />
+ ```
+ ```
+ {{my-child childClickCount=(readonly totalClicks)}}
+ ```
+
+ Now, when you update `childClickCount`:
+
+ ```app/components/my-child.js
+ export default Component.extend({
+ click() {
+ this.incrementProperty('childClickCount');
+ }
+ });
+ ```
+
+ The value updates in the child component, but not the parent component:
+
+ ```app/templates/components/my-child.hbs
+ {{log childClickCount}} //-> 4
+ ```
+
+ ```app/templates/components/my-parent.hbs
+ {{log totalClicks}} //-> 3
+ <MyChild @childClickCount={{readonly totalClicks}} />
+ ```
+ or
+ ```app/templates/components/my-parent.hbs
+ {{log totalClicks}} //-> 3
+ {{my-child childClickCount=(readonly totalClicks)}}
+ ```
+
+ ### Objects and Arrays
+
+ When passing a property that is a complex object (e.g. object, array) instead of a primitive object (e.g. number, string),
+ only the reference to the object is protected using the readonly helper.
+ This means that you can change properties of the object both on the parent component, as well as the child component.
+ The `readonly` binding behaves similar to the `const` keyword in JavaScript.
+
+ Let's look at an example:
+
+ First let's set up the parent component:
+
+ ```app/components/my-parent.js
+ import Component from '@ember/component';
+
+ export default Component.extend({
+ clicks: null,
+
+ init() {
+ this._super(...arguments);
+ this.set('clicks', { total: 3 });
+ }
+ });
+ ```
+
+ ```app/templates/components/my-parent.hbs
+ {{log clicks.total}} //-> 3
+ <MyChild @childClicks={{readonly clicks}} />
+ ```
+ ```app/templates/components/my-parent.hbs
+ {{log clicks.total}} //-> 3
+ {{my-child childClicks=(readonly clicks)}}
+ ```
+
+ Now, if you update the `total` property of `childClicks`:
+
+ ```app/components/my-child.js
+ import Component from '@ember/component';
+
+ export default Component.extend({
+ click() {
+ this.get('clicks').incrementProperty('total');
+ }
+ });
+ ```
+
+ You will see the following happen:
+
+ ```app/templates/components/my-parent.hbs
+ {{log clicks.total}} //-> 4
+ <MyChild @childClicks={{readonly clicks}} />
+ ```
+ or
+ ```app/templates/components/my-parent.hbs
+ {{log clicks.total}} //-> 4
+ {{my-child childClicks=(readonly clicks)}}
+ ```
+
+ ```app/templates/components/my-child.hbs
+ {{log childClicks.total}} //-> 4
+ ```
+
+ @method readonly
+ @param {Object} [attr] the read-only attribute.
+ @for Ember.Templates.helpers
+ @private
+ */
+declare function readonly(args: [attr: any]);
+
 export {
-    fn,
-    component,
-    array,
-    concat,
-    get,
-    hash
+ fn,
+ component,
+ array,
+ concat,
+ get,
+ hash,
+ log,
+ mut,
 }
 
 const helpers = {
-  each,
-  'let': _let,
-  fn,
-  component,
   array,
+  component,
+ 'debugger': _debugger,
+  each,
+ 'each-in': eachIn,
+  fn,
+ 'has-block': hasBlock,
+ 'has-block-params': hasBlockParams,
+  hash,
+  helper,
+ 'if': _if,
+ 'in-element': in_element,
+ 'let': _let,
+  log,
+  modifier,
+  mount,
+  mut,
+ 'outlet': outlet,
+ 'page-title': pageTitle,
   concat,
-  'debugger': _debugger,
-  'each-in': eachIn,
   get,
-  'if': _if,
-  'has-block': hasBlock,
-  'has-block-params': hasBlockParams,
+  unbound,
+  readonly,
   'unless': unless,
-  'outlet': outlet,
-  'in-element': in_element,
   'yield': _yield
 }
 
