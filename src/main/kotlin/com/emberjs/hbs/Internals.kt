@@ -41,6 +41,7 @@ object Internals {
             "query-params",
             "textarea",
             "unbound",
+            "readonly",
             "unless",
             "yield",
             "has-block-params",

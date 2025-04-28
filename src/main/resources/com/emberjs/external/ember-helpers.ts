@@ -1197,22 +1197,6 @@ declare function helper(args: [helper: string|Helper, args: any[]], hash: {[x: s
 
 
 /**
- `page-title` allows you to set the title of any page in your application and
- append additional titles for each route. For complete documentation, see
- https://github.com/ember-cli/ember-page-title.
-
- ```handlebars
- {{page-title "My Page Title" }}
- ```
-
- @method page-title
- @for Ember.Templates.helpers
- @param {String} param
- @public
- */
-declare function pageTitle(args: [title: string]);
-
-/**
  The `{{mount}}` helper lets you embed a routeless engine in a template.
  Mounting an engine will cause an instance to be booted and its `application`
  template to be rendered.
@@ -1433,7 +1417,6 @@ const helpers = {
   mount,
   mut,
  'outlet': outlet,
- 'page-title': pageTitle,
   concat,
   get,
   unbound,
@@ -1443,5 +1426,3 @@ const helpers = {
 }
 
 export default helpers;
-
-
