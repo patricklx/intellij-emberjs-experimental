@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2025.1.2 (2025-04-28)
+
+#### :bug: Bug Fix
+* [#244](https://github.com/patricklx/intellij-emberjs-experimental/pull/244) add missing keywords ([@patricklx](https://github.com/patricklx))
+* [#242](https://github.com/patricklx/intellij-emberjs-experimental/pull/242) fix toc args and named blocks ([@patricklx](https://github.com/patricklx))
+* [#241](https://github.com/patricklx/intellij-emberjs-experimental/pull/241) fix random work dir for glint ([@patricklx](https://github.com/patricklx))
+* [#240](https://github.com/patricklx/intellij-emberjs-experimental/pull/240) fix multiple etl errors ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.0.2 (2025-04-24)
 
 #### :rocket: Enhancement
