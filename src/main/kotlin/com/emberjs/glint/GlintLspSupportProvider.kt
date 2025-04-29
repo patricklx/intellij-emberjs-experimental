@@ -93,6 +93,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 f = f.parent
             }
             if (f?.path?.contains("node_modules") == true) {
+                f = f.parentEmberModule
                 continue
             }
             if (f != null && isAvailableFromDir(f)) {
