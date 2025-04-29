@@ -2,7 +2,7 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lang.javascript.linter.JSLinterError
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.text.StringUtil
-import org.codehaus.jettison.json.JSONObject
+import kotlinx.serialization.json.*
 import java.io.IOException
 import java.util.*
 
@@ -19,13 +19,13 @@ class TemplateLintResultParser {
         private const val SEVERITY = "severity"
         private const val MESSAGE = "message"
 
-        private fun parseItem(map: JSONObject): JSLinterError {
-            val line = map.getInt(LINE)
-            val column = map.getInt(COLUMN)
-            val rule = map.getString(RULE)
-            val text = map.getString(MESSAGE)
+        private fun parseItem(map: JsonObject): JSLinterError {
+            val line = map[LINE]!!.jsonPrimitive.int
+            val column = map[COLUMN]!!.jsonPrimitive.int
+            val rule = map[RULE]!!.jsonPrimitive.content
+            val text = map[MESSAGE]!!.jsonPrimitive.content
 
-            val highlightSeverity = when (map.getInt(SEVERITY)) {
+            val highlightSeverity = when (map[SEVERITY]!!.jsonPrimitive.int) {
                 WARNING_SEVERITY -> HighlightSeverity.WARNING
                 ERROR_SEVERITY -> HighlightSeverity.ERROR
                 else -> null
@@ -43,14 +43,14 @@ class TemplateLintResultParser {
 
         val errorList: ArrayList<JSLinterError> = ArrayList()
         try {
-            val obj = JSONObject(stdout)
+            val obj = Json.parseToJsonElement(stdout!!).jsonObject
 
-            val issues = obj.getJSONArray(obj.keys().next() as String)
-            for (i in 0 until issues.length()) {
-                val issue = issues.getJSONObject(i)
+            val issues = obj.jsonArray
+            for (i in 0 until issues.size) {
+                val issue = issues[i].jsonObject
 
                 // we skip fatal errors
-                if (issue.has("fatal") && issue.getBoolean("fatal")) continue
+                if (issue.containsKey("fatal") && issue["fatal"]?.jsonPrimitive?.boolean == true) continue
 
                 errorList.add(parseItem(issue))
             }
