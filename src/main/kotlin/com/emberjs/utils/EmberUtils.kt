@@ -56,7 +56,7 @@ import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.search.ProjectScope
+import com.intellij.psi.templateLanguages.OuterLanguageElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
@@ -148,6 +148,19 @@ class EmberUtils {
             }
 
             val r = ref as PsiElement? ?: exp
+
+            if (r is JSVariable) {
+                val v = r.children.getOrNull(1)
+                if (v != null) {     
+                  val viewProvider = file.containingFile.viewProvider
+                  val ts = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.TYPESCRIPT)
+                  val js = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                  if (ts is OuterLanguageElement || js is OuterLanguageElement) {
+                      return r
+                  }
+                }
+            }
+
             val func = r?.children?.find { it is JSCallExpression }
             if (func is JSCallExpression) {
                 return func
@@ -765,7 +778,8 @@ class EmberUtils {
         }
 
         fun getComponentReferenceData(f: PsiElement): ComponentReferenceData {
-            val file = resolveDefaultExport(f.containingFile)?.containingFile ?: f
+            val defaultExport = resolveDefaultExport(f.containingFile)
+            val file = defaultExport?.containingFile ?: f
             var name = file.containingFile.name.split(".").first()
             val dir = file.containingFile.parent as PsiDirectoryImpl?
             var template: PsiFile? = null
@@ -803,6 +817,7 @@ class EmberUtils {
             } else {
                 cls = findDefaultExportClass(tsFile)
                         ?: findDefaultExportClass(containingFile)
+                        ?: defaultExport
                         ?: file
             }
 
