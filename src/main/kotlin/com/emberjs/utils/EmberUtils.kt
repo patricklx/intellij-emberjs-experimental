@@ -346,11 +346,6 @@ class EmberUtils {
             }
 
             if (element is ES6ImportedBinding) {
-                var resolvedElement = (element).multiResolve(true)[0]?.element
-                resolvedElement = followReferences(resolvedElement)
-                if (resolvedElement != null) {
-                    return resolvedElement
-                }
                 var ref:PsiReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
                 if (ref == null) {
                     ref = element.declaration?.fromClause?.references?.findLast { it is JSFileModuleReference }
@@ -781,7 +776,8 @@ class EmberUtils {
         }
 
         fun getComponentReferenceData(f: PsiElement): ComponentReferenceData {
-            val file = resolveDefaultExport(f.containingFile)?.containingFile ?: f
+            val defaultExport = resolveDefaultExport(f.containingFile)
+            val file = defaultExport?.containingFile ?: f
             var name = file.containingFile.name.split(".").first()
             val dir = file.containingFile.parent as PsiDirectoryImpl?
             var template: PsiFile? = null
@@ -819,6 +815,7 @@ class EmberUtils {
             } else {
                 cls = findDefaultExportClass(tsFile)
                         ?: findDefaultExportClass(containingFile)
+                        ?: defaultExport
                         ?: file
             }
 
