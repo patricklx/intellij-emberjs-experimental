@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.3 (2025-04-30)
+
+#### :bug: Bug Fix
+* [#247](https://github.com/patricklx/intellij-emberjs-experimental/pull/247) fix bad loop ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.2 (2025-04-28)
 
 #### :bug: Bug Fix
