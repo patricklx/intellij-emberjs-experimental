@@ -56,7 +56,7 @@ import com.intellij.psi.impl.file.PsiDirectoryImpl
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
 import com.intellij.psi.impl.source.tree.LeafPsiElement
-import com.intellij.psi.search.ProjectScope
+import com.intellij.psi.templateLanguages.OuterLanguageElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.parents
@@ -148,6 +148,17 @@ class EmberUtils {
             }
 
             val r = ref as PsiElement? ?: exp
+
+            if (r is JSVariable) {
+                val v = r.children[1]
+                val viewProvider = file.containingFile.viewProvider
+                val ts = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.TYPESCRIPT)
+                val js = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                if (ts is OuterLanguageElement || js is OuterLanguageElement) {
+                    return r
+                }
+            }
+
             val func = r?.children?.find { it is JSCallExpression }
             if (func is JSCallExpression) {
                 return func
@@ -335,6 +346,11 @@ class EmberUtils {
             }
 
             if (element is ES6ImportedBinding) {
+                var resolvedElement = (element).multiResolve(true)[0]?.element
+                resolvedElement = followReferences(resolvedElement)
+                if (resolvedElement != null) {
+                    return resolvedElement
+                }
                 var ref:PsiReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
                 if (ref == null) {
                     ref = element.declaration?.fromClause?.references?.findLast { it is JSFileModuleReference }
