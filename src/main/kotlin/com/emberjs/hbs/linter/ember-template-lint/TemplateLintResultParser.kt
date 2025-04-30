@@ -45,7 +45,7 @@ class TemplateLintResultParser {
         try {
             val obj = Json.parseToJsonElement(stdout!!).jsonObject
 
-            val issues = obj.jsonArray
+            val issues = obj.values.flatMap { map -> map.jsonArray }
             for (i in 0 until issues.size) {
                 val issue = issues[i].jsonObject
 
@@ -59,7 +59,7 @@ class TemplateLintResultParser {
         } catch (ioException: IOException) {
             return null
         } catch (exception: Exception) {
-            LOG.warn("TemplateLint result parsing error")
+            LOG.warn("TemplateLint result parsing error: $exception")
             throw Exception("TemplateLint result parsing error", exception)
         }
     }
