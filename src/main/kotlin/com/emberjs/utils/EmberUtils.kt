@@ -150,12 +150,14 @@ class EmberUtils {
             val r = ref as PsiElement? ?: exp
 
             if (r is JSVariable) {
-                val v = r.children[1]
-                val viewProvider = file.containingFile.viewProvider
-                val ts = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.TYPESCRIPT)
-                val js = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
-                if (ts is OuterLanguageElement || js is OuterLanguageElement) {
-                    return r
+                val v = r.children.getOrNull(1)
+                if (v != null) {     
+                  val viewProvider = file.containingFile.viewProvider
+                  val ts = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.TYPESCRIPT)
+                  val js = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                  if (ts is OuterLanguageElement || js is OuterLanguageElement) {
+                      return r
+                  }
                 }
             }
 
