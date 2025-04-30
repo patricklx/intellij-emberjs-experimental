@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2025.1.4 (2025-04-30)
+
+#### :bug: Bug Fix
+* [#249](https://github.com/patricklx/intellij-emberjs-experimental/pull/249) fix toc on other file ([@patricklx](https://github.com/patricklx))
+* [#248](https://github.com/patricklx/intellij-emberjs-experimental/pull/248) fix template lint exception ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.3 (2025-04-30)
 
 #### :bug: Bug Fix
