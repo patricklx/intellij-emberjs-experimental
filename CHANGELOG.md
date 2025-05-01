@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.5 (2025-05-01)
+
+#### :bug: Bug Fix
+* [#251](https://github.com/patricklx/intellij-emberjs-experimental/pull/251) fix glint res ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.4 (2025-04-30)
 
 #### :bug: Bug Fix
