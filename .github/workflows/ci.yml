@@ -167,5 +167,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: EmberExperimental.zip
-          path: ./build/distributions/EmberExperimental.js-*.zip
+          path: ./build/distributions/intellij-emberjs-experimental*.zip
 

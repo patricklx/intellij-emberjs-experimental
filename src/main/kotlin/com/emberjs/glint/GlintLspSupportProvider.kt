@@ -77,10 +77,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 return true
             }
         }
-        val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
-        if (glintPkg == null) {
-            return false
-        }
+        val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return false
         glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
         lastDir = workingDir
         return true
