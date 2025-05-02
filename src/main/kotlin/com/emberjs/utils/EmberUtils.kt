@@ -862,9 +862,9 @@ class EmberUtils {
                     }
                 }
 
-                if (cls is TypeScriptVariable) {
+                if (cls is TypeScriptVariable && cls.children.getOrNull(1) != null) {
                     jsTemplate = f.containingFile.viewProvider.findElementAt(cls.children[1].textOffset, JavaScriptSupportLoader.TYPESCRIPT)
-                } else if (cls is JSVariable) {
+                } else if (cls is JSVariable && cls.children.getOrNull(1) != null) {
                     jsTemplate = f.containingFile.viewProvider.findElementAt(cls.children[1].textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
                 }
             }
