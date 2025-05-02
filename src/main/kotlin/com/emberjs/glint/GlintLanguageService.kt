@@ -83,7 +83,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         return if (EmberUtils.isEnabledEmberProject(project)) getGlintDescriptor(project) else null
     }
 
-    override val name = "Glint TypeScript LSP"
+    override val name = "Glint"
 
     override fun getCompletionMergeStrategy(parameters: CompletionParameters, file: PsiFile, context: PsiElement): TypeScriptService.CompletionMergeStrategy {
         return TypeScriptLanguageServiceUtil.getCompletionMergeStrategy(parameters, file, context)
