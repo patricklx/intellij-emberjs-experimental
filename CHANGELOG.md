@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.6 (2025-05-02)
+
+#### :rocket: Enhancement
+* [#253](https://github.com/patricklx/intellij-emberjs-experimental/pull/253) show glint version in status bar ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.5 (2025-05-01)
 
 #### :bug: Bug Fix
