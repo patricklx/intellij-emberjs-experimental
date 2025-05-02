@@ -9,15 +9,23 @@ import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
+import com.intellij.javascript.nodejs.NodePackageVersionUtil
+import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
+import com.intellij.javascript.nodejs.packages.NodePackageInfo
+import com.intellij.javascript.nodejs.packages.NodePackageUtil
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
+import com.intellij.javascript.nodejs.settings.NodePackageInfoManager
+import com.intellij.javascript.nodejs.util.NodePackage
+import com.intellij.javascript.nodejs.util.NodePackageDescriptor
 import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.NlsSafe
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
@@ -26,6 +34,7 @@ import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
+import org.eclipse.lsp4j.ServerInfo
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -36,7 +45,7 @@ class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
         if (!getGlintDescriptor(project).isAvailable(file)) return
-        serverStarter.ensureServerStarted(getGlintDescriptor(project))
+        getGlintDescriptor(project).ensureStarted(file)
     }
 }
 
@@ -46,7 +55,7 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 }
 
 
-@Service
+@Service(Service.Level.PROJECT)
 class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
     val lspServerManager = LspServerManager.getInstance(project)
@@ -103,7 +112,21 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun ensureStarted(vfile: VirtualFile) {
         if (!isAvailable(vfile)) return
-        lspServerManager.startServersIfNeeded(GlintLspSupportProvider::class.java)
+        lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
+        server?.let {
+            if (it.initializeResult?.serverInfo == null) {
+                it.initializeResult?.serverInfo = ServerInfo()
+            }
+            it.initializeResult?.serverInfo?.name = "Glint"
+            it.initializeResult?.serverInfo?.version = getGlintVersion()
+        }
+    }
+
+    fun getGlintVersion(): String? {
+        val workingDir = lastDir!!
+        val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
+        var path = workingDir.findFileByRelativePath("node_modules/@glint/core/package.json") ?: return null
+        return PackageJsonData.getOrCreate(path).version?.rawVersion
     }
 
     override fun createCommandLine(): GeneralCommandLine {
