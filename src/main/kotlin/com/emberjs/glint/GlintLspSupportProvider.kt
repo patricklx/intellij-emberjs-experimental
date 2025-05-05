@@ -5,6 +5,7 @@ import com.emberjs.gts.GtsFileType
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.parentEmberModule
 import com.emberjs.utils.parentModule
+import com.emberjs.utils.slice
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
@@ -74,10 +75,10 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             isWsl = true
         }
         if (isWsl) {
-            val path = "./node_modules/@glint/core/bin/glint-language-server.js"
+            val wslWorkdir = "/" + workingDir.path.split("/").slice(4).joinToString("/")
+            val path = "$wslWorkdir/node_modules/@glint/core/bin/glint-language-server.js"
             val builder = ProcessBuilder()
-                .directory(File(workingDir.path))
-                .command("wsl", "--", "test", "-f", "\"$path\"", "||", "echo", "\"true\"")
+                .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
             val p = builder.start()
             p.waitFor()
             val out = p.inputStream.reader().readText().trim()
