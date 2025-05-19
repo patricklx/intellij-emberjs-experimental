@@ -74,9 +74,13 @@ class GtsFileTest : BasePlatformTestCase() {
         val otherGts = """
             export const OtherComponent = 2;
             export const other = 2;
+            export const Comment: TOC<
+                SomeType
+            > = <template></template>;
         """.trimIndent()
         val gts = """
             import { OtherComponent } from './other-component';
+            import { Comment } from './other-component';
             import { other } from './other-component';
             import x from "a";
             import { y, quux } from "a";
@@ -92,6 +96,7 @@ class GtsFileTest : BasePlatformTestCase() {
             
             export default <template>
                 <OtherComponent />
+                <Comment />
                 <Foo />
                 <Baz />
                 <Grault />
