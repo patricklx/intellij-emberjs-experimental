@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.8 (2025-05-19)
+
+#### :bug: Bug Fix
+* [#258](https://github.com/patricklx/intellij-emberjs-experimental/pull/258) fix wrong unused imports that reference exports of gts files ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.7 (2025-05-02)
 
 #### :bug: Bug Fix
