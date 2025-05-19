@@ -151,7 +151,7 @@ class EmberUtils {
 
             if (r is JSVariable) {
                 val v = r.children.getOrNull(1)
-                if (v != null) {     
+                if (v != null) {
                   val viewProvider = file.containingFile.viewProvider
                   val ts = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.TYPESCRIPT)
                   val js = viewProvider.findElementAt(v.textOffset, JavaScriptSupportLoader.ECMA_SCRIPT_6)
@@ -348,6 +348,10 @@ class EmberUtils {
             }
 
             if (element is ES6ImportedBinding) {
+                val res = element.multiResolve(true).firstOrNull()
+                if (res != null && res.element != null) {
+                    return res.element
+                }
                 var ref:PsiReference? = element.declaration?.fromClause?.references?.findLast { it is EmberJSModuleReference && it.rangeInElement.endOffset == it.element.textLength - 1 && it.resolve() != null } as EmberJSModuleReference?
                 if (ref == null) {
                     ref = element.declaration?.fromClause?.references?.findLast { it is JSFileModuleReference }

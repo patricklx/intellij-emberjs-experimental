@@ -218,17 +218,13 @@ class EmberTagNameProvider : XmlTagNameProvider {
                 val hashYield = yieldblock.children.find { it is HbHash && it.hashName == "to"}
                 val tsProp = yieldblock as? TypeScriptPropertySignature
                 var namedYields = hashYield?.let { (it as HbHash).children.last().text.replace(Regex("\"|'"), "") }
-                namedYields = namedYields ?: (yieldblock as? HbPsiElement)?.children?.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
                 namedYields = namedYields ?: tsProp?.name
+                namedYields = namedYields ?: (yieldblock as? HbPsiElement)?.children?.any { it is HbHash && it.hashName == "to"}.ifFalse { "default" }
                 val names: String
 
                 // if the tag has already colon, then remove it from the lookup elements, otherwise intellij will
                 // add it again and it wil turn into <::name
-                if (element.name.startsWith(":")) {
-                    names = namedYields!!
-                } else {
-                    names = namedYields.let { ":$it" }
-                }
+                names = namedYields.let { ":$it" }
                 // needs prioritization to appear before common html tags
                 result.add(names.let { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it), 2.0) })
             }
