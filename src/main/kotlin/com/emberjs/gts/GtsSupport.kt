@@ -49,6 +49,7 @@ import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.actions.lists.TrailingComma
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -126,6 +127,7 @@ class GjsLanguage(): GtsLanguage(JS, "Gjs") {
 
 class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
     : JSFileImpl(viewProvider!!, isJS.ifTrue { GjsLanguage.INSTANCE } ?: GtsLanguage.INSTANCE) {
+
     override fun getFileType(): FileType {
         return isJS.ifTrue { GjsFileType.INSTANCE } ?: GtsFileType.INSTANCE
     }
