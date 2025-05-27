@@ -226,7 +226,7 @@ class GlintExternalAnnotator : JSLinterExternalAnnotator<GlintState>(true) {
         }
 
         val errors: MutableList<JSLinterError> = mutableListOf()
-        errors.addAll(res?.map { JSLinterError(it.line, it.column, it.description, it.category, it.severity) } ?: listOf())
+        errors.addAll(res?.map { JSLinterError(it.line + 1, it.column, it.description, it.category, it.severity) } ?: listOf())
         return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
     }
 

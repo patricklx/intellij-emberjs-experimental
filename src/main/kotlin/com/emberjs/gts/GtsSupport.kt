@@ -49,6 +49,7 @@ import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.actions.lists.TrailingComma
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
