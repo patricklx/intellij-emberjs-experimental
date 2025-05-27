@@ -126,6 +126,7 @@ class GjsLanguage(): GtsLanguage(JS, "Gjs") {
 
 class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
     : JSFileImpl(viewProvider!!, isJS.ifTrue { GjsLanguage.INSTANCE } ?: GtsLanguage.INSTANCE) {
+
     override fun getFileType(): FileType {
         return isJS.ifTrue { GjsFileType.INSTANCE } ?: GtsFileType.INSTANCE
     }
@@ -791,7 +792,9 @@ class GtsIndexedFileTypeProvider : IndexedFileTypeProvider {
     override fun getFileTypesToIndex(): Array<FileType> = arrayOf(GtsFileType.INSTANCE)
 }
 
-val NoWrap = Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
+val NoWrap by lazy {
+    Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
+}
 
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
