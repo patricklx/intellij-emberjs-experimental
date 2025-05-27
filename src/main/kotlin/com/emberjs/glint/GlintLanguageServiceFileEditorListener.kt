@@ -1,8 +1,14 @@
 package com.emberjs.glint
 
+import com.emberjs.gts.GjsLanguage
+import com.emberjs.gts.GtsFileViewProvider
+import com.emberjs.gts.GtsLanguage
+import com.intellij.codeInsight.daemon.impl.analysis.FileHighlightingSetting
+import com.intellij.codeInsight.daemon.impl.analysis.HighlightingSettingsPerFile
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiManager
 
 class GlintLanguageServiceFileEditorListener : FileEditorManagerListener {
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {

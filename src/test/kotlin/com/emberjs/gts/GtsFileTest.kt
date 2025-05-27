@@ -3,7 +3,10 @@ package com.emberjs.hbs
 import com.emberjs.gts.GjsFileType
 import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.intellij.lang.javascript.BasicDialectDetector
+import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
+import com.intellij.lang.javascript.inspections.JSLastCommaInObjectLiteralInspection
 import com.intellij.lang.javascript.inspections.JSUnusedGlobalSymbolsInspection
 import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
@@ -120,5 +123,28 @@ class GtsFileTest : BasePlatformTestCase() {
         TestCase.assertEquals(highlightInfos.toString(), 2, highlightInfos.size)
         TestCase.assertTrue(highlightInfos.first().description.contains("quux"))
         TestCase.assertTrue(highlightInfos.last().description.contains("qux"))
+    }
+
+    @Test
+    fun testGtsTrailingCommaAllowed() {
+        val gts = """
+            const a = {
+                a: 1,
+                b: 2,
+            }
+        """.trimIndent()
+        myFixture.addFileToProject("main.gts", gts)
+        myFixture.configureByFile("main.gts")
+        myFixture.enableInspections(JSLastCommaInObjectLiteralInspection())
+        try {
+            CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+        } catch (exception: Exception) {
+
+        }
+
+        val highlighting = myFixture.doHighlighting()
+        System.out.println(highlighting)
+        val noCommaAllowed = highlighting.filter { it.description?.contains("comma") == true }
+        TestCase.assertEquals(noCommaAllowed.toString(), 0, noCommaAllowed.size)
     }
 }
