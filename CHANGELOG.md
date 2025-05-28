@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.9 (2025-05-28)
+
+#### :bug: Bug Fix
+* [#262](https://github.com/patricklx/intellij-emberjs-experimental/pull/262) fix glint duplicate error reporting ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.8 (2025-05-19)
 
 #### :bug: Bug Fix
