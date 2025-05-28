@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.10 (2025-05-28)
+
+#### :bug: Bug Fix
+* [#265](https://github.com/patricklx/intellij-emberjs-experimental/pull/265) make intellij correctly detect gts language as typescript ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.9 (2025-05-28)
 
 #### :bug: Bug Fix
