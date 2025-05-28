@@ -47,9 +47,7 @@ import com.intellij.lang.xml.XmlFormattingModel
 import com.intellij.lexer.HtmlLexer
 import com.intellij.lexer.Lexer
 import com.intellij.lexer.LookAheadLexer
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.actions.lists.TrailingComma
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.util.LayerDescriptor
 import com.intellij.openapi.editor.ex.util.LayeredLexerEditorHighlighter
@@ -99,6 +97,7 @@ val JS: JSLanguageDialect = JavaScriptSupportLoader.ECMA_SCRIPT_6
 
 open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : Language(lang, id) {
     public var fileElementType: JSFileElementType? = null
+
     override fun <T : Any?> getUserData(key: Key<T>): T? {
         if (key.toString() == "js.file.element.type") {
             return fileElementType as T?
@@ -114,7 +113,7 @@ open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : La
     }
 
     companion object {
-        val INSTANCE = GtsLanguage()
+        val INSTANCE = GtsLanguage(TS)
     }
 }
 
@@ -135,8 +134,6 @@ class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
     override fun toString(): String {
         return "GTS File"
     }
-
-
 }
 
 
@@ -395,6 +392,9 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 
     override fun equals(other: Any?): Boolean {
         if (other == TypeScriptFileType) {
+            return true
+        }
+        if (other == JavaScriptFileType) {
             return true
         }
         return super.equals(other)
