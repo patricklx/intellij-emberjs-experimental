@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2025.1.11 (2025-06-03)
+
+#### :rocket: Enhancement
+* [#266](https://github.com/patricklx/intellij-emberjs-experimental/pull/266) bump intellij ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#269](https://github.com/patricklx/intellij-emberjs-experimental/pull/269) fix gts typescript detection ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.10 (2025-05-28)
 
 #### :bug: Bug Fix
