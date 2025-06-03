@@ -95,7 +95,7 @@ val JS: JSLanguageDialect = JavaScriptSupportLoader.ECMA_SCRIPT_6
 
 
 
-open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : Language(lang, id) {
+open class GtsLanguage(val lang: JSLanguageDialect = TS, id: String ="Gts") : JSLanguageDialect(id, lang.optionHolder, lang) {
     public var fileElementType: JSFileElementType? = null
 
     override fun <T : Any?> getUserData(key: Key<T>): T? {
@@ -392,9 +392,6 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 
     override fun equals(other: Any?): Boolean {
         if (other == TypeScriptFileType) {
-            return true
-        }
-        if (other == JavaScriptFileType) {
             return true
         }
         return super.equals(other)
