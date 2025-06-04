@@ -77,7 +77,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             val path = "./node_modules/@glint/core/bin/glint-language-server.js"
             val builder = ProcessBuilder()
                 .directory(File(workingDir.path))
-                .command("wsl", "--", "test", "-f", "\"$path\"", "||", "echo", "\"true\"")
+                .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
             val p = builder.start()
             p.waitFor()
             val out = p.inputStream.reader().readText().trim()
