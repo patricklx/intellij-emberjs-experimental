@@ -27,6 +27,7 @@ import com.intellij.lang.javascript.psi.impl.JSUseScopeProvider
 import com.intellij.lang.javascript.psi.impl.JSVariableImpl
 import com.intellij.lang.javascript.psi.jsdoc.impl.JSDocCommentImpl
 import com.intellij.lang.javascript.psi.resolve.JSContextResolver
+import com.intellij.lang.javascript.psi.types.JSAnyType
 import com.intellij.lang.javascript.psi.types.JSRecordTypeImpl
 import com.intellij.lang.javascript.psi.types.recordImpl.PropertySignatureImpl
 import com.intellij.openapi.util.TextRange
@@ -318,6 +319,9 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 if (jsType is JSRecordTypeImpl && jsType.findPropertySignature(path.first()) != null) {
                     val elem = jsType.findPropertySignature(path.first())
                     return resolveToJs(elem, path.subList(1, max(path.lastIndex, 1)), resolveIncomplete, recursionCounter + 1)
+                }
+                if (jsType is JSAnyType) {
+                    return any
                 }
                 jsType = EmberUtils.handleEmberProxyTypes(jsType) ?: jsType
                 jsType = jsType.asRecordType()
