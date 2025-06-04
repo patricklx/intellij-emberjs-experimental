@@ -398,19 +398,20 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (element.containingFile.fileType is HtmlFileType) {
-            if (!parameters.isExtendedCompletion) return
-            val results = service?.getCompletionItems(element.originalVirtualFile!!, document, parameters.offset, parameters)?.get()?.map {
-                if (completionResultSet.prefixMatcher.prefix == "@") {
-                    LookupElementBuilder.create("@" + it.name)
-                } else {
-                    LookupElementBuilder.create(it.name)
-                }
+            if (parameters.isExtendedCompletion) {
+                val results = service?.getCompletionItems(element.originalVirtualFile!!, document, parameters.offset, parameters)?.get()?.map {
+                    if (completionResultSet.prefixMatcher.prefix == "@") {
+                        LookupElementBuilder.create("@" + it.name)
+                    } else {
+                        LookupElementBuilder.create(it.name)
+                    }
 
+                }
+                if (results != null && results.size < 100) {
+                    completionResultSet.addAllElements(results)
+                }
+                return
             }
-            if (results != null && results.size < 100) {
-                completionResultSet.addAllElements(results)
-            }
-            return
         }
 
         val result: MutableList<LookupElement> = mutableListOf()
