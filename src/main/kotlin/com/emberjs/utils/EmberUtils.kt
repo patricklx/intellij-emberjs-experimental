@@ -263,9 +263,13 @@ class EmberUtils {
                 val TS = JavaScriptSupportLoader.TYPESCRIPT
 
                 val inJs = view.findElementAt(element.startOffset, TS) ?: view.findElementAt(element.startOffset, JS)
-                cls = PsiTreeUtil.findFirstParent(inJs) { it is JSClass } as JSElement?
+                cls = inJs?.parent as? JSClass
                 if (cls == null) {
                     cls = inJs?.parent?.children?.last() as? TypeScriptVariable
+                    if (cls != null) {
+                        return cls
+                    }
+                    cls = inJs?.prevSibling?.children?.last() as? TypeScriptVariable
                     if (cls != null) {
                         return cls
                     }
