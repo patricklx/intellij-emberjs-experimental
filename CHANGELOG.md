@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.13 (2025-06-04)
+
+#### :bug: Bug Fix
+* [#275](https://github.com/patricklx/intellij-emberjs-experimental/pull/275) fix some toc resolution issues ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.12 (2025-06-04)
 
 #### :rocket: Enhancement
