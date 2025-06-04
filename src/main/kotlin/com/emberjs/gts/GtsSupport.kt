@@ -394,9 +394,6 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
         if (other == TypeScriptFileType) {
             return true
         }
-        if (other == JavaScriptFileType) {
-            return true
-        }
         return super.equals(other)
     }
 
