@@ -25,6 +25,7 @@ import com.intellij.application.options.CodeStyle
 import com.intellij.framework.detection.impl.FrameworkDetectionManager
 import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.lang.Language
+import com.intellij.lang.ecmascript6.psi.ES6ExportDefaultAssignment
 import com.intellij.lang.ecmascript6.psi.ES6ExportSpecifierAlias
 import com.intellij.lang.ecmascript6.psi.ES6ImportExportDeclaration
 import com.intellij.lang.ecmascript6.psi.ES6ImportSpecifier
@@ -345,6 +346,10 @@ class EmberUtils {
 
             if (element is ES6ExportSpecifierAlias) {
                 return followReferences(element.parent.reference?.resolve())
+            }
+
+            if (element is ES6ExportDefaultAssignment) {
+                return element.namedElement
             }
 
             if (element is ES6ImportedBinding) {
