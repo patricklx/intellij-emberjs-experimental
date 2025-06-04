@@ -1,6 +1,20 @@
 # Changelog
 
 
+## v2025.1.12 (2025-06-04)
+
+#### :rocket: Enhancement
+* [#274](https://github.com/patricklx/intellij-emberjs-experimental/pull/274) gts: resolve property on any to any and do not show errors for it ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#273](https://github.com/patricklx/intellij-emberjs-experimental/pull/273) fix missing completions of component args ([@patricklx](https://github.com/patricklx))
+* [#272](https://github.com/patricklx/intellij-emberjs-experimental/pull/272) fix resolving re-exported components ([@patricklx](https://github.com/patricklx))
+* [#271](https://github.com/patricklx/intellij-emberjs-experimental/pull/271) fix wsl glint ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.11 (2025-06-03)
 
 #### :rocket: Enhancement
