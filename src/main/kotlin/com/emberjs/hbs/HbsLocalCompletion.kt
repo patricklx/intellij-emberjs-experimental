@@ -111,6 +111,12 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(anything.reference?.resolve(), result)
         }
 
+        if (anything is PsiElement && anything.reference == null) {
+            val ref = anything.containingFile.originalFile.findReferenceAt(anything.textOffset)
+            resolve((ref as HbsLocalReference?)?.resolveYield(), result)
+            resolve(ref?.resolve(), result)
+        }
+
         if (refElement is HbParam) {
             if (refElement.children.find { it is HbParam }?.text == "hash") {
                 val names = refElement.children.filter { it.elementType == HbTokenTypes.HASH }.map { it.children[0].text }
