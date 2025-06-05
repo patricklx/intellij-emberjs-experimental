@@ -1,11 +1,13 @@
 package com.emberjs.gts
 
+import TemplateLintState
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.emberjs.glint.GlintTypeScriptService
 import com.emberjs.icons.EmberIcons
 import com.intellij.CommonBundle
 import com.intellij.ide.actionsOnSave.ActionOnSaveBackedByOwnConfigurable
 import com.intellij.ide.actionsOnSave.ActionOnSaveContext
+import com.intellij.ide.actionsOnSave.ActionsOnSaveConfigurable
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterField
 import com.intellij.javascript.nodejs.interpreter.NodeJsInterpreterRef
 import com.intellij.javascript.nodejs.util.JSLinterPackage
@@ -27,12 +29,17 @@ import com.intellij.psi.PsiFile
 import com.intellij.reference.SoftReference
 import com.intellij.ui.components.ActionLink
 import com.intellij.util.containers.ContainerUtil
+import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.SwingHelper
 import org.jdom.Element
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.annotations.PropertyKey
+import java.awt.Component
 import java.lang.ref.Reference
 import java.util.*
+import javax.swing.BorderFactory
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 
 class GLintBundle {
@@ -88,7 +95,7 @@ data class GlintState(
     companion object {
         val DEFAULT = GlintState(
             NodeJsInterpreterRef.createProjectRef(),
-            NodePackage("@glint/core"))
+            NodePackage(""))
     }
 }
 
@@ -97,8 +104,13 @@ data class GlintState(
 @State(name = "GlintConfiguration", storages = [Storage("emberLinters/glint.xml")])
 class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(project) {
     private val myPackage: JSLinterPackage = JSLinterPackage(project, "@glint/core")
+
+    public fun getPackage(): JSLinterPackage {
+        return myPackage
+    }
+
     override fun savePrivateSettings(state: GlintState) {
-        this.myPackage.force(NodePackageRef.create(state.interpreterRef.referenceName))
+        this.myPackage.force(NodePackageRef.create(state.templateLintPackage))
     }
 
     override fun loadPrivateSettings(state: GlintState): GlintState {
@@ -135,6 +147,10 @@ class GlintConfiguration(project: Project) : JSLinterConfiguration<GlintState>(p
         return parent
     }
 
+    companion object {
+        fun getInstance(project: Project) = getInstance(project, GlintConfiguration::class.java)
+    }
+
 }
 
 
@@ -152,24 +168,39 @@ class GlintConfigurable(project: Project, fullModeDialog: Boolean = false) :
         return ID
     }
 
-    override fun createView(): JSLinterView<GlintState> {
-        return object : JSLinterView<GlintState> {
+    override fun createView(): JSLinterBaseView<GlintState> {
+        return object : JSLinterBaseView<GlintState>() {
             private val myNodeInterpreterField: NodeJsInterpreterField = NodeJsInterpreterField(project, false)
             private val myTemplateLintPackageField: NodePackageField = NodePackageField(myNodeInterpreterField,
                 "@glint/core"
             )
-            var state: ExtendedLinterState<GlintState> = ExtendedLinterState(false, GlintState(
-                myNodeInterpreterField.interpreterRef, myTemplateLintPackageField.selectedRef.constantPackage!!))
-            override fun getComponent(): JComponent? {
-                return null
+
+            private val panel = FormBuilder.createFormBuilder()
+                .setHorizontalGap(10)
+                .setVerticalGap(4)
+                .setFormLeftIndent(10)
+                .addLabeledComponent(GLintBundle.message("g.lint.node.path.label"), myNodeInterpreterField)
+                .addLabeledComponent(GLintBundle.message("g.lint.package.label"), this.myTemplateLintPackageField)
+                .panel
+
+            private val myCenterPanel: JPanel = SwingHelper.wrapWithHorizontalStretch(panel).apply {
+                this.border = BorderFactory.createEmptyBorder(5, 0, 0, 0)
             }
 
-            override fun getExtendedState(): ExtendedLinterState<GlintState> {
-                return state
+            override fun createCenterComponent(): Component {
+                return myCenterPanel
             }
 
-            override fun setExtendedState(p0: ExtendedLinterState<GlintState>) {
-                state = p0
+            override fun getState(): GlintState {
+                return GlintState(
+                    myNodeInterpreterField.interpreterRef,
+                    myTemplateLintPackageField.selected
+                )
+            }
+
+            override fun setState(state: GlintState) {
+                myNodeInterpreterField.interpreterRef = state.interpreterRef
+                myTemplateLintPackageField.selected = state.nodePackageRef.constantPackage ?: GlintState.DEFAULT.nodePackageRef.constantPackage!!
             }
 
         }
