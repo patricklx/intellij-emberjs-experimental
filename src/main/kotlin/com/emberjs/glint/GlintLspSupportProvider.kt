@@ -1,6 +1,7 @@
 package com.emberjs.glint
 
 import com.dmarcotte.handlebars.file.HbFileType
+import com.emberjs.gts.GlintConfiguration
 import com.emberjs.gts.GtsFileType
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.parentEmberModule
@@ -26,20 +27,25 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.NlsSafe
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
 import com.intellij.platform.lsp.api.LspServerDescriptor
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.impl.file.impl.FileManager
 import com.intellij.util.FileContentUtil
 import org.eclipse.lsp4j.ServerInfo
 import java.io.File
+import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlin.io.path.Path
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
@@ -93,6 +99,15 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     fun isAvailable(vfile: VirtualFile): Boolean {
+        val config = GlintConfiguration.getInstance(myProject)
+        val pkg = config.getPackage()
+        val path = pkg.`package`.constantPackage?.systemIndependentPath
+        if (path != null && File(path).exists()) {
+            val f = VfsUtil.findFile(Path(path), true)
+            if (f != null) {
+                return true
+            }
+        }
         var f: VirtualFile? = vfile
         while (true) {
             if (f?.isFile == true) {
@@ -133,6 +148,12 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         val workingDir = lastDir!!
         val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         var path = workDirectory.path
+        val config = GlintConfiguration.getInstance(myProject)
+        val pkg = config.getPackage()
+        val pkgPath = pkg.`package`.constantPackage?.systemIndependentPath
+        if (pkgPath != null && File(pkgPath).exists()) {
+            path = File(pkgPath).parentFile.parentFile.path
+        }
         path = path.replace("\\", "/")
         this.isWsl = false
         if (path.startsWith("//wsl.localhost") || path.startsWith("//wsl\$")) {
