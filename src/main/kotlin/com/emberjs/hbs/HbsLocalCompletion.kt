@@ -107,8 +107,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (anything is PsiElement && anything.reference is HbsLocalReference) {
-            resolve((anything.reference as HbsLocalReference?)?.resolveYield(), result)
+            resolve((anything.reference as? HbsLocalReference)?.resolveYield(), result)
             resolve(anything.reference?.resolve(), result)
+        }
+
+        if (anything is PsiElement && anything.reference == null && anything.containingFile.viewProvider is GtsFileViewProvider) {
+            val ref = anything.containingFile.originalFile.findReferenceAt(anything.textOffset)
+            resolve((ref as? HbsLocalReference)?.resolveYield(), result)
+            resolve(ref?.resolve(), result)
         }
 
         if (refElement is HbParam) {
