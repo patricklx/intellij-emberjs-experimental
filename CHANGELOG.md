@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v2025.1.14 (2025-06-06)
+
+#### :rocket: Enhancement
+* [#278](https://github.com/patricklx/intellij-emberjs-experimental/pull/278) enable glint config and use specified path ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#279](https://github.com/patricklx/intellij-emberjs-experimental/pull/279) fix some missing hbs completions in gts ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.13 (2025-06-04)
 
 #### :bug: Bug Fix
