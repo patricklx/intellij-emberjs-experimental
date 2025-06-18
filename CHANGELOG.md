@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.15 (2025-06-18)
+
+#### :bug: Bug Fix
+* [#283](https://github.com/patricklx/intellij-emberjs-experimental/pull/283) fix null ptr in some gjs files ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.14 (2025-06-06)
 
 #### :rocket: Enhancement
