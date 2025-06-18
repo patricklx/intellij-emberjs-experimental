@@ -269,7 +269,7 @@ class EmberUtils {
                     if (cls != null) {
                         return cls
                     }
-                    cls = inJs?.prevSibling?.children?.last() as? TypeScriptVariable
+                    cls = inJs?.prevSibling?.children?.lastOrNull() as? TypeScriptVariable
                     if (cls != null) {
                         return cls
                     }
