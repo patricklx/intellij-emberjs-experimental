@@ -139,7 +139,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun getGlintVersion(): String? {
         val workingDir = lastDir!!
-        val workDirectory = VfsUtilCore.virtualToIoFile(workingDir)
         var path = workingDir.findFileByRelativePath("node_modules/@glint/core/package.json") ?: return null
         return PackageJsonData.getOrCreate(path).version?.rawVersion
     }
@@ -152,7 +151,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         val pkg = config.getPackage()
         val pkgPath = pkg.`package`.constantPackage?.systemIndependentPath
         if (pkgPath != null && File(pkgPath).exists()) {
-            path = File(pkgPath).parentFile.parentFile.path
+            path = File(pkgPath).parentFile.parentFile.parentFile.path
         }
         path = path.replace("\\", "/")
         this.isWsl = false
