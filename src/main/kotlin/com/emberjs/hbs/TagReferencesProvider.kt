@@ -199,6 +199,9 @@ fun toAttributeReference(target: XmlAttribute): PsiReference? {
         if (name.length == 1) {
             return null
         }
+        if (!name.contains("|")) {
+            return null
+        }
         var range = TextRange(0, name.length)
         if (name.startsWith("|")) {
             range = TextRange(1, range.endOffset)
