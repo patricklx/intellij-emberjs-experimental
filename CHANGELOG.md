@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.17 (2025-06-28)
+
+#### :bug: Bug Fix
+* [#287](https://github.com/patricklx/intellij-emberjs-experimental/pull/287) fix some template only args references ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.16 (2025-06-27)
 
 #### :bug: Bug Fix
