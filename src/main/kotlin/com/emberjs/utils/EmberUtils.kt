@@ -307,7 +307,7 @@ class EmberUtils {
             if (cls is TypeScriptVariable) {
                 if (cls.jsType.toString().startsWith("TOC<") || cls.jsType.toString().startsWith("TemplateOnlyComponent<")) {
                     val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
-                    return arg.asRecordType().properties.find { it.memberName == "Args" }?.jsType?.asRecordType()
+                    return arg.asRecordType().properties.find { it.memberName == "Args" }?.jsType?.asRecordType() ?: arg.asRecordType()
                 }
                 return cls.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
@@ -958,8 +958,9 @@ class EmberUtils {
                     }
                 }
                 val tsClass = (cls as? JSClass)
-                var blocks: JSRecordType. PropertySignature? = null
-                var args: JSRecordType. PropertySignature? = null
+                var blocks: JSRecordType.PropertySignature? = null
+                var args: JSRecordType.PropertySignature? = null
+                var arg: JSType? = null
                 val supers = tsClass?.superClasses?.asList()?.toTypedArray<JSClass>()
                 val classes = mutableListOf<JSClass?>()
                 classes.add(tsClass)
@@ -974,7 +975,7 @@ class EmberUtils {
                 }
                 if (cls is TypeScriptVariable) {
                     if (cls.jsType.toString().startsWith("TOC<") || cls.jsType.toString().startsWith("TemplateOnlyComponent<")) {
-                        val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
+                        arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
                         blocks = arg.asRecordType().properties.find { it.memberName == "Blocks" }
                         args = arg.asRecordType().properties.find { it.memberName == "Args" }
                     }
@@ -985,8 +986,8 @@ class EmberUtils {
                         it.memberSource.singleElement?.let { tplYields.add(EmberXmlElementDescriptor.YieldReference(it)) }
                     }
                 }
-                if (args != null) {
-                    val arguments = args?.jsType?.asRecordType()?.properties
+                if (args != null || arg != null) {
+                    val arguments = args?.jsType?.asRecordType()?.properties ?: args?.jsType?.asRecordType()?.properties
                     arguments?.forEach {
                         if (it.memberSource.singleElement != null) {
                             tplArgs.add(ArgData(it.memberName, "", AttrPsiReference(it.memberSource.singleElement!!)))
