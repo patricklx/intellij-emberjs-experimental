@@ -83,6 +83,8 @@
         <lang.formatter language="Gts" implementationClass="com.emberjs.gts.GtsFormattingModelBuilder" />
         <lang.formatter language="Gjs" implementationClass="com.emberjs.gts.GtsFormattingModelBuilder" />
         <lang.foldingBuilder language="Gts" implementationClass="com.emberjs.gts.GtsFoldingBuilder" />
+        <lang.foldingBuilder language="Gjs" implementationClass="com.emberjs.gts.GtsFoldingBuilder" />
+        <lang.psiStructureViewFactory language="Gts" implementationClass="com.emberjs.gts.GtsStructureViewFactory" />
         <editorNotificationProvider implementation="com.emberjs.glint.GlintEditorNotificationsProvider"/>
         <editorFactoryListener implementation="com.emberjs.hbs.HbMustacheNameSynchronizer$MyEditorFactoryListener"/>
         <typedHandler implementation="com.emberjs.gts.GtsTypeHandler" order="before xmlSlash"/>
