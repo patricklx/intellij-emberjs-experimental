@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.18 (2025-07-21)
+
+#### :rocket: Enhancement
+* [#293](https://github.com/patricklx/intellij-emberjs-experimental/pull/293) add html folding in gts ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.17 (2025-06-28)
 
 #### :bug: Bug Fix
