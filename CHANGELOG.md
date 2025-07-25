@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.20 (2025-07-25)
+
+#### :bug: Bug Fix
+* [#295](https://github.com/patricklx/intellij-emberjs-experimental/pull/295) fix some cases of hbs resolution failures ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.19 (2025-07-21)
 
 #### :rocket: Enhancement
