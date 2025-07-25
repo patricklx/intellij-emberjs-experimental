@@ -6,6 +6,7 @@ import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
 import com.emberjs.cli.EmberCliFrameworkDetector
+import com.emberjs.glint.GlintLanguageServiceProvider
 import com.emberjs.gts.GjsLanguage
 import com.emberjs.gts.GtsElementTypes
 import com.emberjs.gts.GtsFile
@@ -348,6 +349,10 @@ class EmberUtils {
 
         fun followReferences(element: PsiElement?, path: String? = null): PsiElement? {
 
+            if (element is LeafPsiElement) {
+                return element.parent
+            }
+
             if (element is ES6ExportSpecifierAlias) {
                 return followReferences(element.parent.reference?.resolve())
             }
@@ -369,6 +374,21 @@ class EmberUtils {
                         return ref?.resolve()
                     }
                 }
+
+                var isValid = element.originalVirtualFile?.isValid.ifTrue { true }
+                val psiFile = isValid?.let { PsiManager.getInstance(element.project).findFile(element.originalVirtualFile!!) }
+                isValid = isValid?.and(psiFile != null).ifTrue { true }
+                val document = isValid?.let { PsiDocumentManager.getInstance(element.project).getDocument(psiFile!!) }
+                isValid = isValid?.and(document != null).ifTrue { true }
+                val service = isValid?.let {
+                    GlintLanguageServiceProvider(element.project).getService(element.originalVirtualFile!!)
+                }
+                val resolved = service?.getNavigationFor(document!!, element, true)?.firstOrNull()
+
+                if (resolved != null) {
+                    return followReferences(resolved)
+                }
+
                 if (ref == null || ref.resolve() == null) {
                     var tsFiles = element.declaration?.fromClause?.references?.mapNotNull { (it as? FileReferenceSet)?.resolve() }
                     if (tsFiles?.isEmpty() == true) {
@@ -376,6 +396,7 @@ class EmberUtils {
                     }
                     return tsFiles?.filterIsInstance<JSFile>()?.maxByOrNull { it.virtualFile.path.length }
                 }
+
 
                 return followReferences(ref.resolve())
             }
@@ -724,6 +745,12 @@ class EmberUtils {
 
                         if (jsRef is JSTypeOwner && jsRef.jsType != null) {
                             val jsType = handleEmberProxyTypes(jsRef.jsType) ?: jsRef.jsType
+                            if (jsType is JSGenericTypeImpl && jsType.typeText.startsWith("NativeArray")) {
+                                return jsType.arguments[0]?.sourceElement
+                            }
+                            if (jsType is JSGenericTypeImpl && jsType.typeText.startsWith("TrackedArray")) {
+                                return jsType.arguments[0]?.sourceElement
+                            }
                             if (jsType is JSArrayType) {
                                 return jsType.type?.sourceElement
                             }

@@ -114,7 +114,11 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (anything is PsiElement && anything.reference == null && anything.containingFile.viewProvider is GtsFileViewProvider) {
             val ref = anything.containingFile.originalFile.findReferenceAt(anything.textOffset)
             resolve((ref as? HbsLocalReference)?.resolveYield(), result)
-            resolve(ref?.resolve(), result)
+            val res = ref?.resolve()
+            if (res !is EmberNamedElement || res.target != anything) {
+                resolve(res, result)
+            }
+
         }
 
         if (refElement is HbParam) {
