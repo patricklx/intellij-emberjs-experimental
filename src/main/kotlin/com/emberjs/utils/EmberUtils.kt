@@ -310,6 +310,10 @@ class EmberUtils {
                     val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
                     return arg.asRecordType().properties.find { it.memberName == "Args" }?.jsType?.asRecordType() ?: arg.asRecordType()
                 }
+                if (cls.jsType.toString().startsWith("ComponentLike<")) {
+                    val arg = (cls.jsType as JSGenericTypeImpl).arguments[0]
+                    return findComponentArgsType(arg as JSElement)
+                }
                 return cls.jsType?.asRecordType()?.callSignatures?.firstOrNull()?.returnType?.asRecordType()?.properties?.find { it.memberName == "Context" }?.jsType?.asRecordType()?.properties?.find { it.memberName == "args" }?.jsType?.asRecordType()
             }
             if (cls is TypeScriptAsExpression) {
@@ -397,8 +401,16 @@ class EmberUtils {
                     return tsFiles?.filterIsInstance<JSFile>()?.maxByOrNull { it.virtualFile.path.length }
                 }
 
-
                 return followReferences(ref.resolve())
+            }
+
+            if (element is TypeScriptSingleType && element.text.startsWith("ComponentLike<")) {
+                val view = element.containingFile.viewProvider
+                var elem = view.findElementAt(element.typeArguments[0].textOffset)
+                if (elem is LeafPsiElement) {
+                    elem = elem.parent
+                }
+                return followReferences(elem)
             }
 
             if (element is ES6ImportSpecifier) {

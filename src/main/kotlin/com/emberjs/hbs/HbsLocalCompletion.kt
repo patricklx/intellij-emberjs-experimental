@@ -62,17 +62,29 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (jsType?.sourceElement is JSDocCommentImpl) {
             val doc = jsType.sourceElement as JSDocCommentImpl
             if (doc.tags[0].value?.reference?.resolve() != null) {
-                resolve(doc.tags[0].value?.reference?.resolve()!!, result)
+                resolve(doc.tags[0].value?.reference?.resolve()!!, result, null)
             }
         }
     }
 
-    fun resolve(any: Any?, result: MutableList<LookupElement>) {
+    fun resolve(any: Any?, result: MutableList<LookupElement>, vis: MutableSet<PsiElement?>?) {
         val anything = any as? PsiElement
         var refElement: Any? = any
         if (any == null) {
             return
         }
+
+        var visited: MutableSet<PsiElement?>? = vis
+
+        if (visited == null) {
+            visited = mutableSetOf()
+        }
+
+        if (visited.contains(anything)) {
+            return
+        }
+
+        visited.add(anything)
 
         if (anything is PsiFile) {
             val styleSheetLanguages = arrayOf("sass", "scss", "less")
@@ -91,32 +103,32 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (anything is PsiElement && anything.references.isNotEmpty() && anything.references[0] is HbsLocalRenameReference && anything.references[0].resolve() != anything) {
-            resolve(anything.references[0].resolve(), result)
+            resolve(anything.references[0].resolve(), result, visited)
             return
         }
 
         if (anything is EmberNamedElement) {
-            resolve(anything.target, result)
+            resolve(anything.target, result, visited)
             return
         }
 
         if (anything is PsiElement && anything.references.find { it is HbsLocalReference } != null) {
-            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result)
-            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolved as? PropertySignature, result)
-            resolve(anything.references.find { it is EmberReference }!!.resolve(), result)
+            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result, visited)
+            resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolved as? PropertySignature, result, visited)
+            resolve(anything.references.find { it is EmberReference }!!.resolve(), result, visited)
         }
 
         if (anything is PsiElement && anything.reference is HbsLocalReference) {
-            resolve((anything.reference as? HbsLocalReference)?.resolveYield(), result)
-            resolve(anything.reference?.resolve(), result)
+            resolve((anything.reference as? HbsLocalReference)?.resolveYield(), result, visited)
+            resolve(anything.reference?.resolve(), result, visited)
         }
 
         if (anything is PsiElement && anything.reference == null && anything.containingFile.viewProvider is GtsFileViewProvider) {
             val ref = anything.containingFile.originalFile.findReferenceAt(anything.textOffset)
-            resolve((ref as? HbsLocalReference)?.resolveYield(), result)
+            resolve((ref as? HbsLocalReference)?.resolveYield(), result, visited)
             val res = ref?.resolve()
             if (res !is EmberNamedElement || res.target != anything) {
-                resolve(res, result)
+                resolve(res, result, visited)
             }
 
         }
@@ -128,21 +140,21 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             }
             val ids = PsiTreeUtil.collectElements(refElement, { it.elementType == HbTokenTypes.ID && it !is LeafPsiElement })
             if (ids.isNotEmpty()) {
-                resolve(ids.last(), result)
+                resolve(ids.last(), result, visited)
             }
         }
 
         if (anything is HbData) {
-            resolve(anything.children.firstOrNull(), result)
+            resolve(anything.children.firstOrNull(), result, visited)
         }
 
         if (anything is XmlAttribute) {
-            resolve(anything.descriptor?.declaration, result)
+            resolve(anything.descriptor?.declaration, result, visited)
         }
 
         val dereferencedHelper = EmberUtils.handleEmberHelpers(anything)
         if (dereferencedHelper != null) {
-            resolve(dereferencedHelper, result)
+            resolve(dereferencedHelper, result, visited)
         }
 
         if (refElement is JSFunction) {
@@ -170,7 +182,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
-        resolve(followed, result)
+        resolve(followed, result, visited)
     }
 
     fun addHelperCompletions(element: PsiElement, result: MutableList<LookupElement>, currentParam: PsiElement?) {
@@ -189,7 +201,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 options.remove("___keyof__")
                 if (element.text == "each") {
                     val typeRef = EmberUtils.handleEmberHelpers(element)
-                    resolve(typeRef, result)
+                    resolve(typeRef, result, null)
                 }
             }
             if (isLiteral) {
@@ -438,7 +450,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
 
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
-            resolve(parameters.position.parent.prevSibling?.prevSibling, result)
+            resolve(parameters.position.parent.prevSibling?.prevSibling, result, null)
             completionResultSet.addAllElements(result)
             return
         }
@@ -487,7 +499,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (res?.resolve() != null) {
             val psiExp = res.resolve()
             if (psiExp != null) {
-                resolve(psiExp, result)
+                resolve(psiExp, result, null)
             }
         }
 

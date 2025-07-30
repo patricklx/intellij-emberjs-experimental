@@ -17,6 +17,7 @@ import com.emberjs.psi.EmberNamedElement
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifFalse
+import com.emberjs.utils.ifTrue
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
@@ -111,7 +112,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
                 val p = path.toMutableList()
                 if (it.name != null) {
                     p.add(it.name!!)
-                    result.add(LookupElementBuilder.create(p.joinToString(".")))
+                    result.add(PrioritizedLookupElement.withPriority(LookupElementBuilder.create(p.joinToString(".")), 2.0))
                 }
             }
             return
@@ -121,7 +122,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
             refElement.asRecordType().propertyNames.forEach {
                 val p = path.toMutableList()
                 p.add(it)
-                result.add(LookupElementBuilder.create(p.joinToString(".")))
+                result.add(PrioritizedLookupElement.withPriority(LookupElementBuilder.create(p.joinToString(".")), 2.0))
             }
             return
         }
@@ -132,7 +133,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
                 result.addAll(names.map {
                     val p = path.toMutableList()
                     p.add(it)
-                    LookupElementBuilder.create(p.joinToString("."))
+                    PrioritizedLookupElement.withPriority(LookupElementBuilder.create(p.joinToString(".")), 2.0)
                 })
                 return
             }
@@ -163,7 +164,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
 
         val p = path.toMutableList()
         p.add(anything.text)
-        result.add(LookupElementBuilder.create(p.joinToString(".")))
+        result.add(PrioritizedLookupElement.withPriority(LookupElementBuilder.create(p.joinToString(".")), 2.0))
     }
 
     private fun fromLocalParams(element: XmlTag, result: MutableList<LookupElement>) {
@@ -186,11 +187,12 @@ class EmberTagNameProvider : XmlTagNameProvider {
         for (block in validBlocks) {
             val attrString = block.children.filter { it is XmlAttribute }.map { it.text }.joinToString(" ")
             val names = Regex("\\|.*\\|").find(attrString)!!.groups[0]!!.value.replace("|", "").split(" ")
-            result.addAll(names.map { LookupElementBuilder.create(it) })
+            result.addAll(names.map { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it), 2.0)})
             for (attr in block.children.filter { it is XmlAttribute }.reversed()) {
                 val tagName = (attr as XmlAttribute).name.replace("|", "")
                 if (tagName.startsWith(txt)) {
-                    resolve(attr, mutableListOf(tagName), result)
+                    val l = element.name.contains(".").ifTrue { mutableListOf() } ?: mutableListOf(tagName)
+                    resolve(attr, l, result)
                 }
                 if (attr.name.startsWith("|")) {
                     break
@@ -199,7 +201,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
         }
         for (block in blocks) {
             val refs = block.children[0].children.filter { it.elementType == HbTokenTypes.ID }
-            result.addAll(refs.map { LookupElementBuilder.create(it.text) })
+            result.addAll(refs.map { PrioritizedLookupElement.withPriority(LookupElementBuilder.create(it.text), 2.0) })
             refs.forEach {
                 resolve(it, mutableListOf(it.text), result)
             }
