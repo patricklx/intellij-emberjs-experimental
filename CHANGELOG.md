@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.21 (2025-07-30)
+
+#### :bug: Bug Fix
+* [#297](https://github.com/patricklx/intellij-emberjs-experimental/pull/297) fix some hbs references ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.20 (2025-07-25)
 
 #### :bug: Bug Fix
