@@ -67,14 +67,14 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         }
     }
 
-    fun resolve(any: Any?, result: MutableList<LookupElement>, vis: MutableSet<PsiElement>?) {
+    fun resolve(any: Any?, result: MutableList<LookupElement>, vis: MutableSet<PsiElement?>?) {
         val anything = any as? PsiElement
         var refElement: Any? = any
         if (any == null) {
             return
         }
 
-        var visited: MutableSet<PsiElement>? = vis
+        var visited: MutableSet<PsiElement?>? = vis
 
         if (visited == null) {
             visited = mutableSetOf()
@@ -84,7 +84,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             return
         }
 
-        visited.add(anything!!)
+        visited.add(anything)
 
         if (anything is PsiFile) {
             val styleSheetLanguages = arrayOf("sass", "scss", "less")
