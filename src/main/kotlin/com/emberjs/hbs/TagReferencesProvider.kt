@@ -492,13 +492,11 @@ class TagReferencesProvider : PsiReferenceProvider() {
                 }
                 if (ref is TypeScriptObjectType) {
                     val prop = (ref as TypeScriptObjectType).typeMembers.find { it.name == part } as? TypeScriptPropertySignature
-                    if (prop?.typeDeclaration?.jsType is JSGenericTypeImpl) {
-                        if (prop.typeDeclaration?.jsType?.typeText?.startsWith("WithBoundArgs") == true) {
-                            val refClass = (prop.typeDeclaration?.jsType as JSGenericTypeImpl).arguments[0]
-                            ref = refClass.sourceElement
-                            if (ref is TypeScriptTypeofType) {
-                                ref = (ref as TypeScriptTypeofType).expression
-                            }
+                    if (prop?.typeDeclaration?.jsType is JSGenericTypeImpl && prop.typeDeclaration?.jsType?.typeText?.startsWith("WithBoundArgs") == true) {
+                        val refClass = (prop.typeDeclaration?.jsType as JSGenericTypeImpl).arguments[0]
+                        ref = refClass.sourceElement
+                        if (ref is TypeScriptTypeofType) {
+                            ref = (ref as TypeScriptTypeofType).expression
                         }
                     }
                     else if (prop?.typeDeclaration?.jsType is TypeScriptTypeofType) {

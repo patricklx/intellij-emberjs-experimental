@@ -122,12 +122,9 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     override fun getAttributesDescriptors(context: XmlTag?): Array<out XmlAttributeDescriptor> {
         val result = mutableListOf<XmlAttributeDescriptor>()
-        if (context != this.tag) {
-            return result.toTypedArray()
-        }
-        val commonHtmlAttributes = HtmlNSDescriptorImpl.getCommonAttributeDescriptors(context)
+        val commonHtmlAttributes = HtmlNSDescriptorImpl.getCommonAttributeDescriptors(this.tag)
         val data = getReferenceData()
-        val attributes = data.args.map { EmberAttributeDescriptor(context, it.value, false, it.description, it.reference, null)  }
+        val attributes = data.args.map { EmberAttributeDescriptor(this.tag, it.value, false, it.description, it.reference, null)  }
         result.addAll(attributes)
         if (data.hasSplattributes || this.declaration == null) {
             result.addAll(commonHtmlAttributes)
