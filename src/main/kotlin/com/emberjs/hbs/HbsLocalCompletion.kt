@@ -44,6 +44,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.isAncestor
 import com.intellij.psi.xml.XmlAttribute
+import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.ProcessingContext
 import java.util.function.Predicate
@@ -432,6 +433,9 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
                 if (results != null && results.size < 100) {
                     completionResultSet.addAllElements(results)
                 }
+                return
+            }
+            if (element.parent is XmlTag) {
                 return
             }
         }
