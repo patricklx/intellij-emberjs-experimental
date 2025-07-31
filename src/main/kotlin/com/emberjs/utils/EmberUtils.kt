@@ -413,6 +413,10 @@ class EmberUtils {
                 return followReferences(elem)
             }
 
+            if (element is TypeScriptTypeofType) {
+                return followReferences(element.expression?.reference?.resolve())
+            }
+
             if (element is ES6ImportSpecifier) {
                 val results = element.multiResolve(false)
                 val internal = (element.parent.parent as ES6ImportDeclarationImpl).fromClause?.references?.find { it is EmberInternalJSModuleReference } as? EmberInternalJSModuleReference
