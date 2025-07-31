@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.22 (2025-07-31)
+
+#### :rocket: Enhancement
+* [#298](https://github.com/patricklx/intellij-emberjs-experimental/pull/298) show correct component args ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.21 (2025-07-30)
 
 #### :bug: Bug Fix
