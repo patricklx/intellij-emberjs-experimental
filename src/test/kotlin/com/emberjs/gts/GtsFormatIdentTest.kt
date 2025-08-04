@@ -113,7 +113,9 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
     @Test
     fun testGtsFormat() {
         val gts = """
+            import {   asd} from "xyz";
             let x = <template>hello world</template>;
+            function test() {const abc = 'xyz'};
             x = <template>
                hello world
                 hello world
@@ -185,7 +187,11 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
         """.trimIndent()
 
         val gtsAfter = """
+            import { asd } from 'xyz';
             let x = <template>hello world</template>;
+            function test() {
+                const abc = 'xyz'
+            };
             x = <template>
                 hello world
                 hello world

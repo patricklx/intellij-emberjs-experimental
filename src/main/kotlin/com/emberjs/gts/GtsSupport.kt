@@ -13,6 +13,7 @@ import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.ifTrue
+import com.intellij.application.options.CodeStyle
 import com.intellij.formatting.*
 import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
 import com.intellij.lang.*
@@ -27,6 +28,7 @@ import com.intellij.lang.javascript.dialects.ECMA6ParserDefinition
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.editing.JavascriptCommenter
 import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
+import com.intellij.lang.javascript.formatter.blocks.JSBlock
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
 import com.intellij.lang.javascript.modules.JSImportCandidateDescriptor
@@ -796,10 +798,10 @@ val NoWrap by lazy {
 
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
+open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock((block as? ASTBlock)!!.node!!, block.alignment, block.indent, block.wrap, styleSettings) {
 
     private var cachedBlocks: MutableList<JsBlockWrapper>? = null
-    val astnode =(block as? ASTBlock)?.node
+    val astnode = (block as? JSBlock)?.node
 
     init {
         this.subBlocks
@@ -844,9 +846,9 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
 
     fun mapToWrapper(block: Block, hbsBlock: Block?): JsBlockWrapper {
         if (block is ASTBlock) {
-            return JSAstBlockWrapper(block, this, hbsBlock)
+            return JSAstBlockWrapper(block, this, hbsBlock, styleSettings)
         }
-        return JsBlockWrapper(block, this, hbsBlock)
+        return JsBlockWrapper(block, this, hbsBlock, styleSettings)
     }
 
     override fun getSubBlocks(): MutableList<JsBlockWrapper> {
@@ -878,9 +880,9 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
     }
 }
 
-class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?, hbsBlock: Block?): JsBlockWrapper(block, parent, hbsBlock), ASTBlock {
-    override fun getNode(): ASTNode? {
-        return super.astnode
+class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?, hbsBlock: Block?, styleSettings: CodeStyleSettings): JsBlockWrapper(block, parent, hbsBlock, styleSettings), ASTBlock {
+    override fun getNode(): ASTNode {
+        return super.astnode!!
     }
 }
 
@@ -1052,7 +1054,8 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         }
         val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
         val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
-        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null))
+        val tsStyle = CodeStyle.getSettings(tsFile)
+        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, tsStyle, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null, tsStyle))
         if (element.language is JSLanguageDialect) {
             return jsModel
         }
