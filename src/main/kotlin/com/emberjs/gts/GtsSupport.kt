@@ -68,6 +68,7 @@ import com.intellij.psi.formatter.FormattingDocumentModelImpl
 import com.intellij.psi.formatter.common.AbstractBlock
 import com.intellij.psi.formatter.xml.AnotherLanguageBlockWrapper
 import com.intellij.psi.formatter.xml.HtmlPolicy
+import com.intellij.psi.formatter.xml.SyntheticBlock
 import com.intellij.psi.formatter.xml.XmlFormattingPolicy
 import com.intellij.psi.formatter.xml.XmlTagBlock
 import com.intellij.psi.html.HtmlTag
@@ -796,19 +797,77 @@ val NoWrap by lazy {
     Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 }
 
+class BlockData(parent1: Block, node: ASTNode, subBlocks: MutableList<Block>) {
+    val parent: Block = parent1
+    val node: ASTNode = node
+    val subBlocks: MutableList<Block> = subBlocks
+}
+
+open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?, val styleSettings: CodeStyleSettings): Block by block {
+
+    override fun getDebugName(): String {
+        var b = block
+        if (b is DataLanguageBlockWrapper) {
+            return b.original.debugName ?: b.original.javaClass.simpleName
+        }
+        return b.debugName ?: b.javaClass.simpleName
+    }
+
+    fun mapToWrapper(block: Block): Block? {
+        if (block is ASTBlock && block.node != null) {
+            return JSAstBlockWrapper(block, block.node!!, this, hbsBlock, styleSettings)
+        }
+        if (block is DataLanguageBlockWrapper) {
+            return mapToWrapper(block.original)
+        }
+        if (block is RootBlockWrapper.SynteticBlockWrapper) {
+            return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
+        }
+        if (block is SyntheticBlock) {
+            return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
+        }
+        return JsBlockWrapper(block, (block as ASTBlock).node!!, this, hbsBlock, styleSettings)
+    }
+
+    override fun getSubBlocks(): MutableList<JsBlockWrapper> {
+        val blocks = block.subBlocks.map { mapToWrapper(it) }.toMutableList()
+
+        blocks.toTypedArray().forEach {
+//            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
+            if (it.block is RootBlockWrapper && !it.block.patched) {
+                it.block.parent = this
+            }
+        }
+
+        val psiElement = this.astnode?.psi
+        if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
+            val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
+            if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
+                val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
+                if (outerLanguageBlock != null) {
+                    outerLanguageBlock.patched = true
+                    outerLanguageBlock.parent = this
+                }
+            }
+        }
+        this.cachedBlocks = blocks
+        return blocks
+    }
+}
+
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock((block as? ASTBlock)!!.node!!, block.alignment, block.indent, block.wrap, styleSettings) {
+open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: BlockData?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
+    nnode, block.alignment, block.indent, block.wrap, styleSettings) {
 
     private var cachedBlocks: MutableList<JsBlockWrapper>? = null
-    val astnode = (block as? JSBlock)?.node
 
     init {
         this.subBlocks
     }
 
     override fun getWrap(): Wrap? {
-        if (parent?.subBlocks?.lastOrNull()?.block is RootBlockWrapper) {
+        if (parent?.sub Blocks?.lastOrNull()?.block is RootBlockWrapper) {
             return NoWrap
         }
         if (subBlocks.lastOrNull()?.block is RootBlockWrapper) {
@@ -844,18 +903,27 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
         return null
     }
 
-    fun mapToWrapper(block: Block, hbsBlock: Block?): JsBlockWrapper {
-        if (block is ASTBlock) {
-            return JSAstBlockWrapper(block, this, hbsBlock, styleSettings)
+    fun mapToWrapper(block: Block, hbsBlock: Block?): Block? {
+        if (block is ASTBlock && block.node != null) {
+            return JSAstBlockWrapper(block, block.node!!, this, hbsBlock, styleSettings)
         }
-        return JsBlockWrapper(block, this, hbsBlock, styleSettings)
+        if (block is DataLanguageBlockWrapper) {
+            return mapToWrapper(block.original, hbsBlock)
+        }
+        if (block is RootBlockWrapper.SynteticBlockWrapper) {
+            return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
+        }
+        if (block is SyntheticBlock) {
+            return SyntheticBlockWrapper(block, this, hbsBlock)
+        }
+        return JsBlockWrapper(block, (block as ASTBlock).node!!, this, hbsBlock, styleSettings)
     }
 
     override fun getSubBlocks(): MutableList<JsBlockWrapper> {
         if (this.cachedBlocks != null) {
             return this.cachedBlocks!!
         }
-        val blocks = block.subBlocks.map { mapToWrapper(it, hbsBlock) }.toMutableList()
+        val blocks = block.subBlocks.mapNotNull { mapToWrapper(it, hbsBlock) }.toMutableList()
 
         blocks.toTypedArray().forEach {
 //            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
@@ -864,7 +932,7 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
             }
         }
 
-        val psiElement = this.astnode?.psi
+        val psiElement = this.node?.psi
         if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
             val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
@@ -880,10 +948,8 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
     }
 }
 
-class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?, hbsBlock: Block?, styleSettings: CodeStyleSettings): JsBlockWrapper(block, parent, hbsBlock, styleSettings), ASTBlock {
-    override fun getNode(): ASTNode {
-        return super.astnode!!
-    }
+class JSAstBlockWrapper(block: Block, nnode: ASTNode, parent: Block?, hbsBlock: Block?, styleSettings: CodeStyleSettings): JsBlockWrapper(block, nnode, parent, hbsBlock, styleSettings), ASTBlock {
+
 }
 
 class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPolicy): ASTBlock by block {
@@ -941,13 +1007,13 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
             val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
 
             var startOffset: Int? = null
-            if (blockRef.node!!.psi is JSClass) {
-                val psiRef = blockRef.node!!.psi.parent
+            if (blockRef.node.psi is JSClass) {
+                val psiRef = blockRef.node.psi.parent
                 startOffset = psiRef.textRange?.startOffset?.let { it + JS_INDENT_SIZE }
             }
 
-            if (blockRef.node!!.psi.parent is JSVarStatement) {
-                val psiRef = blockRef.node!!.psi.parent
+            if (blockRef.node.psi.parent is JSVarStatement) {
+                val psiRef = blockRef.node.psi.parent
                 startOffset = psiRef.textRange?.startOffset
                 if (startOffset != null) {
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
@@ -958,8 +1024,8 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
                 }
             }
 
-            if (blockRef.node!!.psi is JSObjectLiteralExpression) {
-                val psiRef = blockRef.node!!.psi.parent.parent
+            if (blockRef.node.psi is JSObjectLiteralExpression) {
+                val psiRef = blockRef.node.psi.parent.parent
                 startOffset = psiRef.textRange?.startOffset
                 if (startOffset != null) {
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
@@ -993,11 +1059,11 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
 class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
     val jsModelBuilder = JavascriptFormattingModelBuilder()
 
-    fun findRootBlock(block: JsBlockWrapper, element: PsiElement): Block? {
-        if (block.block is RootBlockWrapper && block.textRange.contains(element.textRange)) {
+    fun findRootBlock(block: JsBlockWrapper?, element: PsiElement): Block? {
+        if (block?.block is RootBlockWrapper && block.textRange.contains(element.textRange)) {
             return block
         }
-        block.subBlocks.forEach {
+        block?.subBlocks?.forEach {
             val b = findRootBlock(it, element)
             if (b != null) {
                 return b
@@ -1055,7 +1121,7 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
         val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
         val tsStyle = CodeStyle.getSettings(tsFile)
-        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, tsStyle, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null, tsStyle))
+        val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, tsStyle, JSAstBlockWrapper(m.rootBlock as ASTBlock, (m.rootBlock as ASTBlock).node!!, null, null, tsStyle))
         if (element.language is JSLanguageDialect) {
             return jsModel
         }
