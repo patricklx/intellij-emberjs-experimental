@@ -90,6 +90,7 @@ import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
+import java.util.WeakHashMap
 import java.util.function.Predicate
 import javax.swing.Icon
 
@@ -797,11 +798,16 @@ val NoWrap by lazy {
     Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 }
 
-class BlockData(parent1: Block, node: ASTNode, subBlocks: MutableList<Block>) {
-    val parent: Block = parent1
-    val node: ASTNode = node
-    val subBlocks: MutableList<Block> = subBlocks
-}
+class BlockInfo(val parent: Block, val originalBlock: Block)
+
+val blockinfo = WeakHashMap<Block, BlockInfo>()
+
+val Block.block: Block
+    get() = blockinfo.get(this)!!.originalBlock
+
+val Block.parent: Block
+    get() = blockinfo.get(this)!!.parent
+
 
 open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?, val styleSettings: CodeStyleSettings): Block by block {
 
@@ -813,7 +819,7 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
         return b.debugName ?: b.javaClass.simpleName
     }
 
-    fun mapToWrapper(block: Block): Block? {
+    fun mapToWrapper(block: Block): Block {
         if (block is ASTBlock && block.node != null) {
             return JSAstBlockWrapper(block, block.node!!, this, hbsBlock, styleSettings)
         }
@@ -839,17 +845,6 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
             }
         }
 
-        val psiElement = this.astnode?.psi
-        if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
-            val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
-            if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
-                val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
-                if (outerLanguageBlock != null) {
-                    outerLanguageBlock.patched = true
-                    outerLanguageBlock.parent = this
-                }
-            }
-        }
         this.cachedBlocks = blocks
         return blocks
     }
@@ -857,17 +852,17 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
 
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: BlockData?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
+open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: Block?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
     nnode, block.alignment, block.indent, block.wrap, styleSettings) {
 
-    private var cachedBlocks: MutableList<JsBlockWrapper>? = null
+    private var cachedBlocks: MutableList<Block>? = null
 
     init {
         this.subBlocks
     }
 
     override fun getWrap(): Wrap? {
-        if (parent?.sub Blocks?.lastOrNull()?.block is RootBlockWrapper) {
+        if (parent?.subBlocks?.lastOrNull()?.block is RootBlockWrapper) {
             return NoWrap
         }
         if (subBlocks.lastOrNull()?.block is RootBlockWrapper) {
