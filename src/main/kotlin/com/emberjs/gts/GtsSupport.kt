@@ -28,6 +28,7 @@ import com.intellij.lang.javascript.dialects.ECMA6ParserDefinition
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.editing.JavascriptCommenter
 import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
+import com.intellij.lang.javascript.formatter.blocks.CompositeJSBlock
 import com.intellij.lang.javascript.formatter.blocks.JSBlock
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
@@ -798,18 +799,43 @@ val NoWrap by lazy {
     Wrap.createWrap(WrapType.NONE, false).apply { ignoreParentWraps() }
 }
 
-class BlockInfo(val parent: Block, val originalBlock: Block)
+class BlockInfo(var parent: Block?, var originalBlock: Block)
 
 val blockinfo = WeakHashMap<Block, BlockInfo>()
 
-val Block.block: Block
+var Block.block: Block
     get() = blockinfo.get(this)!!.originalBlock
+    set(v: Block) {
+        if (!blockinfo.contains(this)) {
+            blockinfo[this] = BlockInfo(null, v)
+        }
+        blockinfo[this]!!.originalBlock = v
+    }
 
-val Block.parent: Block
-    get() = blockinfo.get(this)!!.parent
+var Block.parent: Block?
+    get() = blockinfo.get(this)?.parent
+    set(v: Block?) {
+        if (!blockinfo.contains(this)) {
+            blockinfo[this] = BlockInfo(v, v!!)
+        }
+        blockinfo[this]!!.parent = v
+    }
 
+fun Block.nexOuterLanguageBlock(block: Block): RootBlockWrapper? {
+    val i = this.block.subBlocks.indexOf(block)
+    if (this.block.subBlocks.getOrNull(i+1) is RootBlockWrapper) {
+        return this.block.subBlocks.getOrNull(i+1) as RootBlockWrapper
+    }
+    return null
+}
 
-open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?, val styleSettings: CodeStyleSettings): Block by block {
+open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val styleSettings: CodeStyleSettings): Block by _block {
+
+    init {
+        this.block = _block
+    }
+
+    private var cachedBlocks: MutableList<Block>? = null
 
     override fun getDebugName(): String {
         var b = block
@@ -817,6 +843,19 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
             return b.original.debugName ?: b.original.javaClass.simpleName
         }
         return b.debugName ?: b.javaClass.simpleName
+    }
+
+    override fun getWrap(): Wrap? {
+        if (parent?.subBlocks?.lastOrNull()?.block is RootBlockWrapper) {
+            return NoWrap
+        }
+        if (subBlocks.lastOrNull()?.block is RootBlockWrapper) {
+            return NoWrap
+        }
+        if (parent?.block is RootBlockWrapper.SynteticBlockWrapper) {
+            return NoWrap
+        }
+        return block.wrap
     }
 
     fun mapToWrapper(block: Block): Block {
@@ -829,18 +868,23 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
         if (block is RootBlockWrapper.SynteticBlockWrapper) {
             return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
         }
-        if (block is SyntheticBlock) {
-            return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
+        if (block is JSBlock) {
+            return JsBlockWrapper(block, block.node, this, hbsBlock, styleSettings)
         }
-        return JsBlockWrapper(block, (block as ASTBlock).node!!, this, hbsBlock, styleSettings)
+        return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
     }
 
-    override fun getSubBlocks(): MutableList<JsBlockWrapper> {
+    override fun getSubBlocks(): MutableList<Block> {
+
+        if (this.cachedBlocks != null) {
+            return this.cachedBlocks!!
+        }
+
         val blocks = block.subBlocks.map { mapToWrapper(it) }.toMutableList()
 
         blocks.toTypedArray().forEach {
 //            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
-            if (it.block is RootBlockWrapper && !it.block.patched) {
+            if (it.block is RootBlockWrapper && !(it.block as RootBlockWrapper).patched) {
                 it.block.parent = this
             }
         }
@@ -852,12 +896,14 @@ open class SyntheticBlockWrapper(val block: SyntheticBlock, val hbsBlock: Block?
 
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: Block?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
-    nnode, block.alignment, block.indent, block.wrap, styleSettings) {
+open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
+    nnode, _block.alignment, _block.indent, _block.wrap, styleSettings) {
 
     private var cachedBlocks: MutableList<Block>? = null
 
     init {
+        this.block = _block
+        this.parent = _parent
         this.subBlocks
     }
 
@@ -890,14 +936,6 @@ open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: Bloc
         return TextRange(subBlocks.first().textRange.startOffset, subBlocks.last().textRange.endOffset)
     }
 
-    private fun nexOuterLanguageBlock(block: Block): RootBlockWrapper? {
-        val i = this.block.subBlocks.indexOf(block)
-        if (this.block.subBlocks.getOrNull(i+1) is RootBlockWrapper) {
-            return this.block.subBlocks.getOrNull(i+1) as RootBlockWrapper
-        }
-        return null
-    }
-
     fun mapToWrapper(block: Block, hbsBlock: Block?): Block? {
         if (block is ASTBlock && block.node != null) {
             return JSAstBlockWrapper(block, block.node!!, this, hbsBlock, styleSettings)
@@ -908,13 +946,13 @@ open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: Bloc
         if (block is RootBlockWrapper.SynteticBlockWrapper) {
             return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
         }
-        if (block is SyntheticBlock) {
-            return SyntheticBlockWrapper(block, this, hbsBlock)
+        if (block is JSBlock) {
+            return JsBlockWrapper(block, block.node, this, hbsBlock, styleSettings)
         }
-        return JsBlockWrapper(block, (block as ASTBlock).node!!, this, hbsBlock, styleSettings)
+        return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
     }
 
-    override fun getSubBlocks(): MutableList<JsBlockWrapper> {
+    override fun getSubBlocks(): MutableList<Block> {
         if (this.cachedBlocks != null) {
             return this.cachedBlocks!!
         }
@@ -922,16 +960,16 @@ open class JsBlockWrapper(val block: Block, val nnode: ASTNode, val parent: Bloc
 
         blocks.toTypedArray().forEach {
 //            blocks.removeIf { it.block is RootBlockWrapper && it.block.patched }
-            if (it.block is RootBlockWrapper && !it.block.patched) {
+            if (it.block is RootBlockWrapper && !(it.block as RootBlockWrapper).patched) {
                 it.block.parent = this
             }
         }
 
-        val psiElement = this.node?.psi
+        val psiElement = this.node.psi
         if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
             val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
-                val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent.block) ?: parent?.nexOuterLanguageBlock(this.block)
+                val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent!!.block) ?: parent?.nexOuterLanguageBlock(this.block)
                 if (outerLanguageBlock != null) {
                     outerLanguageBlock.patched = true
                     outerLanguageBlock.parent = this
@@ -1058,8 +1096,8 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
         if (block?.block is RootBlockWrapper && block.textRange.contains(element.textRange)) {
             return block
         }
-        block?.subBlocks?.forEach {
-            val b = findRootBlock(it, element)
+        block?.subBlocks?.filter { it is JsBlockWrapper }?.forEach {
+            val b = findRootBlock(it as JsBlockWrapper, element)
             if (b != null) {
                 return b
             }
