@@ -829,10 +829,11 @@ fun Block.nexOuterLanguageBlock(block: Block): RootBlockWrapper? {
     return null
 }
 
-open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val styleSettings: CodeStyleSettings): Block by _block {
+open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val _parent: Block?, val styleSettings: CodeStyleSettings): Block by _block {
 
     init {
         this.block = _block
+        this.parent = _parent
     }
 
     private var cachedBlocks: MutableList<Block>? = null
@@ -866,12 +867,12 @@ open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val styleS
             return mapToWrapper(block.original)
         }
         if (block is RootBlockWrapper.SynteticBlockWrapper) {
-            return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
+            return JSAstBlockWrapper(block, (block.parent as RootBlockWrapper).node!!, this, hbsBlock, styleSettings)
         }
         if (block is JSBlock) {
-            return JsBlockWrapper(block, block.node, this, hbsBlock, styleSettings)
+            return JsBlockWrapper(block, block.node, block.parent, hbsBlock, styleSettings)
         }
-        return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
+        return SyntheticBlockWrapper(block, hbsBlock, this, styleSettings)
     }
 
     override fun getSubBlocks(): MutableList<Block> {
@@ -937,6 +938,7 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
     }
 
     fun mapToWrapper(block: Block, hbsBlock: Block?): Block? {
+
         if (block is ASTBlock && block.node != null) {
             return JSAstBlockWrapper(block, block.node!!, this, hbsBlock, styleSettings)
         }
@@ -944,12 +946,13 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
             return mapToWrapper(block.original, hbsBlock)
         }
         if (block is RootBlockWrapper.SynteticBlockWrapper) {
-            return JSAstBlockWrapper(block, block.parent.node!!, this, hbsBlock, styleSettings)
+            return JSAstBlockWrapper(block, (block.parent as RootBlockWrapper).node!!, this, hbsBlock, styleSettings)
         }
         if (block is JSBlock) {
             return JsBlockWrapper(block, block.node, this, hbsBlock, styleSettings)
         }
-        return SyntheticBlockWrapper(block, hbsBlock, styleSettings)
+
+        return SyntheticBlockWrapper(block, hbsBlock, this, styleSettings)
     }
 
     override fun getSubBlocks(): MutableList<Block> {
@@ -966,6 +969,7 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
         }
 
         val psiElement = this.node.psi
+
         if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
             val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
@@ -985,13 +989,16 @@ class JSAstBlockWrapper(block: Block, nnode: ASTNode, parent: Block?, hbsBlock: 
 
 }
 
-class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPolicy): ASTBlock by block {
+class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPolicy): ASTBlock by _block {
 
     var patched = false
-    var parent: Block? = null
+
+    init {
+        this.block = _block
+    }
 
     override fun getDebugName(): String? {
-        return block.original.javaClass.simpleName
+        return _block.original.javaClass.simpleName
     }
 
     override fun getIndent(): Indent? {
@@ -1002,27 +1009,32 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
         return NoWrap
     }
 
-    class SynteticBlockWrapper(val subblock: Block, val parent: RootBlockWrapper, val index: Any, val subblocks: MutableList<Block>): Block by subblock {
+    class SynteticBlockWrapper(val subblock: Block, val _parent: RootBlockWrapper, val index: Any, val subblocks: MutableList<Block>): Block by subblock {
+
+        init {
+            this.parent = _parent
+        }
 
         override fun getWrap(): Wrap? {
             return NoWrap
         }
 
         override fun getIndent(): Indent {
-            val shouldIndent = subblock.javaClass.simpleName == "HandlebarsBlock" || subblock.javaClass.simpleName == "HandlebarsTagBlock"
-            var indent = parent.getBaseIndent(shouldIndent)
+            var shouldIndent = subblock.javaClass.simpleName == "HandlebarsBlock" || subblock.javaClass.simpleName == "HandlebarsTagBlock"
+            shouldIndent = shouldIndent || (subblock as? DataLanguageBlockWrapper)?.original is SyntheticBlock
+            var indent = _parent.getBaseIndent(shouldIndent)
             if (index == 0) {
-                indent = parent.getBaseIndent()
+                indent = _parent.getBaseIndent()
             }
             if (index == subblocks.lastIndex) {
-                indent = parent.getBaseIndent()
+                indent = _parent.getBaseIndent()
             }
             return indent!!
         }
     }
 
     override fun getSubBlocks(): MutableList<Block> {
-        val subblocks = (block.parent == null).ifTrue { block.original.subBlocks } ?: block.subBlocks
+        val subblocks = (block.parent == null).ifTrue { _block.original.subBlocks } ?: block.subBlocks
         return subblocks.mapIndexed { index, it ->
             SynteticBlockWrapper(it, this, index, subblocks)
         }.toMutableList()

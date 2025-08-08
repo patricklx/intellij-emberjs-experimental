@@ -187,8 +187,10 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
         """.trimIndent()
 
         val gtsAfter = """
-            import { asd } from 'xyz';
+            import {asd} from "xyz";
+            
             let x = <template>hello world</template>;
+            
             function test() {
                 const abc = 'xyz'
             };
