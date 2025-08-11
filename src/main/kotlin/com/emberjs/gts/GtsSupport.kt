@@ -834,6 +834,7 @@ open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val _paren
     init {
         this.block = _block
         this.parent = _parent
+        this.subBlocks
     }
 
     private var cachedBlocks: MutableList<Block>? = null
@@ -898,7 +899,7 @@ open class SyntheticBlockWrapper(_block: Block, val hbsBlock: Block?, val _paren
 
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
 open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hbsBlock: Block? = null, val styleSettings: CodeStyleSettings): JSBlock(
-    nnode, _block.alignment, _block.indent, _block.wrap, styleSettings) {
+    nnode, _block.alignment, null, null, styleSettings) {
 
     private var cachedBlocks: MutableList<Block>? = null
 
@@ -906,6 +907,10 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
         this.block = _block
         this.parent = _parent
         this.subBlocks
+    }
+
+    override fun getIndent(): Indent? {
+        return this.block.indent
     }
 
     override fun getWrap(): Wrap? {
@@ -970,7 +975,7 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
 
         val psiElement = this.node.psi
 
-        if (psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
+        if (psiElement is JSClass ||psiElement is JSVariable || (psiElement is JSExpressionStatement) && psiElement.children.find { it is JSAssignmentExpression } != null) {
             val last = PsiTreeUtil.collectElements(psiElement) { it is JSLiteralExpression}.lastOrNull()
             if (last is JSLiteralExpression && last.textLength == 0 && last.textOffset == psiElement.endOffset) {
                 val outerLanguageBlock = parent?.parent?.nexOuterLanguageBlock(parent!!.block) ?: parent?.nexOuterLanguageBlock(this.block)
@@ -1048,17 +1053,20 @@ class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPol
         val document = PsiDocumentManager.getInstance(project).getDocument(htmlFile)!!
         val INDENT_SIZE = this.policy.settings.getIndentSize(htmlFile.language.associatedFileType)
         val JS_INDENT_SIZE = this.policy.settings.getIndentSize(jsFile.language.associatedFileType)
-        if (this.parent != null) {
-            val blockRef = this.parent as? JSAstBlockWrapper ?: ((this.parent as JsBlockWrapper).parent as JSAstBlockWrapper)
+        if (this.parent != null && this.parent is JSAstBlockWrapper || this.parent is JsBlockWrapper || this.parent is SyntheticBlockWrapper) {
+            var node = (this.parent as? JSAstBlockWrapper)?.node ?: ((this.parent as? JsBlockWrapper)?.parent as? JSAstBlockWrapper)?.node
+            if (node == null) {
+                node = ((this.parent as? SyntheticBlockWrapper)?.parent as? JSAstBlockWrapper)?.node
+            }
 
             var startOffset: Int? = null
-            if (blockRef.node.psi is JSClass) {
-                val psiRef = blockRef.node.psi.parent
+            if (node?.psi is JSClass) {
+                val psiRef = node.psi.parent
                 startOffset = psiRef.textRange?.startOffset?.let { it + JS_INDENT_SIZE }
             }
 
-            if (blockRef.node.psi.parent is JSVarStatement) {
-                val psiRef = blockRef.node.psi.parent
+            if (node?.psi?.parent is JSVarStatement) {
+                val psiRef = node.psi.parent
                 startOffset = psiRef.textRange?.startOffset
                 if (startOffset != null) {
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
@@ -1069,8 +1077,8 @@ class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPol
                 }
             }
 
-            if (blockRef.node.psi is JSObjectLiteralExpression) {
-                val psiRef = blockRef.node.psi.parent.parent
+            if (node?.psi is JSObjectLiteralExpression) {
+                val psiRef = node.psi.parent.parent
                 startOffset = psiRef.textRange?.startOffset
                 if (startOffset != null) {
                     val lineTpl = document.getLineNumber(this.textRange.startOffset)
@@ -1088,7 +1096,6 @@ class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPol
             val line = document.getLineNumber(startOffset)
             val lineOffset = document.getLineStartOffset(line)
             val offset = startOffset - lineOffset
-
 
             return Indent.getSpaceIndent(offset + (forChild.ifTrue { INDENT_SIZE } ?: 0))
         }

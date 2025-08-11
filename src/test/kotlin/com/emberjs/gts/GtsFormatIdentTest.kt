@@ -146,7 +146,6 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                 Hi
                 </template>
             }
-            
             class Bar {
                 <template>
                         hello world
@@ -158,6 +157,7 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                     hello world
                 </template>
             }
+            
             class Bar {
                 <template>
                 <div>
@@ -236,6 +236,7 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                     hello world
                 </template>
             }
+            
             class Bar {
                 <template>
                     <div>
