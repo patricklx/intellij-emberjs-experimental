@@ -7,6 +7,7 @@ import com.dmarcotte.handlebars.parsing.HbLexer
 import com.dmarcotte.handlebars.parsing.HbParseDefinition
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.HbPsiFile
+import com.emberjs.gts.block
 import com.emberjs.hbs.EmberReference
 import com.emberjs.icons.EmberIcons
 import com.emberjs.index.EmberNameIndex
@@ -992,6 +993,12 @@ open class JsBlockWrapper(_block: Block, nnode: ASTNode, _parent: Block?, var hb
 
 class JSAstBlockWrapper(block: Block, nnode: ASTNode, parent: Block?, hbsBlock: Block?, styleSettings: CodeStyleSettings): JsBlockWrapper(block, nnode, parent, hbsBlock, styleSettings), ASTBlock {
 
+    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+        if (block is RootBlockWrapper) {
+            return block.getChildAttributes(newChildIndex)
+        }
+        return super.getChildAttributes(newChildIndex)
+    }
 }
 
 class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPolicy): ASTBlock by _block {
@@ -1111,12 +1118,12 @@ class RootBlockWrapper(val _block: DataLanguageBlockWrapper, val policy: HtmlPol
 class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
     val jsModelBuilder = JavascriptFormattingModelBuilder()
 
-    fun findRootBlock(block: JsBlockWrapper?, element: PsiElement): Block? {
+    fun findRootBlock(block: Block?, element: PsiElement): Block? {
         if (block?.block is RootBlockWrapper && block.textRange.contains(element.textRange)) {
             return block
         }
-        block?.subBlocks?.filter { it is JsBlockWrapper }?.forEach {
-            val b = findRootBlock(it as JsBlockWrapper, element)
+        block?.subBlocks?.forEach {
+            val b = findRootBlock(it, element)
             if (b != null) {
                 return b
             }
