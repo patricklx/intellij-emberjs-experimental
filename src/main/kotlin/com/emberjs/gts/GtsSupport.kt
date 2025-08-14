@@ -820,7 +820,7 @@ class SimpleAstNode: ASTNode {
     }
 
     override fun getTextLength(): Int {
-        TODO("Not yet implemented")
+        return 0
     }
 
     override fun getTextRange(): TextRange? {
