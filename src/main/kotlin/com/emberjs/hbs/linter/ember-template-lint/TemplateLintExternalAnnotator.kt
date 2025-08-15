@@ -7,12 +7,14 @@ import com.emberjs.icons.EmberIcons
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.javascript.linter.*
 import com.intellij.lang.javascript.psi.JSFile
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
+import java.util.concurrent.Future
 
 class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternalAnnotator<TemplateLintState>(onTheFly) {
     companion object {
@@ -46,16 +48,20 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
 
     override fun annotate(input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult? {
         var res: JSLinterAnnotationResult? = null
-        try {
-            res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
-        } catch (ex: Exception) {
-            res = null
-            println(ex)
-        }
+        var p = ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                res = TemplateLintExternalRunner(this.isOnTheFly).highlight(input)
+            } catch (ex: Exception) {
+                res = null
+                println(ex)
+            }
 
-        val errors: MutableList<JSLinterError> = mutableListOf()
-        errors.addAll(res?.errors ?: listOf())
-        return JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
+            val errors: MutableList<JSLinterError> = mutableListOf()
+            errors.addAll(res?.errors ?: listOf())
+            res = JSLinterAnnotationResult.createLinterResult(input, errors.toList(), null as VirtualFile?)
+        }
+        p.get()
+        return res
     }
 
     override fun apply(file: PsiFile, annotationResult: JSLinterAnnotationResult?, holder: AnnotationHolder) {
