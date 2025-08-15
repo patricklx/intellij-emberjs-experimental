@@ -1116,7 +1116,10 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
         val htmlFile = viewProvider.getPsi(HTMLLanguage.INSTANCE)
         val jsFile = viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         val project = this.node!!.psi.project
-        val document = PsiDocumentManager.getInstance(project).getDocument(htmlFile)!!
+        val document = PsiDocumentManager.getInstance(project).getDocument(htmlFile)
+        if (document === null) {
+            return null
+        }
         val INDENT_SIZE = this.policy.settings.getIndentSize(htmlFile.language.associatedFileType)
         val JS_INDENT_SIZE = this.policy.settings.getIndentSize(jsFile.language.associatedFileType)
         if (this.parent != null) {

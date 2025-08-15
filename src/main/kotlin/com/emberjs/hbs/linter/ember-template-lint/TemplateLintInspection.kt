@@ -8,6 +8,10 @@ class TemplateLintInspection : JSLinterInspection() {
         return TemplateLintExternalAnnotator.INSTANCE_FOR_BATCH_INSPECTION
     }
 
+    override fun getStaticDescription(): String {
+        return TemplateLintBundle.message("hbs.lint.inspection")
+    }
+
     override fun getSettingsPath(): List<String?> {
         return ContainerUtil.newArrayList(
                 OptionsBundle.message("configurable.group.language.settings.display.name", *arrayOfNulls(0)),
