@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2025.1.23 (2025-08-15)
+
+#### :bug: Bug Fix
+* [#312](https://github.com/patricklx/intellij-emberjs-experimental/pull/312) fix handlebars read action error ([@patricklx](https://github.com/patricklx))
+* [#302](https://github.com/patricklx/intellij-emberjs-experimental/pull/302) fix gjs formatting ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.22 (2025-07-31)
 
 #### :rocket: Enhancement
