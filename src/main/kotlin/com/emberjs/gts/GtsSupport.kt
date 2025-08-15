@@ -26,7 +26,9 @@ import com.intellij.lang.javascript.config.JSImportResolveContext
 import com.intellij.lang.javascript.dialects.ECMA6ParserDefinition
 import com.intellij.lang.javascript.dialects.TypeScriptParserDefinition
 import com.intellij.lang.javascript.editing.JavascriptCommenter
+import com.intellij.lang.javascript.formatter.JSBlockContext
 import com.intellij.lang.javascript.formatter.JavascriptFormattingModelBuilder
+import com.intellij.lang.javascript.formatter.blocks.JSBlock
 import com.intellij.lang.javascript.highlighting.JSHighlighter
 import com.intellij.lang.javascript.index.IndexedFileTypeProvider
 import com.intellij.lang.javascript.modules.JSImportCandidateDescriptor
@@ -81,6 +83,7 @@ import com.intellij.psi.search.ProjectScope
 import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
+import com.intellij.psi.tree.TokenSet
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlTokenType
 import com.intellij.refactoring.suggested.endOffset
@@ -459,8 +462,8 @@ class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
 class GtsFileViewProviderFactory: FileViewProviderFactory {
     override fun createFileViewProvider(file: VirtualFile, language: Language?, manager: PsiManager, eventSystemEnabled: Boolean): FileViewProvider {
         return (language as? GtsLanguage)
-                ?.let { GtsFileViewProvider(manager, file, eventSystemEnabled, it) }
-                ?: GtsFileViewProvider(manager, file, eventSystemEnabled)
+            ?.let { GtsFileViewProvider(manager, file, eventSystemEnabled, it) }
+            ?: GtsFileViewProvider(manager, file, eventSystemEnabled)
     }
 
 }
@@ -615,8 +618,8 @@ class GtsImportResolver(project: Project,
 
     private fun processGtsPackage(processor: Processor<in VirtualFile>) {
         TypeScriptImportsResolverProvider.getDefaultProvider(project, resolveContext)
-                .resolveFileModule("gts", contextFile)
-                ?.let { processor.process(it) }
+            .resolveFileModule("gts", contextFile)
+            ?.let { processor.process(it) }
     }
 
     override fun getPriority(): Int = TypeScriptFileImportsResolver.JS_DEFAULT_PRIORITY
@@ -651,10 +654,10 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
 
     private val candidates: Map<String, List<Info>> by lazy {
         val list = FilenameIndex.getAllFilesByExt(project, "gts",
-                createProjectImportsScope(placeInfo, getStructureModuleRoot(placeInfo)))
-                .map { getExports(it) }
-                .flatten()
-                .toMutableList()
+            createProjectImportsScope(placeInfo, getStructureModuleRoot(placeInfo)))
+            .map { getExports(it) }
+            .flatten()
+            .toMutableList()
 
         val scopes = EmberUtils.getScopesForFile(myPlaceInfo.file)
 
@@ -663,18 +666,18 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
 
         // Collect all components from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "component" }
-                .toCollection(emberNames)
+            .toCollection(emberNames)
 
         // Collect all component templates from the index
         EmberNameIndex.getFilteredProjectKeys(scope) { it.isComponentTemplate }
-                .filter { !emberNames.contains(it) }
-                .toCollection(emberNames)
+            .filter { !emberNames.contains(it) }
+            .toCollection(emberNames)
 
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "helper" }
-                .toCollection(emberNames)
+            .toCollection(emberNames)
 
         EmberNameIndex.getFilteredProjectKeys(scope) { it.type == "modifier" }
-                .toCollection(emberNames)
+            .toCollection(emberNames)
 
         emberNames.removeIf { it.virtualFile?.let { !EmberUtils.isInScope(it, scopes) } ?: false }
 
@@ -795,14 +798,195 @@ val NoWrap by lazy {
 }
 
 
+class SimpleAstNode: ASTNode {
+    override fun getElementType(): IElementType {
+        return GjsFileElementType.INSTANCE
+    }
+
+    override fun getText(): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun getChars(): CharSequence {
+        TODO("Not yet implemented")
+    }
+
+    override fun textContains(p0: Char): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun getStartOffset(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun getTextLength(): Int {
+        return 0
+    }
+
+    override fun getTextRange(): TextRange? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getTreeParent(): ASTNode? {
+        return null
+    }
+
+    override fun getFirstChildNode(): ASTNode? {
+        return null
+    }
+
+    override fun getLastChildNode(): ASTNode? {
+        return null
+    }
+
+    override fun getTreeNext(): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getTreePrev(): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getChildren(p0: TokenSet?): Array<out ASTNode?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun addChild(p0: ASTNode) {
+        TODO("Not yet implemented")
+    }
+
+    override fun addChild(p0: ASTNode, p1: ASTNode?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun addLeaf(
+        p0: IElementType,
+        p1: CharSequence,
+        p2: ASTNode?
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeChild(p0: ASTNode) {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeRange(p0: ASTNode, p1: ASTNode?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun replaceChild(p0: ASTNode, p1: ASTNode) {
+        TODO("Not yet implemented")
+    }
+
+    override fun replaceAllChildrenToChildrenOf(p0: ASTNode) {
+        TODO("Not yet implemented")
+    }
+
+    override fun addChildren(
+        p0: ASTNode,
+        p1: ASTNode?,
+        p2: ASTNode?
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun clone(): Any {
+        TODO("Not yet implemented")
+    }
+
+    override fun copyElement(): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun findLeafElementAt(p0: Int): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> getCopyableUserData(p0: Key<T?>): T? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> putCopyableUserData(p0: Key<T?>, p1: T?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun findChildByType(p0: IElementType): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun findChildByType(
+        p0: IElementType,
+        p1: ASTNode?
+    ): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun findChildByType(p0: TokenSet): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun findChildByType(
+        p0: TokenSet,
+        p1: ASTNode?
+    ): ASTNode? {
+        TODO("Not yet implemented")
+    }
+
+    override fun getPsi(): PsiElement? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : PsiElement?> getPsi(p0: Class<T?>): T? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> getUserData(p0: Key<T?>): T? {
+        TODO("Not yet implemented")
+    }
+
+    override fun <T : Any?> putUserData(p0: Key<T?>, p1: T?) {
+        TODO("Not yet implemented")
+    }
+
+}
+
 // wrapper to patch JsBlocks to include outer language block into JSAssignmentExpression and JSVarStatement
-open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): Block by block {
+open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbsBlock: Block? = null): JSBlock((block as? ASTBlock)?.node ?: SimpleAstNode(), null, null, null, CodeStyleSettings.getDefaults()) {
 
     private var cachedBlocks: MutableList<JsBlockWrapper>? = null
     val astnode =(block as? ASTBlock)?.node
 
     init {
         this.subBlocks
+    }
+
+    override fun getAlignment(): Alignment? {
+        return block.alignment
+    }
+
+    override fun getChildAttributes(newChildIndex: Int): ChildAttributes {
+        return block.getChildAttributes(newChildIndex)
+    }
+
+    override fun getIndent(): Indent? {
+        return block.indent
+    }
+
+    override fun getNode(): ASTNode {
+        return astnode ?: SimpleAstNode()
+    }
+
+    override fun getSpacing(child1: Block?, child2: Block): Spacing? {
+        return block.getSpacing(child1, child2)
+    }
+
+    override fun isLeaf(): Boolean {
+        return block.isLeaf
+    }
+
+    override fun isIncomplete(): Boolean {
+        return block.isIncomplete
     }
 
     override fun getWrap(): Wrap? {
@@ -879,8 +1063,8 @@ open class JsBlockWrapper(val block: Block, val parent: JsBlockWrapper?, var hbs
 }
 
 class JSAstBlockWrapper(block: ASTBlock, parent: JsBlockWrapper?, hbsBlock: Block?): JsBlockWrapper(block, parent, hbsBlock), ASTBlock {
-    override fun getNode(): ASTNode? {
-        return super.astnode
+    override fun getNode(): ASTNode {
+        return super.astnode ?: this.myNode
     }
 }
 
@@ -1061,9 +1245,9 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
             val psiFile = element.containingFile
             val documentModel = FormattingDocumentModelImpl.createOn(psiFile)
             val model = XmlFormattingModel(
-                    psiFile,
-                    block,
-                    documentModel)
+                psiFile,
+                block,
+                documentModel)
             return DocumentBasedFormattingModel(model.rootBlock, element.project, formattingContext.codeStyleSettings, psiFile.fileType, psiFile)
         }
         return jsModel
@@ -1096,9 +1280,9 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
             val documentModel = FormattingDocumentModelImpl.createOn(block.node!!.psi.containingFile)
             val rootBlock = RootBlockWrapper(block, HtmlPolicy(settings, documentModel))
             val model = XmlFormattingModel(
-                    block.node!!.psi.containingFile,
-                    rootBlock,
-                    documentModel)
+                block.node!!.psi.containingFile,
+                rootBlock,
+                documentModel)
             return DocumentBasedFormattingModel(model.rootBlock, element.project, settings, file.fileType, file).rootBlock
         }
         return createModel(FormattingContext.create(node.psi, settings)).rootBlock

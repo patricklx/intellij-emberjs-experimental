@@ -36,8 +36,8 @@ import org.junit.Test
 class GtsFormatIdentTest : BasePlatformTestCase() {
 
     @Throws(IncorrectOperationException::class)
-    fun doStringBasedTest(text: String, textAfter: String) {
-        doTextTest(text, textAfter, "gts", GtsFileType.INSTANCE)
+    fun doStringBasedTest(text: String, textAfter: String, withLineIndentTest: Boolean = true) {
+        doTextTest(text, textAfter, "gts", withLineIndentTest)
     }
 
 
@@ -48,10 +48,9 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
      *
      * @param beforeText               The text run the formatter on
      * @param textAfter                The expected result after running the formatter
-     * @param templateDataLanguageType The templated language of the file
      */
     @Throws(IncorrectOperationException::class)
-    fun doTextTest(beforeText: String, textAfter: String, extension: String, templateDataLanguageType: LanguageFileType) {
+    fun doTextTest(beforeText: String, textAfter: String, extension: String, withLineIndentTest: Boolean) {
         // define action to run "Reformat Code" on the whole "file" defined by beforeText
         val fullFormatRunnableFactory = Runnable {
             val rangeToUse: TextRange = myFixture.file.textRange
@@ -67,28 +66,28 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
             AutoIndentLinesHandler().invoke(myFixture.project, editor, myFixture.file)
         }
 
-        doFormatterActionTest(fullFormatRunnableFactory, beforeText, textAfter, extension, templateDataLanguageType)
-        doFormatterActionTest(lineFormatRunnableFactory, beforeText, textAfter, extension, templateDataLanguageType)
+        if (withLineIndentTest) {
+            doFormatterActionTest(lineFormatRunnableFactory, beforeText, textAfter, extension)
+        } else {
+            doFormatterActionTest(fullFormatRunnableFactory, beforeText, textAfter, extension)
+        }
     }
 
     private fun doFormatterActionTest(
         formatAction: Runnable,
         beforeText: String,
         textAfter: String,
-        extension: String,
-        templateDataLanguageType: LanguageFileType
+        extension: String
     ) {
         val baseFile: PsiFile = myFixture.configureByText("A.$extension", beforeText)
 
         val virtualFile = checkNotNull(baseFile.virtualFile)
-        TemplateDataLanguageMappings.getInstance(project).setMapping(virtualFile, templateDataLanguageType.language)
         IndexingTestUtil.waitUntilIndexesAreReady(project)
 
         // fetch a fresh instance of the file -- the template data mapping creates a new instance,
         // which was causing problems in PsiFileImpl.isValid()
         val file = checkNotNull(PsiManager.getInstance(project).findFile(virtualFile))
         WriteCommandAction.runWriteCommandAction(project, formatAction)
-        TemplateDataLanguageMappings.getInstance(project).cleanupForNextTest()
         assertEquals("Reformat Code failed", prepareText(textAfter), prepareText(file.text))
     }
 
@@ -113,7 +112,9 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
     @Test
     fun testGtsFormat() {
         val gts = """
+            import {   asd} from "xyz";
             let x = <template>hello world</template>;
+            function test() {const abc = 'xyz'};
             x = <template>
                hello world
                 hello world
@@ -144,7 +145,6 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                 Hi
                 </template>
             }
-            
             class Bar {
                 <template>
                         hello world
@@ -156,6 +156,7 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                     hello world
                 </template>
             }
+            
             class Bar {
                 <template>
                 <div>
@@ -185,7 +186,13 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
         """.trimIndent()
 
         val gtsAfter = """
+            import {asd} from "xyz";
+            
             let x = <template>hello world</template>;
+            
+            function test() {
+                const abc = 'xyz'
+            };
             x = <template>
                 hello world
                 hello world
@@ -228,6 +235,7 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                     hello world
                 </template>
             }
+            
             class Bar {
                 <template>
                     <div>
@@ -255,8 +263,164 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
                 {{demo}}
             </template>
         """.trimIndent()
-        doStringBasedTest(gts, gtsAfter)
+        doStringBasedTest(gts, gtsAfter, false)
     }
 
+    @Test
+    fun testGtsLineIndent() {
+        val gts = """
+            import {asd} from "xyz";
+            let x = <template>hello world</template>;
+            function test() {
+            const abc = 'xyz'
+            };
+            x = <template>
+               hello world
+                hello world
+                hello world
+                <div>
+             {{demo}}
+                </div>
+                hello world
+                hello world
+                 {{demo}}
+                hello world
+            </template>;
+            x = <template>
+              hello world hello world hello world hello world hello world hello world
+              <div></div>
+            </template>;
+            x = <template>
+                    hello world hello world hello world hello world hello world hello world
+                    <div></div>
+            </template>;
+             x = <template>
+             <div></div>
+                    hello world hello world hello world hello world hello world hello world                    
+            </template>;
+            
+            class Foo {
+                <template>
+                Hi
+                </template>
+            }
+            
+            class Bar {
+                <template>
+                        hello world
+                    hello world
+                    hello world
+                    hello world
+                     {{demo}}
+                    hello world
+                    hello world
+                </template>
+            }
+            
+            class Bar {
+                <template>
+                <div>
+         {{demo}}
+                </div>
+                        hello world
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                </template>
+            }
+            
+            <template>
+                    hello world
+            <div>
+         {{demo}}
+            </div>
+                hello world
+                hello world
+                hello world
+                hello world
+                hello world
+                 {{demo}}
+            </template>
+        """.trimIndent()
 
+        val gtsAfter = """
+            import {asd} from "xyz";
+            let x = <template>hello world</template>;
+            function test() {
+                const abc = 'xyz'
+            };
+            x = <template>
+                hello world
+                hello world
+                hello world
+                <div>
+                    {{demo}}
+                </div>
+                hello world
+                hello world
+                {{demo}}
+                hello world
+            </template>;
+            x = <template>
+                hello world hello world hello world hello world hello world hello world
+                <div></div>
+            </template>;
+            x = <template>
+                hello world hello world hello world hello world hello world hello world
+                <div></div>
+            </template>;
+            x = <template>
+                <div></div>
+                hello world hello world hello world hello world hello world hello world
+            </template>;
+            
+            class Foo {
+                <template>
+                    Hi
+                </template>
+            }
+            
+            class Bar {
+                <template>
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                    {{demo}}
+                    hello world
+                    hello world
+                </template>
+            }
+            
+            class Bar {
+                <template>
+                    <div>
+                        {{demo}}
+                    </div>
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                    hello world
+                </template>
+            }
+            
+            <template>
+                hello world
+                <div>
+                    {{demo}}
+                </div>
+                hello world
+                hello world
+                hello world
+                hello world
+                hello world
+                {{demo}}
+            </template>
+        """.trimIndent()
+        doStringBasedTest(gts, gtsAfter, true)
+    }
 }
