@@ -141,6 +141,11 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
             </template>;
             
             class Foo {
+                get value() {
+                    return this.args.values
+                      .filter(value => typeof value === 'string') // ignore non-string values
+                      .find(value => value.startsWith(this.args.name));
+                }
                 <template>
                 Hi
                 </template>
@@ -219,6 +224,12 @@ class GtsFormatIdentTest : BasePlatformTestCase() {
             </template>;
             
             class Foo {
+                get value() {
+                    return this.args.values
+                        .filter(value => typeof value === 'string') // ignore non-string values
+                        .find(value => value.startsWith(this.args.name));
+                }
+                
                 <template>
                     Hi
                 </template>
