@@ -934,7 +934,7 @@ class SimpleAstNode: ASTNode {
     }
 
     override fun getPsi(): PsiElement? {
-        TODO("Not yet implemented")
+       return null
     }
 
     override fun <T : PsiElement?> getPsi(p0: Class<T?>): T? {
