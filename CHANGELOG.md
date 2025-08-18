@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.24 (2025-08-18)
+
+#### :bug: Bug Fix
+* [#315](https://github.com/patricklx/intellij-emberjs-experimental/pull/315) fix format exception ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.23 (2025-08-15)
 
 #### :bug: Bug Fix
