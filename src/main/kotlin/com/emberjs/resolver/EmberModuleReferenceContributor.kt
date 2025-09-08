@@ -191,7 +191,7 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
         }.flatten().toTypedArray()
     }
 
-    override fun isApplicable(host: PsiElement): Boolean = EmberUtils.isEmber(host.project)
+    override fun isApplicable(host: PsiElement): Boolean = host.containingFile.originalVirtualFile?.emberRoot != null
 
     /** Detect the name of the ember application */
     private fun getAppName(appRoot: VirtualFile): String? = getModulePrefix(appRoot) ?: getAddonName(appRoot)
