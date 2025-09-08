@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.25 (2025-09-08)
+
+#### :bug: Bug Fix
+* [#319](https://github.com/patricklx/intellij-emberjs-experimental/pull/319) fix ember detection in subfolder ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.24 (2025-08-18)
 
 #### :bug: Bug Fix
