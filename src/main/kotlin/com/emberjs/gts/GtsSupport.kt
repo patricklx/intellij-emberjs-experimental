@@ -12,6 +12,7 @@ import com.emberjs.icons.EmberIcons
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.resolver.EmberName
 import com.emberjs.utils.EmberUtils
+import com.emberjs.utils.emberRoot
 import com.emberjs.utils.ifTrue
 import com.intellij.formatting.*
 import com.intellij.formatting.templateLanguages.DataLanguageBlockWrapper
@@ -640,7 +641,7 @@ class GtsTypeScriptImportsResolverProvider : TypeScriptImportsResolverProvider {
     override fun contributeResolver(project: Project,
                                     context: TypeScriptImportResolveContext,
                                     contextFile: VirtualFile): TypeScriptFileImportsResolver? {
-        val detectedEmber = EmberUtils.isEmber(project)
+        val detectedEmber = contextFile.emberRoot != null
         if (detectedEmber) {
             return GtsImportResolver(project, context, contextFile)
         }
