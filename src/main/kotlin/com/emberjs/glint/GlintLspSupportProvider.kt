@@ -98,7 +98,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         return true
     }
 
-    fun isAvailable(vfile?: VirtualFile): Boolean {
+    fun isAvailable(vfile: VirtualFile?): Boolean {
         val config = GlintConfiguration.getInstance(myProject)
         val pkg = config.getPackage()
         val path = pkg.`package`.constantPackage?.systemIndependentPath
