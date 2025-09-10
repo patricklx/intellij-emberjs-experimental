@@ -52,13 +52,14 @@ import java.util.concurrent.Future
 import java.util.stream.Stream
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
+    val descriptor = getGlintDescriptor(project)
 
     override fun isHighlightingCandidate(file: VirtualFile) = file.fileType is HbFileType || file.fileType is JavaScriptFileType || file.fileType is TypeScriptFileType || file.fileType is GtsFileType
 
-    override fun getService(file: VirtualFile) = allServices.firstOrNull()
+    override fun getService(file: VirtualFile) = if (descriptor.isAvailable(file)) return GlintTypeScriptService.getInstance(project) else null
 
     override val allServices: List<GlintTypeScriptService>
-        get() = if (EmberUtils.isEnabledEmberProject(project)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
+        get() = if (descriptor.isAvailable()) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
 
 
