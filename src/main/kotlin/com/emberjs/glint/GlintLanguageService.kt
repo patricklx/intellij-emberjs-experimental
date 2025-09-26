@@ -56,10 +56,10 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 
     override fun isHighlightingCandidate(file: VirtualFile) = file.fileType is HbFileType || file.fileType is JavaScriptFileType || file.fileType is TypeScriptFileType || file.fileType is GtsFileType
 
-    override fun getService(file: VirtualFile) = if (descriptor.isAvailable(file)) return GlintTypeScriptService.getInstance(project) else null
+    override fun getService(file: VirtualFile) = if (descriptor.isAvailable(file)) GlintTypeScriptService.getInstance(project) else null
 
     override val allServices: List<GlintTypeScriptService>
-        get() = if (descriptor.isAvailable()) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
+        get() = if (descriptor.isAvailable(null)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
 }
 
 
