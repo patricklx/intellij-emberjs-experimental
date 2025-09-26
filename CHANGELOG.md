@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.26 (2025-09-26)
+
+#### :rocket: Enhancement
+* [#321](https://github.com/patricklx/intellij-emberjs-experimental/pull/321) improve glint service detection ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.25 (2025-09-08)
 
 #### :bug: Bug Fix
