@@ -4,7 +4,6 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.EmberReference
-import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
@@ -26,7 +25,6 @@ import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScriptSuppressByCommentFix
-import com.intellij.lang.typescript.languageService.TypeScriptServiceProvider
 import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
 import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
@@ -52,10 +50,12 @@ import java.util.concurrent.CompletableFuture.completedFuture
 import java.util.concurrent.Future
 import java.util.stream.Stream
 
-class GlintLanguageServiceProvider(val project: Project) : TypeScriptServiceProvider() {
+class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
     val descriptor = getGlintDescriptor(project)
 
     override fun isHighlightingCandidate(file: VirtualFile) = file.fileType is HbFileType || file.fileType is JavaScriptFileType || file.fileType is TypeScriptFileType || file.fileType is GtsFileType
+
+    override fun getService(file: VirtualFile) = if (descriptor.isAvailable(file)) GlintTypeScriptService.getInstance(project) else null
 
     override val allServices: List<GlintTypeScriptService>
         get() = if (descriptor.isAvailable(null)) listOf(GlintTypeScriptService.getInstance(project)) else emptyList()
