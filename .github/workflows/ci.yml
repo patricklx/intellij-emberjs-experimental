@@ -40,7 +40,7 @@ jobs:
 
       - run: chmod +x ./gradlew
       - run: ./gradlew assemble
-      - run: ./gradlew check
+      - run: ./gradlew -i check
   release:
     name: Update Changelog, Create Tag and Release
     runs-on: ubuntu-latest

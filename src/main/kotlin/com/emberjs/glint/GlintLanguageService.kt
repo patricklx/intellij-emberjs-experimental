@@ -4,7 +4,6 @@ import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.psi.HbPsiFile
 import com.emberjs.gts.GtsFileType
 import com.emberjs.hbs.EmberReference
-import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.intention.IntentionAction
@@ -81,7 +80,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     fun getDescriptor(): GlintLspServerDescriptor? {
-        return if (EmberUtils.isEnabledEmberProject(project)) getGlintDescriptor(project) else null
+        return getGlintDescriptor(project)
     }
 
     override val name = "Glint"
