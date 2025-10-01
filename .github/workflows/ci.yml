@@ -41,6 +41,7 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew assemble
       - run: ./gradlew check
+      - run: cat /home/runner/work/intellij-emberjs-experimental/intellij-emberjs-experimental/build/reports/problems/problems-report.html || echo "no errors"
   release:
     name: Update Changelog, Create Tag and Release
     runs-on: ubuntu-latest
