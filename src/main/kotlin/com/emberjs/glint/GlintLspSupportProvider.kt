@@ -107,7 +107,8 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         pkg.readOrDetect()
         val path = pkg.`package`.constantPackage?.systemIndependentPath
         if (path != null) {
-            val f = VfsUtil.findFile(Path(path), true)
+            var f = VfsUtil.findFile(Path(path), true)
+            f = f?.findFileByRelativePath("bin/glint-language-server.js")
 
             if (f != null) {
                 return true
