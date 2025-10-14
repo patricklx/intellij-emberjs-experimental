@@ -53,7 +53,7 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
       - name: Use Node.js 18
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 22
       - run: sudo apt-get install markdown -y
