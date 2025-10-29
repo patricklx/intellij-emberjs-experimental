@@ -164,7 +164,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - run: chmod +x ./gradlew
       - run: ./gradlew buildPlugin && ls ./build/distributions
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: EmberExperimental.zip
           path: ./build/distributions/intellij-emberjs-experimental*.zip
