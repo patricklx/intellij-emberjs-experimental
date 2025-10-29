@@ -158,6 +158,13 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         return getNavigationFor(document, elem, false)
     }
 
+    override fun supportsInlayHints(file: PsiFile): Boolean {
+        return this.canHighlight(file)
+    }
+
+    override fun supportsTypeEvaluation(virtualFile: VirtualFile, element: PsiElement): Boolean {
+        return this.isAcceptable(virtualFile)
+    }
 
     override fun getSignatureHelp(file: PsiFile, offset: Int): Future<Stream<JSFunctionType>?>? = null
 
