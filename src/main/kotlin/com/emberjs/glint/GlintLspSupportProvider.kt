@@ -93,6 +93,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         }
         val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return false
         glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
+        glintCoreDir = glintPkg
         return true
     }
 
@@ -105,7 +106,8 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         pkg.readOrDetect()
         val path = pkg.`package`.constantPackage?.systemIndependentPath
         if (path != null) {
-            val f = VfsUtil.findFile(Path(path), true)
+            var f = VfsUtil.findFile(Path(path), true)
+            f = f?.findFileByRelativePath("bin/glint-language-server.js")
 
             if (f != null && f.exists()) {
                 return true
@@ -150,7 +152,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         val pkg = config.getPackage()
         var path = pkg.`package`.constantPackage?.systemIndependentPath
         val dir = glintCoreDir ?: VfsUtil.findFile(Path(path!!), true)
-        this.isWsl = false
 
         var workDirectory = dir
         while (workDirectory != null && workDirectory.path.contains("node_modules")) {
