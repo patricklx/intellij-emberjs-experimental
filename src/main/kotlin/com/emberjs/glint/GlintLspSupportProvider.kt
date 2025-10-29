@@ -75,7 +75,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun isAvailableFromDir(file: VirtualFile): Boolean {
         val workingDir = file
-        var isWsl = false
         if (workingDir.path.contains("wsl.localhost") || workingDir.path.contains("wsl\$")) {
             isWsl = true
         }
@@ -108,7 +107,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         if (path != null) {
             val f = VfsUtil.findFile(Path(path), true)
 
-            if (f != null) {
+            if (f != null && f.exists()) {
                 return true
             }
         }
