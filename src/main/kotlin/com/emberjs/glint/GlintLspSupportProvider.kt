@@ -218,7 +218,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     override fun findLocalFileByPath(path: String): VirtualFile? {
-        if (this.isWsl) {
+        if (this.isWsl && !path.startsWith(this.wslDistro.replace("\\", "/"))) {
             val uri = this.wslDistro.replace("\\", "/") + path
             return super.findLocalFileByPath(uri)
         }
