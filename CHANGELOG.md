@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v2025.1.28 (2025-11-06)
+
+#### :bug: Bug Fix
+* [#334](https://github.com/patricklx/intellij-emberjs-experimental/pull/334) fix glint wsl ([@patricklx](https://github.com/patricklx))
+* [#328](https://github.com/patricklx/intellij-emberjs-experimental/pull/328) fix detect glint ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.27 (2025-10-01)
 
 #### :rocket: Enhancement
