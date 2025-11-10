@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.1.29 (2025-11-10)
+
+#### :bug: Bug Fix
+* [#341](https://github.com/patricklx/intellij-emberjs-experimental/pull/341) fix missing gjs ts analysis ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.28 (2025-11-06)
 
 #### :bug: Bug Fix
