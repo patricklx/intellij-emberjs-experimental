@@ -602,7 +602,9 @@ val GTS_DEFAULT_EXTENSIONS_WITH_DOT = arrayOf(".gts", ".gjs")
 
 class GtsImportResolver(project: Project,
                         resolveContext: JSImportResolveContext,
-                        private val contextFile: VirtualFile): TypeScriptFileImportsResolverImpl(project, resolveContext, GTS_DEFAULT_EXTENSIONS_WITH_DOT, listOf(GtsFileType.INSTANCE)) {
+                        private val contextFile: VirtualFile):
+    TypeScriptFileImportsResolverImpl(project, resolveContext, GTS_DEFAULT_EXTENSIONS_WITH_DOT, listOf(GtsFileType.INSTANCE, GjsFileType.INSTANCE
+)) {
 
     override fun processAllFilesInScope(includeScope: GlobalSearchScope, processor: Processor<in VirtualFile>) {
         if (includeScope == GlobalSearchScope.EMPTY_SCOPE) return
@@ -620,6 +622,9 @@ class GtsImportResolver(project: Project,
     private fun processGtsPackage(processor: Processor<in VirtualFile>) {
         TypeScriptImportsResolverProvider.getDefaultProvider(project, resolveContext)
             .resolveFileModule("gts", contextFile)
+            ?.let { processor.process(it) }
+        TypeScriptImportsResolverProvider.getDefaultProvider(project, resolveContext)
+            .resolveFileModule("gjs", contextFile)
             ?.let { processor.process(it) }
     }
 
@@ -659,6 +664,13 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
             .map { getExports(it) }
             .flatten()
             .toMutableList()
+
+        list.addAll(FilenameIndex.getAllFilesByExt(project, "gjs",
+            createProjectImportsScope(placeInfo, getStructureModuleRoot(placeInfo)))
+            .map { getExports(it) }
+            .flatten()
+            .toMutableList()
+        )
 
         val scopes = EmberUtils.getScopesForFile(myPlaceInfo.file)
 
@@ -726,6 +738,9 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
 
     private fun getComponentName(virtualFile: VirtualFile): String {
         return if (virtualFile.name == "index.gts") {
+            virtualFile.parent.name
+        }
+        else if (virtualFile.name == "index.gjs") {
             virtualFile.parent.name
         }
         else {
