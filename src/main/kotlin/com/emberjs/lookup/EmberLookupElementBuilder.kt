@@ -17,6 +17,7 @@ import com.intellij.lang.javascript.modules.JSImportPlaceInfo
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.ResolveResult
 import java.util.function.Predicate
@@ -48,11 +49,16 @@ object EmberLookupElementBuilder {
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
-            val keyFilter = Predicate { n: String? -> n == it.name }
             val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
-            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                candidates.addAll(elements.filterNotNull().filter { it.descriptor?.moduleName == moduleName })
+            
+            // Process candidates from each provider
+            for (provider in providers) {
+                val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
+                provider.processCandidates(it.name, collector)
+                candidates.addAll(collector.results.filter { candidate -> 
+                    candidate.descriptor?.moduleName == moduleName 
+                })
             }
         }
         return candidates.firstOrNull()
@@ -81,11 +87,16 @@ object EmberLookupInternalElementBuilder {
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
             val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: return@runReadAction
-            val keyFilter = Predicate { n: String? -> n == name }
             val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
-            JSImportCompletionUtil.processExportedElements(file, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                candidates.addAll(elements.filterNotNull().filter { it.descriptor?.moduleName == moduleName })
+            
+            // Process candidates from each provider
+            for (provider in providers) {
+                val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
+                provider.processCandidates(name, collector)
+                candidates.addAll(collector.results.filter { candidate -> 
+                    candidate.descriptor?.moduleName == moduleName 
+                })
             }
         }
         return candidates.firstOrNull()

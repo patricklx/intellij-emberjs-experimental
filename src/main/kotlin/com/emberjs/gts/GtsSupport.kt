@@ -151,10 +151,6 @@ class GtsFileElementType(language: Language?) : JSFileElementType(language) {
         return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
     }
 
-    override fun getExternalId(): String {
-        return GtsLanguage.INSTANCE.toString() + ":" + this
-    }
-
     companion object {
         val INSTANCE = GtsFileElementType(GtsLanguage.INSTANCE)
     }
@@ -170,10 +166,6 @@ class GjsFileElementType(language: Language?) : JSFileElementType(language) {
         return GtsElementTypes.TS_CONTENT_ELEMENT_TYPE.parseContents(chameleon)
     }
 
-    override fun getExternalId(): String {
-        return GjsLanguage.INSTANCE.toString() + ":" + this
-    }
-
     companion object {
         val INSTANCE = GjsFileElementType(GjsLanguage.INSTANCE)
     }
@@ -181,11 +173,11 @@ class GjsFileElementType(language: Language?) : JSFileElementType(language) {
 
 class GtsElementTypes {
     companion object {
-        val HB_TOKEN = JSElementType("HB_TOKEN")
-        val JS_TOKEN = JSElementType("JS_TOKEN")
-        val HTML_TOKEN = JSElementType("HTML_TOKEN")
+        val HB_TOKEN = IElementType("HB_TOKEN", GtsLanguage.INSTANCE)
+        val JS_TOKEN = IElementType("JS_TOKEN", GtsLanguage.INSTANCE)
+        val HTML_TOKEN = IElementType("HTML_TOKEN", GtsLanguage.INSTANCE)
         val GTS_OUTER_ELEMENT_TYPE = IElementType("GTS_EMBEDDED_CONTENT", GtsLanguage.INSTANCE)
-        val HBS_BLOCK: IElementType = JSElementType("HBS_BLOCK")
+        val HBS_BLOCK = IElementType("HBS_BLOCK", GtsLanguage.INSTANCE)
         //val TS_CONTENT_ELEMENT_TYPE = TSTemplate()
         val TS_CONTENT_ELEMENT_TYPE = object: TemplateDataElementType("GTS_TS", TS, JS_TOKEN, GTS_OUTER_ELEMENT_TYPE) {
 

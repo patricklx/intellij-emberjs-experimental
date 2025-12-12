@@ -296,10 +296,19 @@ class EmberTagNameProvider : XmlTagNameProvider {
                 ResolveResult.EMPTY_ARRAY
         )
         val tagName = tag.name.replace("IntellijIdeaRulezzz", "")
-        val keyFilter = Predicate { name: String? -> name?.first()?.isUpperCase() == true && name.contains(tagName) }
         val providers = JSImportCandidatesProvider.getProviders(info)
-        JSImportCompletionUtil.processExportedElements(tag, providers, keyFilter) { candidates: Collection<JSImportCandidate?>, name: String? ->
-            candidates.filterNotNull().filter { it.descriptor != null }.forEach { candidate ->
+        
+        // Process candidates from each provider
+        for (provider in providers) {
+            val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
+            // Get all candidates and filter them
+            provider.collectNames { candidateName: String? ->
+                if (candidateName?.first()?.isUpperCase() == true && candidateName.contains(tagName)) {
+                    provider.processCandidates(candidateName, collector)
+                }
+            }
+            
+            collector.results.filter { it.descriptor != null }.forEach { candidate ->
                 val lookupElement = LookupElementBuilder.create(candidate.element ?: candidate.name, candidate.name)
                         .withTailText(" from ${candidate.descriptor!!.moduleName }")
                         .withTypeText("component")
@@ -309,7 +318,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
                             override fun handleInsert(context: InsertionContext, item: LookupElement) {
                                 val tsFile = context.file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
                                         ?: context.file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
-                                val action = JSImportAction(context.editor, tag, name!!)
+                                val action = JSImportAction(context.editor, tag, candidate.name)
                                 val candidateWithExecutors = JSImportCandidateWithExecutor.sortWithExecutors(candidate, tsFile)
                                 if (candidateWithExecutors.size == 1) {
                                     action.executeFor((candidateWithExecutors[0] as JSImportCandidateWithExecutor), null)
@@ -324,7 +333,6 @@ class EmberTagNameProvider : XmlTagNameProvider {
                         })
                 lookupElements.add(lookupElement)
             }
-            true
         }
     }
 
