@@ -81,6 +81,8 @@ import com.intellij.psi.impl.source.tree.PsiWhiteSpaceImpl
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
+import com.intellij.psi.stubs.LanguageStubDescriptor
+import com.intellij.psi.stubs.StubElementRegistryService
 import com.intellij.psi.templateLanguages.*
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.tree.IFileElementType
@@ -137,6 +139,10 @@ class GtsFile(viewProvider: FileViewProvider?, val isJS: Boolean =false)
 
     override fun toString(): String {
         return "GTS File"
+    }
+
+    override fun getStubDescriptor(): LanguageStubDescriptor? {
+        return StubElementRegistryService.getInstance().getStubDescriptor(isJS.ifTrue { JS } ?: TS);
     }
 }
 
