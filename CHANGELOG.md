@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.3.0 (2025-12-15)
+
+#### :rocket: Enhancement
+* [#348](https://github.com/patricklx/intellij-emberjs-experimental/pull/348) intellij 2025.3 ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.1.29 (2025-11-10)
 
 #### :bug: Bug Fix
