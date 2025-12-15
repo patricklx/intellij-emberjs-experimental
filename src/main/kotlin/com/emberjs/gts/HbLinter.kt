@@ -166,16 +166,28 @@ class HbLintAnnotator() : Annotator {
 
     fun getCandidates(file: PsiFile, name: String): MutableList<JSImportCandidate> {
         val candidates = mutableListOf<JSImportCandidate>()
-            ApplicationManager.getApplication().runReadAction {
-            val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6) ?: return@runReadAction
-            val keyFilter = Predicate { n: String? -> n?.startsWith(name) == true }
+        ApplicationManager.getApplication().runReadAction {
+            val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) 
+                ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6) 
+                ?: return@runReadAction
+            
             val info = JSImportPlaceInfo(tsFile, ResolveResult.EMPTY_ARRAY)
             val providers = JSImportCandidatesProvider.getProviders(info)
-            JSImportCompletionUtil.processExportedElements(tsFile, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                candidates.addAll(elements.filterNotNull())
+            
+            // Process candidates from each provider
+            for (provider in providers) {
+                val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
+                provider.processCandidates(name, collector)
+                candidates.addAll(collector.results.filter { it.name.startsWith(name) })
             }
         }
-        candidates.sortBy { c -> c.descriptor?.let { c.name.equals(name).and(it.moduleName.contains("helpers").or(it.moduleName.contains("components"))).ifTrue { 0 }} ?: 1 }
+        candidates.sortBy { c -> 
+            c.descriptor?.let { 
+                c.name.equals(name).and(
+                    it.moduleName.contains("helpers").or(it.moduleName.contains("components"))
+                ).ifTrue { 0 }
+            } ?: 1 
+        }
         return candidates
     }
 

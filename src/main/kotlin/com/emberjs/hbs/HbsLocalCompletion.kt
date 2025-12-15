@@ -388,11 +388,16 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val f = view.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: view.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
-            val keyFilter = Predicate { n: String? -> n != null && n.contains(name) }
-            val info = JSImportPlaceInfo(f, ResolveResult.EMPTY_ARRAY)
-            val providers = JSImportCandidatesProvider.getProviders(info)
-            JSImportCompletionUtil.processExportedElements(f, providers, keyFilter) { elements: Collection<JSImportCandidate?>, name: String? ->
-                candidates.addAll(elements.filterNotNull())
+            if (f != null) {
+                val info = JSImportPlaceInfo(f, ResolveResult.EMPTY_ARRAY)
+                val providers = JSImportCandidatesProvider.getProviders(info)
+                
+                // Process candidates from each provider
+                for (provider in providers) {
+                    val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
+                    provider.processCandidates(name, collector)
+                    candidates.addAll(collector.results.filter { it.name.contains(name) })
+                }
             }
         }
         completionResultSet.addAllElements(candidates.mapNotNull { EmberLookupElementBuilderWithCandidate.create(it, file) })
