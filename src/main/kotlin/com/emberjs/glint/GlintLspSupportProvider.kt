@@ -65,45 +65,47 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
     fun isAvailableFromDir(file: VirtualFile): Boolean {
-        val workingDir = file
-        val cacheKey = workingDir.path
-        
-        // Check cache first
-        availabilityCache[cacheKey]?.let { return it }
-        
-        if (WslPath.isWslUncPath(workingDir.path)) {
-            isWsl = true
-            val wsl = WslPath.parseWindowsUncPath(workingDir.path)
-            wslDistro = wsl?.wslRoot ?: ""
-        }
-        if (isWsl) {
-            val path = "./node_modules/@glint/core/bin/glint-language-server.js"
-            val builder = ProcessBuilder()
-                .directory(File(workingDir.path))
-                .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
-            val p = builder.start()
-            p.waitFor()
-            val out = p.inputStream.reader().readText().trim()
-            if (out == "true") {
-                glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
-                    availabilityCache[cacheKey] = false
-                    return false
-                }
-                availabilityCache[cacheKey] = true
-                return true
+        return ApplicationManager.getApplication().runReadAction<Boolean> {
+            val workingDir = file
+            val cacheKey = workingDir.path
+            
+            // Check cache first
+            availabilityCache[cacheKey]?.let { return@runReadAction it }
+            
+            if (WslPath.isWslUncPath(workingDir.path)) {
+                isWsl = true
+                val wsl = WslPath.parseWindowsUncPath(workingDir.path)
+                wslDistro = wsl?.wslRoot ?: ""
             }
+            if (isWsl) {
+                val path = "./node_modules/@glint/core/bin/glint-language-server.js"
+                val builder = ProcessBuilder()
+                    .directory(File(workingDir.path))
+                    .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
+                val p = builder.start()
+                p.waitFor()
+                val out = p.inputStream.reader().readText().trim()
+                if (out == "true") {
+                    glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
+                        availabilityCache[cacheKey] = false
+                        return@runReadAction false
+                    }
+                    availabilityCache[cacheKey] = true
+                    return@runReadAction true
+                }
+            }
+            val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
+                availabilityCache[cacheKey] = false
+                return@runReadAction false
+            }
+            glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: run {
+                availabilityCache[cacheKey] = false
+                return@runReadAction false
+            }
+            glintCoreDir = glintPkg
+            availabilityCache[cacheKey] = true
+            return@runReadAction true
         }
-        val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
-            availabilityCache[cacheKey] = false
-            return false
-        }
-        glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: run {
-            availabilityCache[cacheKey] = false
-            return false
-        }
-        glintCoreDir = glintPkg
-        availabilityCache[cacheKey] = true
-        return true
     }
 
     fun isAvailable(vfile: VirtualFile?): Boolean {
@@ -115,25 +117,34 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         pkg.readOrDetect()
         val path = pkg.`package`.constantPackage?.systemIndependentPath
         if (path != null) {
-            var f = VfsUtil.findFile(Path(path), true)
-            f = f?.findFileByRelativePath("bin/glint-language-server.js")
-
-            if (f != null && f.exists()) {
-                if (WslPath.isWslUncPath(f.path)) {
-                    isWsl = true
-                    val wsl = WslPath.parseWindowsUncPath(f.path)
-                    wslDistro = wsl?.wslRoot ?: ""
+            val fileExists = ApplicationManager.getApplication().runReadAction<Boolean> {
+                val f = VfsUtil.findFile(Path(path), true)
+                val serverFile = f?.findFileByRelativePath("bin/glint-language-server.js")
+                
+                if (serverFile != null && serverFile.exists()) {
+                    if (WslPath.isWslUncPath(serverFile.path)) {
+                        isWsl = true
+                        val wsl = WslPath.parseWindowsUncPath(serverFile.path)
+                        wslDistro = wsl?.wslRoot ?: ""
+                    }
+                    true
+                } else {
+                    false
                 }
-                return true
             }
+            if (fileExists) return true
         }
         var f: VirtualFile? = vfile
         while (true) {
-            if (f?.isFile == true) {
-                f = f.parent
+            val (isFile, parent, pathContainsNodeModules) = ApplicationManager.getApplication().runReadAction<Triple<Boolean, VirtualFile?, Boolean>> {
+                Triple(f?.isFile == true, f?.parent, f?.path?.contains("node_modules") == true)
             }
-            if (f?.path?.contains("node_modules") == true) {
-                f = f.parentEmberModule
+            
+            if (isFile) {
+                f = parent
+            }
+            if (pathContainsNodeModules) {
+                f = f?.parentEmberModule
                 continue
             }
             if (f != null && isAvailableFromDir(f)) {
@@ -157,28 +168,35 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     }
 
     fun getGlintVersion(): String? {
-        val config = GlintConfiguration.getInstance(myProject)
-        val pkg = config.getPackage()
-        val path = pkg.`package`.constantPackage?.systemIndependentPath ?: glintCoreDir?.path ?: return null
-        val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json"))
-        return PackageJsonData.getOrCreate(f!!).version?.rawVersion
+        return ApplicationManager.getApplication().runReadAction<String?> {
+            val config = GlintConfiguration.getInstance(myProject)
+            val pkg = config.getPackage()
+            val path = pkg.`package`.constantPackage?.systemIndependentPath ?: glintCoreDir?.path ?: return@runReadAction null
+            val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json"))
+            PackageJsonData.getOrCreate(f!!).version?.rawVersion
+        }
     }
 
     override fun createCommandLine(): GeneralCommandLine {
         val config = GlintConfiguration.getInstance(myProject)
         val pkg = config.getPackage()
         var path = pkg.`package`.constantPackage?.systemIndependentPath
-        val dir = glintCoreDir ?: VfsUtil.findFile(Path(path!!), true)
+        val dir = glintCoreDir ?: ApplicationManager.getApplication().runReadAction<VirtualFile?> {
+            VfsUtil.findFile(Path(path!!), true)
+        }
 
-        var workDirectory = dir
-        while (workDirectory != null && workDirectory.path.contains("node_modules")) {
-            workDirectory = workDirectory.parent
+        val (workDirectoryPath, dirPath) = ApplicationManager.getApplication().runReadAction<Pair<String?, String?>> {
+            var workDirectory = dir
+            while (workDirectory != null && workDirectory.path.contains("node_modules")) {
+                workDirectory = workDirectory.parent
+            }
+            Pair(workDirectory?.path, dir?.path)
         }
 
         val commandLine = GeneralCommandLine()
                 .withCharset(StandardCharsets.UTF_8)
                 .withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE)
-                .withWorkDirectory(workDirectory?.path)
+                .withWorkDirectory(workDirectoryPath)
 
         ApplicationManager.getApplication().runReadAction {
 //            val glintPkg = NodeModuleManager.getInstance(project).collectVisibleNodeModules(workingDir).find { it.name == "@glint/core" }?.virtualFile
@@ -186,7 +204,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 //            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
 //                    ?: throw RuntimeException("glint lsp was not found")
             //commandLine.addParameter("--inspect-brk")
-            commandLine.addParameter("${dir!!.path}/bin/glint-language-server.js")
+            commandLine.addParameter("${dirPath!!}/bin/glint-language-server.js")
             commandLine.addParameter("--stdio")
             if (!this.isWsl) {
                 commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
