@@ -33,6 +33,7 @@ import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 import kotlin.io.path.Path
 
@@ -57,6 +58,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
+    private val availabilityCache = ConcurrentHashMap<String, Boolean>()
 
     public val server
         get() =
@@ -64,6 +66,11 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun isAvailableFromDir(file: VirtualFile): Boolean {
         val workingDir = file
+        val cacheKey = workingDir.path
+        
+        // Check cache first
+        availabilityCache[cacheKey]?.let { return it }
+        
         if (WslPath.isWslUncPath(workingDir.path)) {
             isWsl = true
             val wsl = WslPath.parseWindowsUncPath(workingDir.path)
@@ -78,13 +85,24 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             p.waitFor()
             val out = p.inputStream.reader().readText().trim()
             if (out == "true") {
-                glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return false
+                glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
+                    availabilityCache[cacheKey] = false
+                    return false
+                }
+                availabilityCache[cacheKey] = true
                 return true
             }
         }
-        val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return false
-        glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return false
+        val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
+            availabilityCache[cacheKey] = false
+            return false
+        }
+        glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: run {
+            availabilityCache[cacheKey] = false
+            return false
+        }
         glintCoreDir = glintPkg
+        availabilityCache[cacheKey] = true
         return true
     }
 
