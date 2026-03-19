@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2025.3.1 (2026-03-19)
+
+#### :bug: Bug Fix
+* [#361](https://github.com/patricklx/intellij-emberjs-experimental/pull/361) improve glint check perf ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2025.3.0 (2025-12-15)
 
 #### :rocket: Enhancement
