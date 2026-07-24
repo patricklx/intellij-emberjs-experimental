@@ -30,7 +30,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.junit.platform:junit-platform-launcher:6.1.2")
     implementation(kotlin("test"))
-    implementation("org.codehaus.jettison:jettison:1.5.6")
+    implementation("org.codehaus.jettison:jettison:1.5.7")
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
