@@ -33,7 +33,6 @@ import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 import kotlin.io.path.Path
 
@@ -58,53 +57,38 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
-    private val availabilityCache = ConcurrentHashMap<String, Boolean>()
 
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
     fun isAvailableFromDir(file: VirtualFile): Boolean {
-        return ApplicationManager.getApplication().runReadAction<Boolean> {
-            val workingDir = file
-            val cacheKey = workingDir.path
-            
-            // Check cache first
-            availabilityCache[cacheKey]?.let { return@runReadAction it }
-            
-            if (WslPath.isWslUncPath(workingDir.path)) {
-                isWsl = true
-                val wsl = WslPath.parseWindowsUncPath(workingDir.path)
-                wslDistro = wsl?.wslRoot ?: ""
-            }
-            if (isWsl) {
-                val path = "./node_modules/@glint/core/bin/glint-language-server.js"
-                val builder = ProcessBuilder()
-                    .directory(File(workingDir.path))
-                    .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
-                val p = builder.start()
-                p.waitFor()
-                val out = p.inputStream.reader().readText().trim()
-                if (out == "true") {
-                    glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
-                        availabilityCache[cacheKey] = false
-                        return@runReadAction false
-                    }
-                    availabilityCache[cacheKey] = true
-                    return@runReadAction true
+        val workingDir = file
+        if (WslPath.isWslUncPath(workingDir.path)) {
+            isWsl = true
+            val wsl = WslPath.parseWindowsUncPath(workingDir.path)
+            wslDistro = wsl?.wslRoot ?: ""
+        }
+        if (isWsl) {
+            val path = "./node_modules/@glint/core/bin/glint-language-server.js"
+            val builder = ProcessBuilder()
+                .directory(File(workingDir.path))
+                .command("wsl", "--", "test", "-f", "\"$path\"", "&&", "echo", "\"true\"")
+            val p = builder.start()
+            p.waitFor()
+            val out = p.inputStream.reader().readText().trim()
+            if (out == "true") {
+                return ApplicationManager.getApplication().runReadAction<Boolean> {
+                    glintCoreDir = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return@runReadAction false
+                    true
                 }
             }
-            val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: run {
-                availabilityCache[cacheKey] = false
-                return@runReadAction false
-            }
-            glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: run {
-                availabilityCache[cacheKey] = false
-                return@runReadAction false
-            }
+        }
+        return ApplicationManager.getApplication().runReadAction<Boolean> {
+            val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return@runReadAction false
+            glintPkg.findFileByRelativePath("bin/glint-language-server.js") ?: return@runReadAction false
             glintCoreDir = glintPkg
-            availabilityCache[cacheKey] = true
-            return@runReadAction true
+            true
         }
     }
 
