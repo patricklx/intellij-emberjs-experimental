@@ -1127,8 +1127,8 @@ class RootBlockWrapper(val block: DataLanguageBlockWrapper, val policy: HtmlPoli
 
     fun getBaseIndent(forChild: Boolean = false): Indent? {
         val viewProvider = this.node!!.psi.containingFile.viewProvider
-        val htmlFile = viewProvider.getPsi(HTMLLanguage.INSTANCE)
-        val jsFile = viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+        val htmlFile = viewProvider.getPsi(HTMLLanguage.INSTANCE)!!
+        val jsFile = (viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6))!!
         val project = this.node!!.psi.project
         val document = PsiDocumentManager.getInstance(project).getDocument(htmlFile)
         if (document === null) {
@@ -1249,9 +1249,9 @@ class GtsFormattingModelBuilder : AbstractXmlTemplateFormattingModelBuilder() {
 
         var element = formattingContext.psiElement.containingFile.findElementAt(formattingContext.formattingRange.startOffset) ?: formattingContext.psiElement
         if (formattingContext.psiElement is PsiFile && formattingContext.formattingRange.startOffset == 0) {
-            element = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
+            element = (formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS))!!
         }
-        val tsFile = formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS)
+        val tsFile = (formattingContext.containingFile.viewProvider.getPsi(TS) ?: formattingContext.containingFile.viewProvider.getPsi(JS))!!
         val m = jsModelBuilder.createModel(formattingContext.withPsiElement(tsFile))
         val jsModel = JavascriptFormattingModelBuilder.createJSFormattingModel(tsFile, formattingContext.codeStyleSettings, JSAstBlockWrapper(m.rootBlock as ASTBlock, null, null))
         if (element.language is JSLanguageDialect) {

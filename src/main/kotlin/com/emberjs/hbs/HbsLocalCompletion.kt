@@ -317,7 +317,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             val tsView = view.getPsi(TS)
             val jsView = view.getPsi(JS)
             f = tsView ?: jsView
-            tpl = view.findElementAt(element.startOffset, f.language)
+            tpl = view.findElementAt(element.startOffset, f!!.language)
         }
 
         if (tpl == null) {
