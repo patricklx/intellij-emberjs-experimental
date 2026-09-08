@@ -319,4 +319,75 @@ class HbsCompletionTest : BasePlatformTestCase() {
         val completions = myFixture.lookupElementStrings!!
         assert(completions.contains("localEq"))
     }
+
+    @Test
+    fun testGtsTagAutoImportCompletion() {
+        val componentTs = """
+            import Component from '@glimmer/component';
+            export class WelcomePage extends Component {}
+        """.trimIndent()
+        myFixture.addFileToProject("app/components/welcome-page.ts", componentTs)
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
+        myFixture.addFileToProject(".ember-cli", "")
+        val gts = """
+            export default <template>
+                <Welcome
+            </template>
+        """.trimIndent()
+        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+        val offset = myFixture.file.text.indexOf("<Welcome") + "<Welcome".length
+        myFixture.editor.caretModel.moveToOffset(offset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.contains("WelcomePage"))
+    }
+
+    @Test
+    fun testGtsTagLocalImportCompletion() {
+        val componentTs = """
+            import Component from '@glimmer/component';
+            export class WelcomePage extends Component {}
+        """.trimIndent()
+        myFixture.addFileToProject("app/components/welcome-page.ts", componentTs)
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
+        myFixture.addFileToProject(".ember-cli", "")
+        val gts = """
+            import { WelcomePage } from './welcome-page';
+
+            export default <template>
+                <Welcome
+            </template>
+        """.trimIndent()
+        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+        val offset = myFixture.file.text.indexOf("<Welcome") + "<Welcome".length
+        myFixture.editor.caretModel.moveToOffset(offset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.contains("WelcomePage"))
+    }
+
+    @Test
+    fun testGtsTagLocalImportCompletionUnresolvedModule() {
+        val gts = """
+            import { WelcomePage, WelcomeBanner } from 'ember-welcome-page';
+
+            export default <template>
+                <Welcome
+            </template>
+        """.trimIndent()
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
+        myFixture.addFileToProject(".ember-cli", "")
+        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+        val offset = myFixture.file.text.indexOf("<Welcome") + "<Welcome".length
+        myFixture.editor.caretModel.moveToOffset(offset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.contains("WelcomePage"))
+    }
 }
