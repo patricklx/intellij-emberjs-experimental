@@ -117,7 +117,7 @@ open class RangedReference(element: PsiElement, val targetPsi: PsiElement?, val 
 
     override fun handleElementRename(newElementName: String): PsiElement {
         if (element is HbStatementsImpl) {
-            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!).findElementAt(range.startOffset)!!.parent as XmlTag
+            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)!!.findElementAt(range.startOffset)!!.parent as XmlTag
             tag.name = newElementName
             return tag
         }

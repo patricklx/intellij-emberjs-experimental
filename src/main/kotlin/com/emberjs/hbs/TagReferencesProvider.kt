@@ -172,7 +172,7 @@ open class XmlRangedReference(element: XmlAttribute, val targetPsi: PsiElement?,
             return element
         }
         if (element is HbStatementsImpl) {
-            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)
+            val tag = element.containingFile.viewProvider.getPsi(Language.findLanguageByID("HTML")!!)!!
                 .findElementAt(range.startOffset)!!.parent as XmlTag
             tag.name = newElementName
             return tag

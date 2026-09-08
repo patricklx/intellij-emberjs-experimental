@@ -35,7 +35,7 @@ class GtsReferenceSearcher : QueryExecutorBase<PsiReference?, ReferencesSearch.S
                     if (element is JSVariable) {
                         val psi = element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT)
                             ?: element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
-                        element = psi.findElementAt(element.textOffset)?.parent ?: element
+                        element = psi?.findElementAt(element.textOffset)?.parent ?: element
                     }
                 }
                 val effectiveScope =

@@ -116,7 +116,7 @@ class EmberUtils {
         fun resolveDefaultExport(ffile: PsiElement?): PsiElement? {
             var file = ffile ?: return null
             if (file is GtsFile) {
-                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                file = (file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6))!!
             }
             var exp: PsiElement? = ES6PsiUtil.findDefaultExport(file)
             val exportImport = PsiTreeUtil.findChildOfType(file, ES6ImportExportDeclaration::class.java)
@@ -233,7 +233,7 @@ class EmberUtils {
         fun findDefaultExportClass(f: PsiFile): JSClass? {
             var file = f
             if (file is GtsFile) {
-                file = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+                file = (file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6))!!
             }
             val exp = ES6PsiUtil.findDefaultExport(file)
             var cls: Any? = exp?.children?.find { it is JSClass }

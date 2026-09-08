@@ -59,7 +59,7 @@ class FakeJsElement(val element: PsiElement): PsiElement by element {
     }
 
     override fun getContainingFile(): PsiFile {
-        return element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+        return (element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: element.containingFile.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6))!!
     }
 
     override fun getReference(): PsiReference {
@@ -197,7 +197,7 @@ class HbLintAnnotator() : Annotator {
             return
         }
 
-        val tsFile = file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+        val tsFile = (file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6))!!
         val isJS = tsFile.language == JavaScriptSupportLoader.ECMA_SCRIPT_6
         val severity = isJS.ifTrue { HighlightSeverity.WEAK_WARNING } ?: HighlightSeverity.ERROR
         val highlightType = isJS.ifTrue { ProblemHighlightType.WEAK_WARNING } ?: ProblemHighlightType.LIKE_UNKNOWN_SYMBOL

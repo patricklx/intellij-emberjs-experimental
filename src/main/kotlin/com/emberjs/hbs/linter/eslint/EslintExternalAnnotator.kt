@@ -91,7 +91,7 @@ class GtsEsLintFixAction : EsLintFixAction() {
 class GtsEslintExternalAnnotator: EslintExternalAnnotator() {
 
     override fun createInfo(psiFile: PsiFile, state: EslintState, colorsScheme: EditorColorsScheme?): JSLinterInput<EslintState> {
-        return super.createInfo(FakeFile(psiFile.viewProvider.getPsi(HTMLLanguage.INSTANCE)), state, colorsScheme)
+        return super.createInfo(FakeFile(psiFile.viewProvider.getPsi(HTMLLanguage.INSTANCE)!!), state, colorsScheme)
     }
     override fun acceptPsiFile(file: PsiFile): Boolean {
         if (file is GtsFile && EmberApplicationOptions.runEslintOnGts) return true
