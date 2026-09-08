@@ -21,7 +21,6 @@ import com.intellij.lang.Language
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.JavaScriptSupportLoader
-import com.intellij.lang.javascript.completion.JSImportCompletionUtil
 import com.intellij.lang.javascript.modules.JSImportPlaceInfo
 import com.intellij.lang.javascript.modules.imports.JSImportCandidate
 import com.intellij.lang.javascript.modules.imports.providers.JSImportCandidatesProvider
@@ -326,7 +325,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
 
         val children = PsiTreeUtil.collectElements(f) { it is JSFunction || it is JSVariable || it is ES6ImportDeclaration || it is JSClass}
         children.forEach {
-            if (it is JSVariable) {
+            if (it is JSVariable && it.name != null) {
                 val useScope = JSUseScopeProvider.getBlockScopeElement(it)
                 if (useScope.isAncestor(tpl)) {
                     result.addElement(LookupElementBuilder.create(it.name!!))
@@ -389,14 +388,29 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         val candidates = mutableListOf<JSImportCandidate>()
         ApplicationManager.getApplication().runReadAction {
             if (f != null) {
-                val info = JSImportPlaceInfo(f, ResolveResult.EMPTY_ARRAY)
+                // Use the actual TS-side element at the caret as the "place", not the whole
+                // file - providers use it to decide what's importable/in-scope from there,
+                // and a file-level place can silently drop library (node_modules) candidates
+                // that a real reference element would resolve fine.
+                val place = view.findElementAt(element.startOffset, f.language) ?: f
+                val info = JSImportPlaceInfo(place, ResolveResult.EMPTY_ARRAY)
                 val providers = JSImportCandidatesProvider.getProviders(info)
-                
-                // Process candidates from each provider
+
+                // Providers expose fuzzy-matched names via getNames(), then resolve each
+                // matched name to candidates via processCandidates(exactName, ...).
                 for (provider in providers) {
+                    val matchedNames = mutableListOf<String>()
+                    provider.collectNames( { x ->
+                        if (x != null && x.contains(name)) {
+                            matchedNames.add(x)
+                        }
+                    })
+                    if (matchedNames.isEmpty()) {
+                        continue
+                    }
                     val collector = com.intellij.lang.javascript.modules.imports.providers.JSCandidatesProcessor(info)
-                    provider.processCandidates(name, collector)
-                    candidates.addAll(collector.results.filter { it.name.contains(name) })
+                    matchedNames.forEach { provider.processCandidates(it, collector) }
+                    candidates.addAll(collector.results)
                 }
             }
         }

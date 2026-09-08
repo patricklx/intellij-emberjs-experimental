@@ -1,5 +1,6 @@
 package com.emberjs.hbs
 
+import com.emberjs.gts.GtsFileType
 import com.dmarcotte.handlebars.file.HbFileType
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.impl.HbPathImpl
@@ -11,6 +12,7 @@ import com.intellij.psi.util.parentsWithSelf
 import com.intellij.psi.xml.XmlTag
 import com.intellij.refactoring.suggested.endOffset
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import com.jetbrains.rd.util.assert
 import org.junit.Test
 
@@ -260,5 +262,61 @@ class HbsCompletionTest : BasePlatformTestCase() {
         myFixture.complete(CompletionType.BASIC)
         val tagCompletions = myFixture.lookupElementStrings!!
         assert(tagCompletions.containsAll(listOf("item.name", "item.title")))
+    }
+
+    @Test
+    fun testGtsHelperAutoImportCompletion() {
+        val helperTs = """
+            import { helper } from '@ember/component/helper';
+            export function localEq(params: unknown[]) {
+                return params[0] === params[1];
+            }
+            export default helper(localEq);
+        """.trimIndent()
+        myFixture.addFileToProject("app/helpers/local-eq.ts", helperTs)
+        myFixture.addFileToProject("app/helpers/local-eq2.ts", helperTs.replace("localEq", "localEq2"))
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
+        myFixture.addFileToProject(".ember-cli", "")
+        val gts = """
+            export default <template>
+                {{localE}}
+            </template>
+        """.trimIndent()
+        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+        val offset = myFixture.file.text.indexOf("{{localE") + "{{localE".length
+        myFixture.editor.caretModel.moveToOffset(offset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.contains("localEq"))
+    }
+
+    @Test
+    fun testGtsHelperAutoImportCompletionInSubExpression() {
+        val helperTs = """
+            import { helper } from '@ember/component/helper';
+            export function localEq(params: unknown[]) {
+                return params[0] === params[1];
+            }
+            export default helper(localEq);
+        """.trimIndent()
+        myFixture.addFileToProject("app/helpers/local-eq.ts", helperTs)
+        myFixture.addFileToProject("app/helpers/local-eq2.ts", helperTs.replace("localEq", "localEq2"))
+        myFixture.addFileToProject("package.json", "{\"keywords\": [\"ember\"]}")
+        myFixture.addFileToProject(".ember-cli", "")
+        val gts = """
+            export default <template>
+                {{(localE)}}
+            </template>
+        """.trimIndent()
+        myFixture.configureByText(GtsFileType.INSTANCE, gts)
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+        val offset = myFixture.file.text.indexOf("{{(localE") + "{{(localE".length
+        myFixture.editor.caretModel.moveToOffset(offset)
+        myFixture.complete(CompletionType.BASIC)
+        val completions = myFixture.lookupElementStrings!!
+        assert(completions.contains("localEq"))
     }
 }
