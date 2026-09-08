@@ -154,7 +154,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         }?.filterNotNull()?.toTypedArray() ?: emptyArray<PsiElement>()
     }
 
-    override fun getNavigationFor(document: Document, elem: PsiElement): Array<PsiElement> {
+    override fun getNavigationFor(document: Document, elem: PsiElement, offsetInSourceElement: Int): Array<PsiElement> {
         return getNavigationFor(document, elem, false)
     }
 
@@ -173,8 +173,11 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     }
 
     override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
+        val virtualFile = file.virtualFile ?: return completedFuture(emptyList())
+        if (getDescriptor()?.isAvailable(virtualFile) != true) {
+            return completedFuture(emptyList())
+        }
         val server = getServer() ?: return completedFuture(emptyList())
-        val virtualFile = file.virtualFile
 
         EditorNotifications.getInstance(project).updateNotifications(virtualFile)
 
