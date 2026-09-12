@@ -62,6 +62,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var glintCoreDir: VirtualFile? = null
     private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
     private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
+    private val availabilityProbesInFlight = ConcurrentHashMap.newKeySet<String>()
 
     public val server
         get() =
@@ -81,22 +82,35 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
      * `.get()`, the pool thread waits for the write action, and the write action waits for the
      * caller's read lock to be released.
      *
-     * Concurrent callers for the same path are coalesced via `ConcurrentHashMap.compute`, which
-     * holds the map's per-bucket lock for the whole call: whichever thread finds the cache stale
-     * first runs the probe while any other thread for the *same* key blocks briefly on the map
-     * (not on a cross-thread future) until that result is published, so a burst of callers for
-     * one path still only spawns one `wsl.exe` process per TTL window instead of one per caller.
+     * Concurrent callers for the same path are de-duplicated via `availabilityProbesInFlight`: if
+     * another thread is already probing this path, this call returns the last known result (or
+     * `false` if none yet) immediately instead of running its own probe or waiting for the other
+     * one to finish. This deliberately never blocks one caller on another - holding any lock (an
+     * explicit one, or a `ConcurrentHashMap` bucket lock via `compute`) across the blocking
+     * subprocess call and `runReadAction` below would reintroduce the same deadlock shape as the
+     * `CompletableFuture` approach above: a caller that already holds a read lock could block on
+     * that lock while a write action is waiting for that same read lock to be released. A stale
+     * or momentarily-false result here is harmless - it just means "not available for this
+     * highlighting pass," which corrects itself on the next pass once the in-flight probe
+     * completes and populates the cache.
      */
     fun isAvailableFromDir(file: VirtualFile): Boolean {
         val cacheKey = file.path
         val now = System.currentTimeMillis()
-        return availabilityCache.compute(cacheKey) { _, existing ->
-            if (existing != null && now - existing.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
-                existing
-            } else {
-                CachedAvailability(computeAvailabilityFromDir(file), now)
-            }
-        }!!.available
+        val cached = availabilityCache[cacheKey]
+        if (cached != null && now - cached.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
+            return cached.available
+        }
+        if (!availabilityProbesInFlight.add(cacheKey)) {
+            return cached?.available ?: false
+        }
+        try {
+            val available = computeAvailabilityFromDir(file)
+            availabilityCache[cacheKey] = CachedAvailability(available, System.currentTimeMillis())
+            return available
+        } finally {
+            availabilityProbesInFlight.remove(cacheKey)
+        }
     }
 
     private fun computeAvailabilityFromDir(workingDir: VirtualFile): Boolean {
