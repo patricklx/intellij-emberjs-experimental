@@ -80,17 +80,23 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
      * deadlock against a pending write action - the caller holds its read lock while waiting on
      * `.get()`, the pool thread waits for the write action, and the write action waits for the
      * caller's read lock to be released.
+     *
+     * Concurrent callers for the same path are coalesced via `ConcurrentHashMap.compute`, which
+     * holds the map's per-bucket lock for the whole call: whichever thread finds the cache stale
+     * first runs the probe while any other thread for the *same* key blocks briefly on the map
+     * (not on a cross-thread future) until that result is published, so a burst of callers for
+     * one path still only spawns one `wsl.exe` process per TTL window instead of one per caller.
      */
     fun isAvailableFromDir(file: VirtualFile): Boolean {
         val cacheKey = file.path
-        val cached = availabilityCache[cacheKey]
         val now = System.currentTimeMillis()
-        if (cached != null && now - cached.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
-            return cached.available
-        }
-        val available = computeAvailabilityFromDir(file)
-        availabilityCache[cacheKey] = CachedAvailability(available, now)
-        return available
+        return availabilityCache.compute(cacheKey) { _, existing ->
+            if (existing != null && now - existing.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
+                existing
+            } else {
+                CachedAvailability(computeAvailabilityFromDir(file), now)
+            }
+        }!!.available
     }
 
     private fun computeAvailabilityFromDir(workingDir: VirtualFile): Boolean {
