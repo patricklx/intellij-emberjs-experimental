@@ -28,6 +28,7 @@ import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
+import com.intellij.util.concurrency.AppExecutorUtil
 import org.eclipse.lsp4j.ServerInfo
 import java.io.File
 import java.net.URLEncoder
@@ -85,7 +86,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             return cached.available
         }
         val future = pendingAvailabilityChecks.computeIfAbsent(cacheKey) {
-            CompletableFuture.supplyAsync { computeAvailabilityFromDir(file) }
+            CompletableFuture.supplyAsync({ computeAvailabilityFromDir(file) }, AppExecutorUtil.getAppExecutorService())
         }
         return try {
             val available = future.get()
