@@ -28,13 +28,11 @@ import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
 import com.intellij.util.FileContentUtil
-import com.intellij.util.concurrency.AppExecutorUtil
 import org.eclipse.lsp4j.ServerInfo
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 import kotlin.io.path.Path
@@ -64,7 +62,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var glintCoreDir: VirtualFile? = null
     private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
     private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
-    private val pendingAvailabilityChecks = ConcurrentHashMap<String, CompletableFuture<Boolean>>()
 
     public val server
         get() =
@@ -74,9 +71,15 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
      * getAttributeDescriptor/getAttributesDescriptors calls this for every attribute of every
      * tag during highlighting, and on WSL this spawns a blocking `wsl.exe` process, so results
      * are cached for a short time. A short TTL (rather than caching forever) is used so that
-     * e.g. installing @glint/core after the first check is picked up again quickly. Concurrent
-     * callers for the same directory (e.g. multiple highlighting threads at once) are coalesced
-     * onto a single probe instead of each spawning their own subprocess.
+     * e.g. installing @glint/core after the first check is picked up again quickly.
+     *
+     * The actual probe runs synchronously on the calling thread (not dispatched to another
+     * thread) because callers here almost always already hold the read lock (PsiReference
+     * resolution, reference providers, completion contributors). Blocking the caller on a
+     * future computed on a different thread that itself needs to acquire a fresh read lock can
+     * deadlock against a pending write action - the caller holds its read lock while waiting on
+     * `.get()`, the pool thread waits for the write action, and the write action waits for the
+     * caller's read lock to be released.
      */
     fun isAvailableFromDir(file: VirtualFile): Boolean {
         val cacheKey = file.path
@@ -85,16 +88,9 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         if (cached != null && now - cached.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
             return cached.available
         }
-        val future = pendingAvailabilityChecks.computeIfAbsent(cacheKey) {
-            CompletableFuture.supplyAsync({ computeAvailabilityFromDir(file) }, AppExecutorUtil.getAppExecutorService())
-        }
-        return try {
-            val available = future.get()
-            availabilityCache[cacheKey] = CachedAvailability(available, now)
-            available
-        } finally {
-            pendingAvailabilityChecks.remove(cacheKey, future)
-        }
+        val available = computeAvailabilityFromDir(file)
+        availabilityCache[cacheKey] = CachedAvailability(available, now)
+        return available
     }
 
     private fun computeAvailabilityFromDir(workingDir: VirtualFile): Boolean {
