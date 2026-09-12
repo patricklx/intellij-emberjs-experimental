@@ -28,13 +28,14 @@ import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScrip
 import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
 import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.runBlockingMaybeCancellable
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspServerManager
-import com.intellij.platform.lsp.impl.highlighting.DiagnosticAndQuickFixes
+import com.intellij.platform.lsp.impl.features.highlighting.DiagnosticAndQuickFixes
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -141,7 +142,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             elem = DelegateElement(elem, element, document)
         }
 
-        val links = getServer()?.requestExecutor?.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset)
+        val links = getLspClient()?.requestExecutor?.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset)
         val psiManager = PsiManager.getInstance(project)
         return links?.map {
             val vFile = VfsUtil.findFileByURL(URL(it.targetUri))
@@ -177,12 +178,13 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         if (getDescriptor()?.isAvailable(virtualFile) != true) {
             return completedFuture(emptyList())
         }
-        val server = getServer() ?: return completedFuture(emptyList())
 
         EditorNotifications.getInstance(project).updateNotifications(virtualFile)
 
-        return completedFuture(server.getDiagnosticsAndQuickFixes(virtualFile).map {
-            GlintAnnotationError(it, virtualFile.canonicalPath)
+        return completedFuture(runBlockingMaybeCancellable {
+            getLspDiagnosticsAndQuickFixes(virtualFile).map {
+                GlintAnnotationError(it, virtualFile.canonicalPath) as JSAnnotationError
+            }
         })
     }
 
