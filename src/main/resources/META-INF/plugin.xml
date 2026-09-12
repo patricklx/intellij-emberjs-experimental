@@ -43,9 +43,18 @@
     <depends>JavaScript</depends>
     <depends>com.intellij.css</depends>
     <depends>com.intellij.modules.json</depends>
+    <depends>intellij.javascript.eslint</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
+
+    <dependencies>
+        <module name="intellij.platform.lsp.impl"/>
+        <module name="intellij.xml.structureView"/>
+        <module name="intellij.xml.structureView.impl"/>
+        <module name="intellij.platform.smRunner"/>
+        <module name="intellij.platform.testRunner"/>
+    </dependencies>
 
     <applicationListeners>
         <listener class="com.emberjs.hbs.HbMustacheNameSynchronizer$MyCommandListener" topic="com.intellij.openapi.command.CommandListener"/>
