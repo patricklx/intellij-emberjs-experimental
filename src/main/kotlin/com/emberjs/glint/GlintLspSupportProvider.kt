@@ -116,7 +116,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     true
                 }
             }
-            return false
         }
         return ApplicationManager.getApplication().runReadAction<Boolean> {
             val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return@runReadAction false
