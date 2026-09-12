@@ -33,8 +33,12 @@ import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 import kotlin.io.path.Path
+
+private const val AVAILABILITY_CACHE_TTL_MS = 5000L
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
@@ -57,13 +61,42 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
+    private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
+    private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
+    private val pendingAvailabilityChecks = ConcurrentHashMap<String, CompletableFuture<Boolean>>()
 
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
+    /**
+     * getAttributeDescriptor/getAttributesDescriptors calls this for every attribute of every
+     * tag during highlighting, and on WSL this spawns a blocking `wsl.exe` process, so results
+     * are cached for a short time. A short TTL (rather than caching forever) is used so that
+     * e.g. installing @glint/core after the first check is picked up again quickly. Concurrent
+     * callers for the same directory (e.g. multiple highlighting threads at once) are coalesced
+     * onto a single probe instead of each spawning their own subprocess.
+     */
     fun isAvailableFromDir(file: VirtualFile): Boolean {
-        val workingDir = file
+        val cacheKey = file.path
+        val cached = availabilityCache[cacheKey]
+        val now = System.currentTimeMillis()
+        if (cached != null && now - cached.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
+            return cached.available
+        }
+        val future = pendingAvailabilityChecks.computeIfAbsent(cacheKey) {
+            CompletableFuture.supplyAsync { computeAvailabilityFromDir(file) }
+        }
+        return try {
+            val available = future.get()
+            availabilityCache[cacheKey] = CachedAvailability(available, now)
+            available
+        } finally {
+            pendingAvailabilityChecks.remove(cacheKey, future)
+        }
+    }
+
+    private fun computeAvailabilityFromDir(workingDir: VirtualFile): Boolean {
         if (WslPath.isWslUncPath(workingDir.path)) {
             isWsl = true
             val wsl = WslPath.parseWindowsUncPath(workingDir.path)
@@ -83,6 +116,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                     true
                 }
             }
+            return false
         }
         return ApplicationManager.getApplication().runReadAction<Boolean> {
             val glintPkg = workingDir.findFileByRelativePath("node_modules/@glint/core") ?: return@runReadAction false
