@@ -17,13 +17,13 @@ plugins {
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "2.4.20"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij.platform") version "2.13.1"
+    id("org.jetbrains.intellij.platform") version "2.18.1"
 //    id("org.jetbrains.intellij.platform.migration") version "2.0.0-beta7"
 }
 
 
 group = "com.emberjs"
-version = "2026.1.0"
+version = "2026.2.0"
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
@@ -36,17 +36,21 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:261.22158.180"))
-        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json"))
+        plugins(listOf("com.dmarcotte.handlebars:262.8665.173"))
+        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
+        bundledModules(listOf("intellij.platform.lsp.impl", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.1")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2")
     }
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
 
 // Configure gradle-intellij-plugin plugin.
