@@ -33,8 +33,11 @@ import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.schedule
 import kotlin.io.path.Path
+
+private const val AVAILABILITY_CACHE_TTL_MS = 5000L
 
 class GlintLspSupportProvider : LspServerSupportProvider {
     var willStart = false
@@ -57,13 +60,60 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
+    private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
+    private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
+    private val availabilityProbesInFlight = ConcurrentHashMap.newKeySet<String>()
 
     public val server
         get() =
            lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
+    /**
+     * getAttributeDescriptor/getAttributesDescriptors calls this for every attribute of every
+     * tag during highlighting, and on WSL this spawns a blocking `wsl.exe` process, so results
+     * are cached for a short time. A short TTL (rather than caching forever) is used so that
+     * e.g. installing @glint/core after the first check is picked up again quickly.
+     *
+     * The actual probe runs synchronously on the calling thread (not dispatched to another
+     * thread) because callers here almost always already hold the read lock (PsiReference
+     * resolution, reference providers, completion contributors). Blocking the caller on a
+     * future computed on a different thread that itself needs to acquire a fresh read lock can
+     * deadlock against a pending write action - the caller holds its read lock while waiting on
+     * `.get()`, the pool thread waits for the write action, and the write action waits for the
+     * caller's read lock to be released.
+     *
+     * Concurrent callers for the same path are de-duplicated via `availabilityProbesInFlight`: if
+     * another thread is already probing this path, this call returns the last known result (or
+     * `false` if none yet) immediately instead of running its own probe or waiting for the other
+     * one to finish. This deliberately never blocks one caller on another - holding any lock (an
+     * explicit one, or a `ConcurrentHashMap` bucket lock via `compute`) across the blocking
+     * subprocess call and `runReadAction` below would reintroduce the same deadlock shape as the
+     * `CompletableFuture` approach above: a caller that already holds a read lock could block on
+     * that lock while a write action is waiting for that same read lock to be released. A stale
+     * or momentarily-false result here is harmless - it just means "not available for this
+     * highlighting pass," which corrects itself on the next pass once the in-flight probe
+     * completes and populates the cache.
+     */
     fun isAvailableFromDir(file: VirtualFile): Boolean {
-        val workingDir = file
+        val cacheKey = file.path
+        val now = System.currentTimeMillis()
+        val cached = availabilityCache[cacheKey]
+        if (cached != null && now - cached.checkedAt < AVAILABILITY_CACHE_TTL_MS) {
+            return cached.available
+        }
+        if (!availabilityProbesInFlight.add(cacheKey)) {
+            return cached?.available ?: false
+        }
+        try {
+            val available = computeAvailabilityFromDir(file)
+            availabilityCache[cacheKey] = CachedAvailability(available, System.currentTimeMillis())
+            return available
+        } finally {
+            availabilityProbesInFlight.remove(cacheKey)
+        }
+    }
+
+    private fun computeAvailabilityFromDir(workingDir: VirtualFile): Boolean {
         if (WslPath.isWslUncPath(workingDir.path)) {
             isWsl = true
             val wsl = WslPath.parseWindowsUncPath(workingDir.path)

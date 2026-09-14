@@ -10,6 +10,7 @@ import com.emberjs.utils.EmberUtils
 import com.emberjs.utils.originalVirtualFile
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSNamedElement
+import com.intellij.openapi.project.DumbService
 import com.intellij.psi.*
 import com.intellij.psi.impl.FakePsiElement
 import com.intellij.psi.impl.source.html.dtd.HtmlNSDescriptorImpl
@@ -122,7 +123,9 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     override fun getAttributesDescriptors(context: XmlTag?): Array<out XmlAttributeDescriptor> {
         val result = mutableListOf<XmlAttributeDescriptor>()
-        val commonHtmlAttributes = HtmlNSDescriptorImpl.getCommonAttributeDescriptors(this.tag)
+        // HtmlNSDescriptorImpl.getCommonAttributeDescriptors queries FileBasedIndex without a
+        // dumb-mode guard of its own, throwing IndexNotReadyException while indexing.
+        val commonHtmlAttributes = if (DumbService.isDumb(project)) emptyArray() else HtmlNSDescriptorImpl.getCommonAttributeDescriptors(this.tag)
         val data = getReferenceData()
         val attributes = data.args.map { EmberAttributeDescriptor(this.tag, it.value, false, it.description, it.reference, null)  }
         result.addAll(attributes)
