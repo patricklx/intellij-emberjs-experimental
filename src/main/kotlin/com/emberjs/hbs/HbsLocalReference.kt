@@ -435,13 +435,21 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                     return HbsLocalReference(element, res ?: service?.getNavigationFor(document!!, element, true)?.firstOrNull()?.parent)
                 }
                 val sig = (ref as? HbsLocalReference)?.resolved as? JSRecordType.PropertySignature
-                if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
-                    return HbsLocalReference(element, resolveToJs(sig ?: ref.resolve(), listOf(element.text)))
-                }
-                // @controller.model in a route template: the route sets it, so the controller usually doesn't declare it
+                // @controller.model in a route template: the route sets it, so unless the app's controller declares
+                // `model` itself (rather than inheriting Ember's typed declaration), go to the route's model() hook.
                 if (name == "model" && sibling.text == "controller" && element.parent is HbData &&
                         PsiTreeUtil.findSiblingBackward(sibling, HbTokenTypes.ID, null) == null) {
-                    EmberRouteTemplates.modelHook(element)?.let { return HbsLocalReference(element, it) }
+                    val onController = when (val m = resolveToJs(sig ?: ref?.resolve(), listOf(element.text))) {
+                        is PsiElement -> m
+                        is JSRecordType.PropertySignature -> m.memberSource.singleElement
+                        else -> null
+                    }
+                    if (onController == null || !EmberRouteTemplates.isAppSource(onController)) {
+                        EmberRouteTemplates.modelHook(element)?.let { return HbsLocalReference(element, it) }
+                    }
+                }
+                if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
+                    return HbsLocalReference(element, resolveToJs(sig ?: ref.resolve(), listOf(element.text)))
                 }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
                 val res = resolveToJs(ref2?.resolve(), listOf(element.text))
