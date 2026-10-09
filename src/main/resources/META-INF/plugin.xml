@@ -49,6 +49,7 @@
 
     <dependencies>
         <module name="intellij.platform.lsp.impl"/>
+        <module name="intellij.platform.structureView"/>
         <module name="intellij.xml.structureView"/>
         <module name="intellij.xml.structureView.impl"/>
         <module name="intellij.platform.smRunner"/>

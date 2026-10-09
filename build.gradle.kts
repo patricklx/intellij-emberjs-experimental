@@ -36,13 +36,12 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        plugins(listOf("com.dmarcotte.handlebars:262.8665.173"))
-        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
-        bundledModules(listOf("intellij.platform.lsp.impl", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
+        bundledPlugins(listOf("com.dmarcotte.handlebars", "JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
+        bundledModules(listOf("intellij.platform.lsp.impl", "intellij.platform.structureView", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
+        create(IntelliJPlatformType.WebStorm, "2026.2.3")
     }
 }
 
