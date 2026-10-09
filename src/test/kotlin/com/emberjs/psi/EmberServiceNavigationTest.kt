@@ -254,5 +254,37 @@ class EmberServiceNavigationTest : BasePlatformTestCase() {
             }
         """, "session')"))
     }
+
+    private fun definitionOf(path: String): String? {
+        val file = psiManager.findFile(myFixture.findFileInTempDir(path))!!
+        return EmberNavigationTargets.defaultExportDefinition(file)?.let {
+            "${it.containingFile?.virtualFile?.path?.substringAfter("/src/")}#${(it as? com.intellij.psi.PsiNamedElement)?.name}"
+        }
+    }
+
+    /** ember-data 4.12: app/services/store.js -> 'ember-data/store' -> './-private' -> class Store */
+    fun testFollowsEmberDataStoreReExportChain() {
+        myFixture.addFileToProject("node_modules/ember-data/package.json", """{ "name": "ember-data", "keywords": ["ember-addon"] }""")
+        myFixture.addFileToProject("node_modules/ember-data/app/services/store.js", "export { default } from 'ember-data/store';")
+        myFixture.addFileToProject("node_modules/ember-data/addon/store.ts", "export { Store as default } from './-private';")
+        myFixture.addFileToProject("node_modules/ember-data/addon/-private/index.ts", "export class Store { findRecord() {} }")
+        assertEquals("node_modules/ember-data/addon/-private/index.ts#Store", definitionOf("node_modules/ember-data/app/services/store.js"))
+    }
+
+    fun testFollowsAddonAppReExportToItsServiceClass() {
+        myFixture.addFileToProject("node_modules/ember-simple-auth/package.json", """{ "name": "ember-simple-auth", "keywords": ["ember-addon"] }""")
+        myFixture.addFileToProject("node_modules/ember-simple-auth/app/services/session.js", "export { default } from 'ember-simple-auth/services/session';")
+        myFixture.addFileToProject("node_modules/ember-simple-auth/addon/services/session.js", "import Service from '@ember/service';\nexport default class SessionService extends Service {}")
+        assertEquals("node_modules/ember-simple-auth/addon/services/session.js#SessionService", definitionOf("node_modules/ember-simple-auth/app/services/session.js"))
+    }
+
+    fun testAppServiceDefinitionIsItsClass() {
+        assertEquals("app/services/session.js#SessionService", definitionOf("app/services/session.js"))
+    }
+
+    fun testUnresolvableReExportGivesNull() {
+        myFixture.addFileToProject("app/services/broken.js", "export { default } from 'does-not-exist/services/broken';")
+        assertNull(definitionOf("app/services/broken.js"))
+    }
 }
 

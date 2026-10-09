@@ -1,5 +1,16 @@
 package com.emberjs.navigation
 
+import com.emberjs.utils.EmberUtils
+import com.intellij.lang.ecmascript6.psi.ES6ExportDeclaration
+import com.intellij.lang.ecmascript6.psi.ES6FromClause
+import com.intellij.lang.ecmascript6.resolve.ES6PsiUtil
+import com.intellij.lang.javascript.JavaScriptSupportLoader
+import com.intellij.lang.javascript.psi.JSFile
+import com.intellij.lang.javascript.psi.JSFunction
+import com.intellij.lang.javascript.psi.JSVarStatement
+import com.intellij.lang.javascript.psi.ecmal4.JSClass
+import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiFile
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.parentModule
 import com.intellij.lang.ecmascript6.psi.ES6ExportSpecifier
@@ -80,6 +91,53 @@ object EmberNavigationTargets {
         val type = PsiTreeUtil.findChildrenOfType(entry, JSReferenceExpression::class.java).firstOrNull()?.resolve()
         return followAliases(type) ?: entry
     }
+
+    /**
+     * The declaration a module's default export ends up at, following re-exports such as ember-data's
+     * `app/services/store.js` -> `export { default } from 'ember-data/store'` -> `export { Store as default } from
+     * './-private'` -> `export class Store`. Returns null if the chain can't be followed.
+     */
+    fun defaultExportDefinition(file: PsiFile): PsiElement? = exportedDeclaration(file, "default", 0)
+
+    private fun exportedDeclaration(file: PsiFile, name: String, depth: Int): PsiElement? {
+        if (depth > 8) return null
+        val js = jsPsi(file) ?: return null
+        val exports = js.children.filterIsInstance<ES6ExportDeclaration>()
+        for (export in exports) {
+            val specifier = export.exportSpecifiers.firstOrNull { (it.alias?.name ?: it.referenceName) == name } ?: continue
+            val importedName = specifier.referenceName ?: return null
+            val from = export.fromClause
+            return if (from != null) {
+                moduleFile(from)?.let { exportedDeclaration(it, importedName, depth + 1) }
+            } else {
+                followAliases(specifier.reference?.resolve())
+            }
+        }
+        if (name == "default") {
+            EmberUtils.findDefaultExportClass(file)?.let { return it }
+            ES6PsiUtil.findDefaultExport(js)?.let { return it }
+        } else {
+            js.children.firstOrNull { (it as? JSClass)?.name == name || (it as? JSFunction)?.name == name }?.let { return it }
+            js.children.filterIsInstance<JSVarStatement>().flatMap { it.variables.toList() }.firstOrNull { it.name == name }?.let { return it }
+        }
+        // export * from '...'
+        return exports.filter { it.isExportAll }.firstNotNullOfOrNull { e -> e.fromClause?.let(::moduleFile)?.let { exportedDeclaration(it, name, depth + 1) } }
+    }
+
+    private fun jsPsi(file: PsiFile): PsiFile? = when (file) {
+        is JSFile -> file
+        else -> file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
+    }
+
+    private fun moduleFile(from: ES6FromClause): PsiFile? = from.references.firstNotNullOfOrNull { ref ->
+        when (val target = ref.resolve()) {
+            is PsiFile -> target
+            is PsiDirectory -> INDEX_FILES.firstNotNullOfOrNull { target.findFile(it) }
+            else -> null
+        }
+    }
+
+    private val INDEX_FILES = listOf("index.ts", "index.gts", "index.js", "index.gjs", "index.d.ts")
 
     /** Follows `import X from '...'` and `export { X as default }` to the declaration they refer to. */
     private fun followAliases(element: PsiElement?): PsiElement? {
