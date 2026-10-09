@@ -2,6 +2,7 @@ package com.emberjs.index
 
 import com.emberjs.resolver.EmberName
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
@@ -38,15 +39,26 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
 
         private fun getAllPairs(project: Project): Collection<Pair<EmberName, VirtualFile>> {
             return SlowOperations.knownIssue("intellij-emberjs: EmberNameIndex.getAllPairs").use {
-                 CachedValuesManager.getManager(project).getCachedValue(project) {
-                    val results = mutableListOf<Pair<EmberName, VirtualFile>>()
-                    for (file in index.getContainingFiles(NAME, true, GlobalSearchScope.allScope(project))) {
-                        ProgressManager.checkCanceled()
-                        results.addIfNotNull(EmberName.from(file)?.let { it to file })
+                // While indexing, the index keeps filling up without its modification stamp changing, so a cached
+                // list would be stale (and the IDE reports it as a non-idempotent computation). Only cache once
+                // indexing is done; DumbService as a dependency drops anything cached right at the transition.
+                if (DumbService.isDumb(project)) {
+                    computeAllPairs(project)
+                } else {
+                    CachedValuesManager.getManager(project).getCachedValue(project) {
+                        CachedValueProvider.Result.create(computeAllPairs(project), IndexModificationTracker(project), DumbService.getInstance(project))
                     }
-                     CachedValueProvider.Result.create(results, IndexModificationTracker(project))
                 }
             }
+        }
+
+        private fun computeAllPairs(project: Project): List<Pair<EmberName, VirtualFile>> {
+            val results = mutableListOf<Pair<EmberName, VirtualFile>>()
+            for (file in index.getContainingFiles(NAME, true, GlobalSearchScope.allScope(project))) {
+                ProgressManager.checkCanceled()
+                results.addIfNotNull(EmberName.from(file)?.let { it to file })
+            }
+            return results
         }
 
         private fun getScopePairs(scope: GlobalSearchScope): Collection<Pair<EmberName, VirtualFile>> {
