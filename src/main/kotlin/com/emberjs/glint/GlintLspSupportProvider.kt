@@ -5,6 +5,7 @@ import com.emberjs.gts.GlintConfiguration
 import com.emberjs.gts.GtsFileType
 import com.emberjs.utils.parentEmberModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.execution.wsl.WslPath
@@ -223,17 +224,17 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     override fun createCommandLine(): GeneralCommandLine {
         val config = GlintConfiguration.getInstance(myProject)
         val pkg = config.getPackage()
-        var path = pkg.`package`.constantPackage?.systemIndependentPath
-        val dir = glintCoreDir ?: ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            VfsUtil.findFile(Path(path!!), true)
-        }
+        val path = pkg.`package`.constantPackage?.systemIndependentPath
+        val dir = glintCoreDir ?: path?.let {
+            ApplicationManager.getApplication().runReadAction<VirtualFile?> { VfsUtil.findFile(Path(it), true) }
+        } ?: throw ExecutionException("Cannot start Glint: @glint/core was not found")
 
-        val (workDirectoryPath, dirPath) = ApplicationManager.getApplication().runReadAction<Pair<String?, String?>> {
-            var workDirectory = dir
+        val (workDirectoryPath, dirPath) = ApplicationManager.getApplication().runReadAction<Pair<String?, String>> {
+            var workDirectory: VirtualFile? = dir
             while (workDirectory != null && workDirectory.path.contains("node_modules")) {
                 workDirectory = workDirectory.parent
             }
-            Pair(workDirectory?.path, dir?.path)
+            Pair(workDirectory?.path, dir.path)
         }
 
         val commandLine = GeneralCommandLine()
@@ -247,21 +248,19 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 //            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
 //                    ?: throw RuntimeException("glint lsp was not found")
             //commandLine.addParameter("--inspect-brk")
-            commandLine.addParameter("${dirPath!!}/bin/glint-language-server.js")
+            commandLine.addParameter("$dirPath/bin/glint-language-server.js")
             commandLine.addParameter("--stdio")
             if (!this.isWsl) {
                 commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
             }
         }
 
+        val interpreter = NodeJsInterpreterRef.createProjectRef().resolve(project)
+                ?: throw ExecutionException("Cannot start Glint: no Node.js interpreter is configured for this project")
         if (isWsl) {
-            WslCommandLineConfigurator
-                .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
-                .configure(commandLine)
+            WslCommandLineConfigurator.find(interpreter).configure(commandLine)
         } else {
-            NodeCommandLineConfigurator
-                .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
-                .configure(commandLine)
+            NodeCommandLineConfigurator.find(interpreter).configure(commandLine)
         }
         return commandLine
     }
