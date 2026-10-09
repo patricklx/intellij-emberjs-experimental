@@ -403,7 +403,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
         }
 
         fun fromNamedYields(tag: XmlTag, name: String): PsiElement? {
-            val angleComponents = tag.parents.find {
+            val angleComponents = tag.parents(withSelf = false).find {
                 it is XmlTag && it.descriptor is EmberXmlElementDescriptor
             } as XmlTag? ?: return null
             val data = (angleComponents.descriptor as EmberXmlElementDescriptor).getReferenceData()
@@ -449,7 +449,7 @@ class TagReferencesProvider : PsiReferenceProvider() {
             // find html blocks with attribute |name|
             var blockParamIdx = 0
             var refPsi: PsiElement? = null
-            val angleBracketBlock: XmlTag? = tag.parentsWithSelf
+            val angleBracketBlock: XmlTag? = tag.parents(withSelf = true)
                 .find {
                     it is XmlTag && it.attributes.map { it.text }.joinToString(" ")
                         .contains(Regex("\\|.*\\b$name\\b.*\\|"))

@@ -4,7 +4,7 @@ import com.intellij.history.LocalHistory
 import com.intellij.history.LocalHistoryAction
 import com.intellij.ide.IdeView
 import com.intellij.notification.Notification
-import com.intellij.notification.NotificationGroup
+import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
@@ -24,7 +24,7 @@ class EmberCliGenerateTask(project: Project, val workDir: VirtualFile, val templ
     private val files = arrayListOf<VirtualFile>()
 
     private fun setNotification(content: String, type: NotificationType) {
-        notification = NOTIFICATION_GROUP.createNotification("<b>Problem running ember-cli:</b><br/>$content", type)
+        notification = NotificationGroupManager.getInstance().getNotificationGroup(NOTIFICATION_GROUP_ID).createNotification("<b>Problem running ember-cli:</b><br/>$content", type)
     }
 
     override fun run(indicator: ProgressIndicator) {
@@ -88,6 +88,6 @@ class EmberCliGenerateTask(project: Project, val workDir: VirtualFile, val templ
         private val CREATED_REGEX = Regex("  (?:create|overwrite)\\s+(.+)")
         private val ROUTER_REGEX = Regex("updating (router)")
 
-        val NOTIFICATION_GROUP = NotificationGroup.balloonGroup("ember-cli")
+        const val NOTIFICATION_GROUP_ID = "ember-cli"
     }
 }

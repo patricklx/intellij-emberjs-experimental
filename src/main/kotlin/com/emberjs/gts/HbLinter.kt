@@ -231,7 +231,6 @@ class HbLintAnnotator() : Annotator {
                     val fix = GtsImportFix(element, icwe, JSImportModuleFix.HintMode.SINGLE)
                     annotation.withFix(fix)
                 }
-                annotation.needsUpdateOnTyping()
                 annotation.create()
             }
         }
@@ -261,7 +260,6 @@ class HbLintAnnotator() : Annotator {
                     annotation.withFix(fix)
                 }
             }
-            annotation.needsUpdateOnTyping()
             annotation.create()
         }
     }

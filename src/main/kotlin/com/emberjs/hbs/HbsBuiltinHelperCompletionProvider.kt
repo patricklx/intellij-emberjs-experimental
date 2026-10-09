@@ -11,7 +11,7 @@ import com.intellij.injected.editor.VirtualFileWindow
 import com.intellij.javascript.nodejs.reference.NodeModuleManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.elementType
-import com.intellij.psi.util.parentsWithSelf
+import com.intellij.psi.util.parents
 import com.intellij.util.ProcessingContext
 
 
@@ -27,7 +27,7 @@ class HbsBuiltinHelperCompletionProvider(val helpers: List<String>) : Completion
         }
         val hasHbsImports = NodeModuleManager.getInstance(parameters.position.project).collectVisibleNodeModules(f).find { it.name == "ember-hbs-imports" }
         val useImports = hasHbsImports != null
-        val path = parameters.position.parentsWithSelf.toList().find { it is HbPathImpl }
+        val path = parameters.position.parents(withSelf = true).find { it is HbPathImpl }
         if (path != null && path.text.contains(".")) return
         if (parameters.position.parent.prevSibling.elementType == HbTokenTypes.SEP) {
             return

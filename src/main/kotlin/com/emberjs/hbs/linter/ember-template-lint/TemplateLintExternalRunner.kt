@@ -17,7 +17,7 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ObjectUtils
 import com.intellij.util.TimeoutUtil
-import com.intellij.webcore.util.ProcessOutputCatcher
+import com.intellij.execution.process.CapturingProcessRunner
 import java.io.File
 import java.io.IOException
 import java.nio.charset.Charset
@@ -141,10 +141,7 @@ class TemplateLintExternalRunner(private val myIsOnTheFly: Boolean = false) {
         }
 
         private fun captureOutput(processHandler: BaseOSProcessHandler): ProcessOutput {
-            val catcher = ProcessOutputCatcher(processHandler)
-            catcher.startNotify()
-            catcher.run()
-            return catcher.output
+            return CapturingProcessRunner(processHandler).runProcess()
         }
 
         private fun createFileLevelWarning(message: String, input: JSLinterInput<TemplateLintState>): JSLinterAnnotationResult {

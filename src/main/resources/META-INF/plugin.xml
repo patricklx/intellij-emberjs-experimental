@@ -62,6 +62,7 @@
     </applicationListeners>
 
     <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="ember-cli" displayType="BALLOON"/>
         <multiLangCommenter implementation="com.emberjs.gts.GtsCommenter" />
         <lang.fileViewProviderFactory language="Gts" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
         <lang.fileViewProviderFactory language="Gjs" implementationClass="com.emberjs.gts.GtsFileViewProviderFactory"/>
