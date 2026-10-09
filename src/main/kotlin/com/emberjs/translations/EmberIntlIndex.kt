@@ -52,7 +52,7 @@ class EmberIntlIndex() : FileBasedIndexExtension<String, String>() {
     companion object {
         val NAME: ID<String, String> = ID.create("ember.intl")
 
-        private val YAML_PLUGIN_ENABLED by lazy { PluginId.findId("org.jetbrains.plugins.yaml").isEnabled }
+        private val YAML_PLUGIN_ENABLED by lazy { PluginId.getId("org.jetbrains.plugins.yaml").isEnabled }
 
         private val index by lazy { FileBasedIndex.getInstance() }
 

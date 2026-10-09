@@ -93,7 +93,7 @@ import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
-import java.util.function.Predicate
+import java.util.function.Consumer
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
@@ -708,8 +708,8 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
         candidates?.forEach { processor.processCandidate(GtsImportCandidate(ref, place, it)) }
     }
 
-    override fun getNames(keyFilter: Predicate<in String>): Set<String> {
-        return candidates.keys.filter(keyFilter::test).toSet()
+    override fun collectNames(consumer: Consumer<String>) {
+        candidates.keys.forEach(consumer::accept)
     }
 
     private fun getComponentName(virtualFile: VirtualFile): String {
