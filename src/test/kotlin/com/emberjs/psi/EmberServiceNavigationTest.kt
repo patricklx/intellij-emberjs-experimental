@@ -268,6 +268,8 @@ class EmberServiceNavigationTest : BasePlatformTestCase() {
         myFixture.addFileToProject("node_modules/ember-data/app/services/store.js", "export { default } from 'ember-data/store';")
         myFixture.addFileToProject("node_modules/ember-data/addon/store.ts", "export { Store as default } from './-private';")
         myFixture.addFileToProject("node_modules/ember-data/addon/-private/index.ts", "export class Store { findRecord() {} }")
+        // the package's main module; must not be mistaken for 'ember-data/store'
+        myFixture.addFileToProject("node_modules/ember-data/addon/index.js", "export { default as Model } from './model';\nexport default {};")
         assertEquals("node_modules/ember-data/addon/-private/index.ts#Store", definitionOf("node_modules/ember-data/app/services/store.js"))
     }
 
