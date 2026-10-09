@@ -23,12 +23,14 @@ import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
 import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptInlayHintsResult
+import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptQuickInfoResponse
 import com.intellij.lang.typescript.compiler.languageService.TypeScriptLanguageServiceUtil
 import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScriptSuppressByCommentFix
 import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
 import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.runBlockingMaybeCancellable
+import com.intellij.openapi.application.readAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
@@ -48,8 +50,7 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
-import java.util.concurrent.Future
-import java.util.stream.Stream
+import kotlinx.coroutines.future.await
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
     val descriptor = getGlintDescriptor(project)
@@ -65,7 +66,9 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 
 
 class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(project, GlintLspSupportProvider::class.java) {
-    var currentlyChecking: PsiElement? = null
+    // Re-entrancy guard for getNavigationFor (resolving references below can call back into it). This is a
+    // project service used from many threads at once, so the guard must be per thread.
+    private val currentlyChecking = ThreadLocal<PsiElement?>()
     val lspServerManager = LspServerManager.getInstance(project)
 
     companion object {
@@ -112,16 +115,18 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
             return emptyArray()
         }
         var element = sourceElement.containingFile.originalFile.findElementAt(sourceElement.textOffset) ?: sourceElement
-        if (currentlyChecking == null && element.containingFile is HbPsiFile) {
-            currentlyChecking = sourceElement
-            if (element is LeafPsiElement) {
-                element = element.parent!!
+        if (currentlyChecking.get() == null && element.containingFile is HbPsiFile) {
+            currentlyChecking.set(sourceElement)
+            try {
+                if (element is LeafPsiElement) {
+                    element = element.parent ?: return emptyArray()
+                }
+                if (element.reference is EmberReference || element.references.find { it is EmberReference } != null) {
+                    return emptyArray()
+                }
+            } finally {
+                currentlyChecking.remove()
             }
-            if (element.reference is EmberReference || element.references.find { it is EmberReference } != null) {
-                currentlyChecking = null
-                return emptyArray()
-            }
-            currentlyChecking = null
         }
         if (sourceElement.containingFile.fileType == GtsFileType.INSTANCE) {
             element = sourceElement
@@ -136,19 +141,20 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
 
         var elem: Any = element
         if (document is DocumentWindow) {
-            val vfile = (element.originalVirtualFile as VirtualFileWindow).delegate
-            val f = PsiManager.getInstance(element.project).findFile(vfile)!!
-            elem = f.findElementAt(document.hostRanges.first().startOffset + element.textOffset)!!
+            val vfile = (element.originalVirtualFile as? VirtualFileWindow)?.delegate ?: return emptyArray()
+            val f = PsiManager.getInstance(element.project).findFile(vfile) ?: return emptyArray()
+            elem = f.findElementAt(document.hostRanges.first().startOffset + element.textOffset) ?: return emptyArray()
             elem = DelegateElement(elem, element, document)
         }
 
-        val links = getLspClient()?.requestExecutor?.getElementDefinitions(element.originalVirtualFile!!, (elem as PsiElement).textOffset)
+        val virtualFile = element.originalVirtualFile ?: return emptyArray()
+        val links = getLspClient()?.requestExecutor?.getElementDefinitions(virtualFile, (elem as PsiElement).textOffset)
         val psiManager = PsiManager.getInstance(project)
         return links?.map {
             val vFile = VfsUtil.findFileByURL(URL(it.targetUri))
             val file = vFile?.let { psiManager.findFile(it) }
             if (file == null) return@map null
-            val doc = file.viewProvider.document
+            val doc = file.viewProvider.document ?: return@map null
             val startOffset = doc.getLineStartOffset(it.targetRange.start.line)
             val offset = startOffset + it.targetRange.start.character
             return@map file.findElementAt(offset)
@@ -159,15 +165,35 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         return getNavigationFor(document, elem, false)
     }
 
-    override fun supportsInlayHints(file: PsiFile): Boolean {
-        return this.canHighlight(file)
+    // Since 2026.2, BaseLspTypeScriptService sends inlay hints, signature help, quick info, completion,
+    // diagnostics and type evaluation through TypeScriptLspClientCommandExecutor. That executor casts the
+    // client descriptor to TypeScriptLspClientDescriptor and speaks tsserver-specific commands, neither of
+    // which applies to Glint (a plain LSP server), so every such call failed with a ClassCastException.
+    // The overrides below talk to the LSP client directly or opt out of the tsserver-only features.
+
+    override fun supportsInlayHints(file: PsiFile): Boolean = false
+
+    override suspend fun getInlayHints(file: PsiFile, range: TextRange): TypeScriptInlayHintsResult? = null
+
+    override fun supportsTypeEvaluation(virtualFile: VirtualFile, element: PsiElement): Boolean = false
+
+    override suspend fun getSignatureHelp(file: PsiFile, offset: Int): Sequence<JSFunctionType>? = null
+
+    override fun getQuickInfoAt(element: PsiElement, originalFile: VirtualFile): CompletableFuture<TypeScriptQuickInfoResponse?> =
+        completedFuture(null)
+
+    override suspend fun getCompletionItemsSuspending(file: VirtualFile, document: Document, offset: Int, parameters: CompletionParameters): List<TypeScriptService.CompletionEntry> {
+        val client = getLspClient() ?: return emptyList()
+        val completionList = readAction {
+            client.requestExecutor.getCompletionListAsync(file, offset, parameters.isAutoPopup)
+        }.await() ?: return emptyList()
+        return completionList.items.map { GlintCompletionEntry(it) }
     }
 
-    override fun supportsTypeEvaluation(virtualFile: VirtualFile, element: PsiElement): Boolean {
-        return this.isAcceptable(virtualFile)
+    override suspend fun getLspDiagnosticsAndQuickFixes(file: VirtualFile): List<DiagnosticAndQuickFixes> {
+        if (getDescriptor()?.isAvailable(file) != true) return emptyList()
+        return getLspClient()?.getDiagnosticsAndQuickFixes(file) ?: emptyList()
     }
-
-    override fun getSignatureHelp(file: PsiFile, offset: Int): Future<Stream<JSFunctionType>?>? = null
 
     override fun isDisabledByContext(context: VirtualFile): Boolean {
         return getDescriptor()?.isAvailable(context)?.not() ?: return true
@@ -181,11 +207,8 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
 
         EditorNotifications.getInstance(project).updateNotifications(virtualFile)
 
-        return completedFuture(runBlockingMaybeCancellable {
-            getLspDiagnosticsAndQuickFixes(virtualFile).map {
-                GlintAnnotationError(it, virtualFile.canonicalPath) as JSAnnotationError
-            }
-        })
+        val diagnostics = getLspClient()?.getDiagnosticsAndQuickFixes(virtualFile) ?: emptyList()
+        return completedFuture(diagnostics.map { GlintAnnotationError(it, virtualFile.canonicalPath) })
     }
 
     override fun canHighlight(file: PsiFile) = file.fileType is HbFileType ||
