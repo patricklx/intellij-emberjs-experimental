@@ -129,13 +129,20 @@ object EmberNavigationTargets {
         else -> file.viewProvider.getPsi(JavaScriptSupportLoader.TYPESCRIPT) ?: file.viewProvider.getPsi(JavaScriptSupportLoader.ECMA_SCRIPT_6)
     }
 
-    private fun moduleFile(from: ES6FromClause): PsiFile? = from.references.firstNotNullOfOrNull { ref ->
-        when (val target = ref.resolve()) {
+    // Module references come per path segment ('ember-data', 'store' / 'ember-data/store'); only the ones that end at
+    // the end of the specifier point at the module itself, an earlier segment would e.g. resolve 'ember-data' to its
+    // main index.js.
+    private fun moduleFile(from: ES6FromClause): PsiFile? {
+        val end = from.references.maxOfOrNull { it.rangeInElement.endOffset } ?: return null
+        return from.references.filter { it.rangeInElement.endOffset == end }.firstNotNullOfOrNull { ref -> moduleTarget(ref.resolve()) }
+    }
+
+    private fun moduleTarget(target: PsiElement?): PsiFile? =
+        when (target) {
             is PsiFile -> target
             is PsiDirectory -> INDEX_FILES.firstNotNullOfOrNull { target.findFile(it) }
             else -> null
         }
-    }
 
     private val INDEX_FILES = listOf("index.ts", "index.gts", "index.js", "index.gjs", "index.d.ts")
 
