@@ -4,6 +4,7 @@ import com.google.gson.stream.JsonReader
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.text.CharSequenceReader
+import java.util.concurrent.ConcurrentHashMap
 
 val VirtualFile.parents: Iterable<VirtualFile>
     get() = object : Iterable<VirtualFile> {
@@ -21,9 +22,10 @@ val VirtualFile.parents: Iterable<VirtualFile>
     }
 
 
-val addonCache = HashMap<String, Boolean>()
-val inRepoCache = HashMap<String, List<String>>()
-val emberCache = HashMap<String, Boolean>()
+// Read and written from parallel highlighting/indexing threads, so these must be concurrent maps.
+val addonCache = ConcurrentHashMap<String, Boolean>()
+val inRepoCache = ConcurrentHashMap<String, List<String>>()
+val emberCache = ConcurrentHashMap<String, Boolean>()
 
 fun clearVirtualCache() {
     addonCache.clear()
@@ -34,7 +36,7 @@ fun clearVirtualCache() {
 val VirtualFile.inRepoAddonPaths: List<String>
     get() {
         val out = mutableListOf<String>()
-        if (inRepoCache.contains(this.path)) return inRepoCache.getOrDefault(this.path, emptyList())
+        inRepoCache[this.path]?.let { return it }
         val packageJsonFile = findFileByRelativePath("package.json") ?: return out
         val text: String
         try {
@@ -70,7 +72,7 @@ val VirtualFile.inRepoAddonPaths: List<String>
 
 val VirtualFile.isEmberAddonFolder: Boolean
     get() {
-        if (addonCache.contains(this.path)) return addonCache.getOrDefault(this.path, false)
+        addonCache[this.path]?.let { return it }
         val packageJsonFile = findFileByRelativePath("package.json") ?: return false
         val text: String
         try {
@@ -104,7 +106,7 @@ val VirtualFile.isEmberAddonFolder: Boolean
 val VirtualFile.isEmberFolder: Boolean
     get() {
         if (this.isEmberAddonFolder) return false
-        if (emberCache.contains(this.path)) return emberCache.getOrDefault(this.path, false)
+        emberCache[this.path]?.let { return it }
         val packageJsonFile = findFileByRelativePath("package.json") ?: return false
         val text: String
         try {
