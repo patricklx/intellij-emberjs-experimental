@@ -4,35 +4,20 @@ import com.emberjs.gts.GjsFileType
 import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.javascript.BasicDialectDetector
+import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
 import com.intellij.lang.javascript.inspections.JSLastCommaInObjectLiteralInspection
 import com.intellij.lang.javascript.inspections.JSUnusedGlobalSymbolsInspection
 import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
-import com.intellij.testFramework.LoggedErrorProcessor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.fixtures.impl.CodeInsightTestFixtureImpl
 import junit.framework.TestCase
 import org.junit.Test
 
 class GtsFileTest : BasePlatformTestCase() {
-    /**
-     * The JavaScript plugin's string-literal words index intermittently logs "JSFilterLexer.start was not called"
-     * while indexing .gjs files (also seen in real IDE logs, and failing this test on Windows CI on upstream main).
-     * It is logged from inside the JavaScript plugin, so tolerate exactly that message here; any other logged error
-     * still fails the test.
-     */
-    private fun <T> ignoringJsFilterLexerError(block: () -> T): T {
-        var result: T? = null
-        LoggedErrorProcessor.executeWith<Throwable>(object : LoggedErrorProcessor() {
-            override fun processError(category: String, message: String, details: Array<String>, t: Throwable?): Set<Action> =
-                if (message == "JSFilterLexer.start was not called") Action.NONE else super.processError(category, message, details, t)
-        }) { result = block() }
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
-
     @Test
     fun testGtsStub() {
         val gts = """
@@ -74,12 +59,10 @@ class GtsFileTest : BasePlatformTestCase() {
                 {{grault2}}
             </template>
         """.trimIndent()
-        val highlighting = ignoringJsFilterLexerError {
-            myFixture.configureByText(GjsFileType.INSTANCE, gts)
-            myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
-            CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
-            myFixture.doHighlighting()
-        }
+        myFixture.configureByText(GjsFileType.INSTANCE, gts)
+        myFixture.enableInspections(ES6UnusedImportsInspection(), JSUnusedLocalSymbolsInspection(), JSUnusedGlobalSymbolsInspection())
+        CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+        val highlighting = myFixture.doHighlighting()
         val unusedConstants = highlighting.filter { it.description?.startsWith("Unused constant") == true }
         TestCase.assertEquals(unusedConstants.toString(), 2, unusedConstants.size)
         val highlightInfos: List<HighlightInfo> = highlighting.filter { it.inspectionToolId == "ES6UnusedImports" || it.inspectionToolId == "JSUnusedLocalSymbols" }
@@ -165,5 +148,14 @@ class GtsFileTest : BasePlatformTestCase() {
         System.out.println(highlighting)
         val noCommaAllowed = highlighting.filter { it.description?.contains("comma") == true }
         TestCase.assertEquals(noCommaAllowed.toString(), 0, noCommaAllowed.size)
+    }
+
+    @Test
+    fun testFileTypesAreNotEqualToJsAndTs() {
+        // The platform looks up the indices for a file type in an open-addressing map that only calls equals(),
+        // so a Gjs/Gts file type claiming to equal JavaScript/TypeScript picked up their indices on some runs
+        // ("JSFilterLexer.start was not called").
+        TestCase.assertFalse(GjsFileType.INSTANCE.equals(JavaScriptFileType))
+        TestCase.assertFalse(GtsFileType.INSTANCE.equals(TypeScriptFileType))
     }
 }
