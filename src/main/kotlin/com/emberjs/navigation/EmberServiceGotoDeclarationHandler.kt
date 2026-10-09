@@ -26,10 +26,12 @@ class EmberServiceGotoDeclarationHandler : GotoDeclarationHandler {
         if (DumbService.isDumb(project)) return null
 
         val serviceName = injectedServiceName(field) ?: return null
+        val context = field.containingFile?.originalFile?.virtualFile
+        val indexed = EmberNameIndex.getFilteredFiles(ProjectScope.getAllScope(project)) { it.type == "service" && it.name == serviceName }
+        val files = EmberNavigationTargets.preferResolvedByApp(context, indexed)
+                .ifEmpty { EmberNavigationTargets.builtinService(context, serviceName) }
         val psiManager = PsiManager.getInstance(project)
-        val targets = EmberNameIndex.getFilteredFiles(ProjectScope.getAllScope(project)) { it.type == "service" && it.name == serviceName }
-                .mapNotNull { psiManager.findFile(it) }
-        return targets.takeIf { it.isNotEmpty() }?.toTypedArray()
+        return files.mapNotNull { psiManager.findFile(it) }.takeIf { it.isNotEmpty() }?.toTypedArray()
     }
 
     companion object {
