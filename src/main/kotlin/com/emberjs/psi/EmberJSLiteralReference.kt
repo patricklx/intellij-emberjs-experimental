@@ -2,6 +2,7 @@ package com.emberjs.psi
 
 import com.emberjs.index.EmberNameIndex
 import com.emberjs.lookup.EmberLookupElementBuilder
+import com.emberjs.navigation.EmberNavigationTargets
 import com.intellij.lang.javascript.psi.JSLiteralExpression
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementResolveResult.createResults
@@ -29,11 +30,12 @@ class EmberJSLiteralReference(element: JSLiteralExpression, val types: Iterable<
     private fun resolve(value: String): Collection<PsiElement> {
         val names = arrayOf(value, value.removeSuffix("s"))
 
-        // Collect all matching modules from the index
-        return EmberNameIndex.getFilteredFiles(scope) { it.type in types && it.name in names }
-                // Lookup corresponding PsiFiles
-                .map { psiManager.findFile(it) }
-                .filterNotNull()
+        // Collect all matching modules from the index, narrowed to the copies the app resolves
+        val context = element.containingFile?.originalFile?.virtualFile
+        val files = EmberNavigationTargets.preferResolvedByApp(context, EmberNameIndex.getFilteredFiles(scope) { it.type in types && it.name in names })
+                .ifEmpty { if ("service" in types) EmberNavigationTargets.builtinService(context, value) else emptyList() }
+        // Lookup corresponding PsiFiles
+        return files.mapNotNull { psiManager.findFile(it) }
     }
 
     override fun getVariants(): Array<out Any> {

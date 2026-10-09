@@ -1,6 +1,8 @@
 package com.emberjs.psi
 
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction
+import com.emberjs.navigation.EmberNavigationTargets
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
@@ -118,6 +120,69 @@ class EmberServiceNavigationTest : BasePlatformTestCase() {
               @tracked session;
             }
         """, "session;").contains("app/services/session.js"))
+    }
+
+    private fun addAddon(root: String, name: String, vararg files: String): List<VirtualFile> {
+        myFixture.addFileToProject("$root/package.json", """{ "name": "$name", "keywords": ["ember-addon"] }""")
+        return files.map { myFixture.addFileToProject("$root/$it", "export default class {}").virtualFile }
+    }
+
+    // The light test fixture doesn't index node_modules like a real project does, so these feed the
+    // candidates the index would return straight into the narrowing step.
+    private fun narrowed(candidates: List<VirtualFile>): List<String> {
+        val context = myFixture.addFileToProject("app/components/ctx.js", "").virtualFile
+        return EmberNavigationTargets.preferResolvedByApp(context, candidates).map { it.path.substringAfter("/src/") }
+    }
+
+    private val sessionComponent = """
+        import Component from '@glimmer/component';
+        import { service } from '@ember/service';
+        export default class C extends Component {
+          @service session;
+          @service cookies;
+          @service store;
+          @service router;
+        }
+    """
+
+    fun testAppServiceWinsOverAddon() {
+        addAddon("node_modules/ember-simple-auth", "ember-simple-auth", "addon/services/session.js", "app/services/session.js")
+        assertEquals(listOf("app/services/session.js"), targetsAt("app/components/c1.js", sessionComponent, "session;"))
+    }
+
+    fun testAddonImplementationWinsOverAppReExport() {
+        val files = addAddon("node_modules/ember-cookies", "ember-cookies", "addon/services/cookies.js", "app/services/cookies.js")
+        assertEquals(listOf("node_modules/ember-cookies/addon/services/cookies.js"), narrowed(files))
+    }
+
+    fun testCopyInstalledByTheAppWinsOverOtherCopies() {
+        val installed = addAddon("node_modules/ember-data", "ember-data", "app/services/store.js")
+        val nested = addAddon("node_modules/other-addon/node_modules/ember-data", "ember-data", "app/services/store.js")
+        val scoped = addAddon("node_modules/@scope/fixtures/app/services", "fixture", "store.js")
+        assertEquals(listOf("node_modules/ember-data/app/services/store.js"), narrowed(nested + scoped + installed))
+    }
+
+    fun testAppFileWinsOverNodeModules() {
+        val addon = addAddon("node_modules/ember-simple-auth", "ember-simple-auth", "addon/services/session.js")
+        val app = myFixture.findFileInTempDir("app/services/session.js")
+        assertEquals(listOf("app/services/session.js"), narrowed(addon + app))
+    }
+
+    fun testBuiltinRouterServiceFallsBackToEmberSource() {
+        myFixture.addFileToProject("node_modules/ember-source/package.json", """{ "name": "ember-source" }""")
+        myFixture.addFileToProject("node_modules/ember-source/dist/packages/@ember/-internals/routing/lib/services/router.js", "export default class RouterService {}")
+        assertEquals(listOf("node_modules/ember-source/dist/packages/@ember/-internals/routing/lib/services/router.js"), targetsAt("app/components/c4.js", sessionComponent, "router;"))
+    }
+
+    fun testStringArgumentAlsoPrefersTheAppCopy() {
+        addAddon("node_modules/ember-simple-auth", "ember-simple-auth", "addon/services/session.js", "app/services/session.js")
+        assertEquals(listOf("app/services/session.js"), targetsAt("app/components/c5.js", """
+            import Component from '@glimmer/component';
+            import { service } from '@ember/service';
+            export default class C extends Component {
+              @service('session') mySession;
+            }
+        """, "session')"))
     }
 }
 
