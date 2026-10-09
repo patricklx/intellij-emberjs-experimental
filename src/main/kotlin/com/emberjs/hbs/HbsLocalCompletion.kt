@@ -115,7 +115,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
         if (anything is PsiElement && anything.references.find { it is HbsLocalReference } != null) {
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolveYield(), result, visited)
             resolve((anything.references.find { it is HbsLocalReference } as HbsLocalReference).resolved as? PropertySignature, result, visited)
-            resolve(anything.references.find { it is EmberReference }!!.resolve(), result, visited)
+            resolve(anything.references.find { it is EmberReference }?.resolve(), result, visited)
         }
 
         if (anything is PsiElement && anything.reference is HbsLocalReference) {
@@ -123,7 +123,7 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
             resolve(anything.reference?.resolve(), result, visited)
         }
 
-        if (anything is PsiElement && anything.reference == null && anything.containingFile.viewProvider is GtsFileViewProvider) {
+        if (anything is PsiElement && anything.reference == null && anything.containingFile?.viewProvider is GtsFileViewProvider) {
             val ref = anything.containingFile.originalFile.findReferenceAt(anything.textOffset)
             resolve((ref as? HbsLocalReference)?.resolveYield(), result, visited)
             val res = ref?.resolve()

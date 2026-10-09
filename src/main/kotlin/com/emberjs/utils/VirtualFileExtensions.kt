@@ -172,9 +172,15 @@ val VirtualFile.isInRepoAddon: Boolean
 
 /**
  * Searches all parent paths until it finds a path containing a `package.json` file.
+ *
+ * Files can be deleted while we walk (e.g. `pnpm install` replacing `node_modules/.pnpm/...`), and
+ * `findChild` on an invalid file throws, so stop at the first invalid entry.
  */
 val VirtualFile.parentModule: VirtualFile?
-    get() = this.parents.find { it.findChild("package.json") != null }
+    get() {
+        if (!this.isValid) return null
+        return this.parents.takeWhile { it.isValid }.find { it.findChild("package.json") != null }
+    }
 
 /**
  * Searches all parent paths until it finds a path containing a `package.json` file and

@@ -94,6 +94,10 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
      * also check .ts/d.ts files for Component<Args>
      */
     fun getReferenceData(): ComponentReferenceData {
+        // Following references resolves imports through indexes, which throws IndexNotReadyException while indexing.
+        if (DumbService.isDumb(project)) {
+            return ComponentReferenceData()
+        }
         var f: PsiFile? = null
         // if it references a block param
         val target: PsiElement?
