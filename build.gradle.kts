@@ -1,5 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 
@@ -68,6 +69,12 @@ intellijPlatform {
     }
 
     pluginVerification {
+        // The verifier does not resolve content modules that live inside bundled plugins (the Test Runner and
+        // Structure View plugins in 2026.2), so it reports their classes as missing even though they are declared
+        // in plugin.xml <dependencies> and load fine at runtime.
+        ignoredProblemsFile.set(file("gradle/plugin-verifier-ignored-problems.txt"))
+        // Internal API usage is inherent to the Glint/ESLint integrations, so only fail on real binary problems.
+        failureLevel.set(listOf(VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS, VerifyPluginTask.FailureLevel.INVALID_PLUGIN))
         ides {
             create(IntelliJPlatformType.WebStorm, "2026.2.3")
             create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")

@@ -1,0 +1,3 @@
+com.emberjs.experimental:.*unresolved class com\.intellij\.execution\.testframework\..*
+com.emberjs.experimental:.*Package 'com\.intellij\.execution\.testframework\..*
+com.emberjs.experimental:.*unresolved class com\.intellij\.ide\.structureView\.impl\.TemplateLanguageStructureViewBuilder.*

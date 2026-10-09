@@ -30,3 +30,7 @@ gradle-app.setting
 
 # Cache of project
 .gradletasknamecache
+
+# IntelliJ Platform Gradle Plugin / Kotlin caches
+.intellijPlatform/
+.kotlin/
