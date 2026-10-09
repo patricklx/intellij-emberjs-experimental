@@ -6,7 +6,6 @@ import com.emberjs.gts.GtsFileType
 import com.emberjs.utils.parentEmberModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.OSProcessUtil
 import com.intellij.execution.wsl.WslPath
 import com.intellij.javascript.nodejs.PackageJsonData
@@ -24,26 +23,27 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.isFile
 import com.intellij.platform.lsp.api.LspServerDescriptor
+import com.intellij.platform.lsp.api.LspServerListener
 import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.psi.PsiManager
-import com.intellij.util.FileContentUtil
+import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.ServerInfo
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.schedule
 import kotlin.io.path.Path
 
 private const val AVAILABILITY_CACHE_TTL_MS = 5000L
 
 class GlintLspSupportProvider : LspServerSupportProvider {
-    var willStart = false
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        if (!getGlintDescriptor(project).isAvailable(file)) return
-        getGlintDescriptor(project).ensureStarted(file)
+        val descriptor = getGlintDescriptor(project)
+        if (!descriptor.isAvailable(file)) return
+        // Report the server through serverStarter: the LSP manager uses fileOpened to decide which servers the
+        // open files need, so a server started behind its back gets stopped and restarted.
+        serverStarter.ensureServerStarted(descriptor)
     }
 }
 
@@ -195,12 +195,18 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
     fun ensureStarted(vfile: VirtualFile) {
         if (!isAvailable(vfile)) return
         lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
-        server?.let {
-            if (it.initializeResult?.serverInfo == null) {
-                it.initializeResult?.serverInfo = ServerInfo()
-            }
-            it.initializeResult?.serverInfo?.name = "Glint"
-            it.initializeResult?.serverInfo?.version = getGlintVersion()
+    }
+
+    override val lspServerListener = object : LspServerListener {
+        override fun serverInitialized(params: InitializeResult) {
+            params.serverInfo = ServerInfo("Glint", getGlintVersion())
+            // References and highlighting computed before the server was up are stale. Drop the resolve caches and
+            // re-highlight once. Don't reparse open files: that needs a write action on the EDT for every server
+            // start, and the file changes it causes can trigger further TypeScript service restarts.
+            ApplicationManager.getApplication().invokeLater({
+                PsiManager.getInstance(myProject).dropResolveCaches()
+                DaemonCodeAnalyzer.getInstance(myProject).restart()
+            }, myProject.disposed)
         }
     }
 
@@ -209,8 +215,8 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             val config = GlintConfiguration.getInstance(myProject)
             val pkg = config.getPackage()
             val path = pkg.`package`.constantPackage?.systemIndependentPath ?: glintCoreDir?.path ?: return@runReadAction null
-            val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json"))
-            PackageJsonData.getOrCreate(f!!).version?.rawVersion
+            val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json")) ?: return@runReadAction null
+            PackageJsonData.getOrCreate(f).version?.rawVersion
         }
     }
 
@@ -258,19 +264,6 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 .configure(commandLine)
         }
         return commandLine
-    }
-
-    override fun startServerProcess(): OSProcessHandler {
-        val r = super.startServerProcess()
-        Timer().schedule(5000) {
-            ApplicationManager.getApplication().invokeLater {
-                DaemonCodeAnalyzer.getInstance(project).restart()
-                ApplicationManager.getApplication().runWriteAction {
-                    FileContentUtil.reparseOpenedFiles()
-                }
-            }
-        }
-        return r;
     }
 
     override fun findLocalFileByPath(path: String): VirtualFile? {
