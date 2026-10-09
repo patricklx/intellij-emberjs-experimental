@@ -2,22 +2,26 @@ package com.emberjs.navigation
 
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.parentModule
+import com.intellij.lang.ecmascript6.psi.ES6ExportSpecifier
+import com.intellij.lang.ecmascript6.psi.ES6ExportSpecifierAlias
+import com.intellij.lang.ecmascript6.psi.ES6ImportedBinding
+import com.intellij.lang.javascript.psi.JSReferenceExpression
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptInterface
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptModule
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature
+import com.intellij.lang.javascript.psi.stubs.JSClassIndex
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 
 /**
  * Narrows Ember name index results down to the files Ember itself would resolve for an app, so that
  * Cmd+click jumps straight there instead of offering every copy found in node_modules.
  */
 object EmberNavigationTargets {
-
-    /** Built-in services that ship with ember-source, as paths inside the ember-source package (newest layout first). */
-    private val BUILTIN_SERVICES = mapOf(
-        "router" to listOf(
-            "dist/packages/@ember/routing/router-service.js",
-            "dist/packages/@ember/-internals/routing/lib/services/router.js",
-            "types/stable/@ember/routing/router-service.d.ts",
-        ),
-    )
 
     /**
      * Like Ember's resolver:
@@ -51,12 +55,52 @@ object EmberNavigationTargets {
             .flatMap { (_, samePackage) -> samePackage.filterNot { isAppReExport(it) }.ifEmpty { samePackage } }
     }
 
-    /** Files for a service that is built into Ember rather than defined by the app or an addon. */
-    fun builtinService(context: VirtualFile?, name: String): List<VirtualFile> {
-        val candidates = BUILTIN_SERVICES[name] ?: return emptyList()
-        val appRoot = context?.let { it.emberRoot ?: it.parentModule } ?: return emptyList()
-        val emberSource = appRoot.findFileByRelativePath("node_modules/ember-source") ?: return emptyList()
-        return listOfNotNull(candidates.firstNotNullOfOrNull { emberSource.findFileByRelativePath(it) })
+    /**
+     * A service registered in Ember's service registry types, e.g. the built-in `router`:
+     * ```
+     * declare module '@ember/service' { interface Registry { router: RouterService } }
+     * ```
+     * This is what `@service('router')` is typed against, so it covers built-in services and any app or addon that
+     * registers its services for TypeScript/Glint, without knowing where a package keeps its files. Resolves the
+     * registry entry and then its type, i.e. the service class.
+     */
+    fun registeredService(project: Project, name: String): PsiElement? {
+        if (DumbService.isDumb(project)) return null
+        val entries = mutableListOf<TypeScriptPropertySignature>()
+        JSClassIndex.processElements("Registry", project, GlobalSearchScope.allScope(project)) { element ->
+            val registry = element as? TypeScriptInterface
+            if (registry != null && isEmberServiceModule(registry)) {
+                registry.body?.children?.filterIsInstance<TypeScriptPropertySignature>()
+                        ?.filterTo(entries) { it.name?.trim('\'', '"') == name }
+            }
+            true
+        }
+        val entry = entries.firstOrNull() ?: return null
+        // `router: RouterService` -> RouterService, following an `import type RouterService from '...'` if needed
+        val type = PsiTreeUtil.findChildrenOfType(entry, JSReferenceExpression::class.java).firstOrNull()?.resolve()
+        return followAliases(type) ?: entry
+    }
+
+    /** Follows `import X from '...'` and `export { X as default }` to the declaration they refer to. */
+    private fun followAliases(element: PsiElement?): PsiElement? {
+        var current = element
+        repeat(5) {
+            current = when (val c = current) {
+                is ES6ImportedBinding -> c.findReferencedElements().firstOrNull() ?: return c
+                is ES6ExportSpecifierAlias -> (c.parent as? ES6ExportSpecifier)?.reference?.resolve() ?: return c
+                else -> return c
+            }
+        }
+        return current
+    }
+
+    /** Whether [registry] is declared for the `@ember/service` module (an augmentation or its own types package). */
+    private fun isEmberServiceModule(registry: TypeScriptInterface): Boolean {
+        val module = PsiTreeUtil.getParentOfType(registry, TypeScriptModule::class.java)
+        // ambient module names are reported as e.g. `module:@ember/service`
+        if (module != null) return module.name?.removePrefix("module:")?.trim('\'', '"') == "@ember/service"
+        val path = registry.containingFile?.virtualFile?.path ?: return false
+        return "/@types/ember__service/" in path || "/@ember/service/" in path
     }
 
     /** The package directory directly below a node_modules folder (or below its @scope folder). */

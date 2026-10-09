@@ -33,9 +33,9 @@ class EmberJSLiteralReference(element: JSLiteralExpression, val types: Iterable<
         // Collect all matching modules from the index, narrowed to the copies the app resolves
         val context = element.containingFile?.originalFile?.virtualFile
         val files = EmberNavigationTargets.preferResolvedByApp(context, EmberNameIndex.getFilteredFiles(scope) { it.type in types && it.name in names })
-                .ifEmpty { if ("service" in types) EmberNavigationTargets.builtinService(context, value) else emptyList() }
         // Lookup corresponding PsiFiles
         return files.mapNotNull { psiManager.findFile(it) }
+                .ifEmpty { if ("service" in types) listOfNotNull(EmberNavigationTargets.registeredService(project, value)) else emptyList() }
     }
 
     override fun getVariants(): Array<out Any> {
