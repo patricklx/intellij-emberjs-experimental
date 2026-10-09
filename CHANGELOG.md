@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2026.2.0 (2026-10-09)
+
+#### :rocket: Enhancement
+* [#393](https://github.com/patricklx/intellij-emberjs-experimental/pull/393) Support IntelliJ IDEA 2026.2 (build 262) ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2026.1.1 (2026-09-15)
 
 #### :bug: Bug Fix
