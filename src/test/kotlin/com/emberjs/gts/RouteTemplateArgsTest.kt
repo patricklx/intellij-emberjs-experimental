@@ -139,4 +139,14 @@ class RouteTemplateArgsTest : BasePlatformTestCase() {
         val usages = myFixture.findUsages(myFixture.elementAtCaret)
         assertTrue(usages.toString(), usages.any { it.file?.name == "opdracht.gjs" && it.element?.text == "error" })
     }
+
+    /** Ember's Controller type declares `model`; that inherited declaration shouldn't win over the route's hook. */
+    fun testControllerModelInheritedFromEmberTypesUsesTheRouteModelHook() {
+        myFixture.addFileToProject("types/ember-controller.d.ts", """
+            declare module '@ember/controller' {
+              export default class Controller { model: unknown; }
+            }
+        """.trimIndent())
+        assertEquals("app/routes/klant/opdracht.js#model", describe(target("gjs", "@controller.model")))
+    }
 }

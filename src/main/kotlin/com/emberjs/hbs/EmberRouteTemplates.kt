@@ -31,6 +31,12 @@ object EmberRouteTemplates {
     /** The route's `model()` hook, for `@model` (and `@controller.model` when the controller doesn't declare it). */
     fun modelHook(element: PsiElement): JSFunction? = defaultExportClass(element, "route")?.findFunctionByName("model")
 
+    /** Whether [element] is declared in the app's own code, rather than in a library or type definitions. */
+    fun isAppSource(element: PsiElement): Boolean {
+        val file = element.containingFile?.originalFile?.virtualFile ?: return false
+        return !file.name.endsWith(".d.ts") && "/node_modules/" !in file.path
+    }
+
     private fun defaultExportClass(element: PsiElement, type: String): JSClass? {
         val route = routeName(element) ?: return null
         val project = element.project
