@@ -33,8 +33,7 @@
     ]]>
     </change-notes>
 
-    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="232.8453.116"/>
+    <!-- since-build/until-build are set by patchPluginXml from build.gradle.kts -->
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
@@ -43,7 +42,7 @@
     <depends>JavaScript</depends>
     <depends>com.intellij.css</depends>
     <depends>com.intellij.modules.json</depends>
-    <depends>intellij.javascript.eslint</depends>
+    <depends optional="true" config-file="eslint.xml">intellij.javascript.eslint</depends>
     <depends optional="true" config-file="yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends config-file="handlebars.xml">com.dmarcotte.handlebars</depends>
     <depends optional="true" config-file="hbs-injections.xml">org.intellij.intelliLang</depends>
@@ -190,8 +189,6 @@
         <externalAnnotator language="JavaScript" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Gts" implementationClass="TemplateLintExternalAnnotator"/>
         <externalAnnotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintExternalAnnotator"/>
-        <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
-        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
         <annotator language="Handlebars" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <annotator language="HTML" implementationClass="com.emberjs.gts.HbLintAnnotator"/>
         <projectService serviceImplementation="TemplateLintConfiguration"/>
@@ -202,9 +199,6 @@
         <actionOnSaveInfoProvider id="TemplateLintOnSaveInfoProvider"
                                   implementation="TemplateLintOnSaveInfoProvider"
                                   order="after FormatOnSaveInfoProvider, before PrettierOnSaveInfoProvider, before BuildOnSaveInfoProvider, before FileWatcherOnSaveInfoProvider, before UploadOnSaveInfoProvider"/>
-        <actionOnSave id="EsLintActionOnSave"
-                      implementation="EsLintActionOnSave"
-                      order="after FormatOnSaveAction, before PrettierActionOnSave"/>
         <actionOnSave id="TemplateLintActionOnSave"
                       implementation="TemplateLintActionOnSave"
                       order="after FormatOnSaveAction, before PrettierActionOnSave"/>
