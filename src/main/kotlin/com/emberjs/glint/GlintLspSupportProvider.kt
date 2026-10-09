@@ -146,6 +146,9 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
         if (ApplicationManager.getApplication().isUnitTestMode) {
             return false
         }
+        if (vfile != null && !vfile.isValid) {
+            return false
+        }
         val config = GlintConfiguration.getInstance(myProject)
         val pkg = config.getPackage()
         pkg.readOrDetect()
