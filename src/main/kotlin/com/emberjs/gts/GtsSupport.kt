@@ -392,13 +392,6 @@ class GtsLexerAdapter(baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =fal
 
 class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 
-    override fun equals(other: Any?): Boolean {
-        if (other == TypeScriptFileType) {
-            return true
-        }
-        return super.equals(other)
-    }
-
     companion object {
         val INSTANCE = GtsFileType()
     }
@@ -418,20 +411,9 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
     override fun getIcon(): Icon {
         return GtsIcons.icon
     }
-
-    override fun hashCode(): Int {
-        return javaClass.hashCode()
-    }
 }
 
 class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
-
-    override fun equals(other: Any?): Boolean {
-        if (other == JavaScriptFileType) {
-            return true
-        }
-        return super.equals(other)
-    }
 
     companion object {
         val INSTANCE = GjsFileType()
@@ -451,10 +433,6 @@ class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
 
     override fun getIcon(): Icon {
         return GtsIcons.icon
-    }
-
-    override fun hashCode(): Int {
-        return javaClass.hashCode()
     }
 }
 
