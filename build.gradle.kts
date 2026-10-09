@@ -28,9 +28,9 @@ version = "2025.3.1"
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.27.7")
-    testImplementation("org.junit.platform:junit-platform-launcher:6.0.3")
+    testImplementation("org.junit.platform:junit-platform-launcher:6.1.3")
     implementation(kotlin("test"))
-    implementation("org.codehaus.jettison:jettison:1.5.5")
+    implementation("org.codehaus.jettison:jettison:1.5.7")
 
     // see https://www.jetbrains.com/intellij-repository/releases/
     // and https://www.jetbrains.com/intellij-repository/snapshots/
@@ -42,7 +42,7 @@ dependencies {
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
     }
 }
 
@@ -58,6 +58,21 @@ java {
 intellijPlatform {
     pluginConfiguration {
         name.set("EmberExperimental.js")
+        ideaVersion {
+            // The JavaScript plugin APIs we extend (BaseLspTypeScriptService, ESLint, LSP impl) are internal and
+            // change incompatibly between releases - even between 262 patch releases (2026.2 -> 2026.2.3 turned
+            // TypeScriptService.getSignatureHelp into a suspend function). Only claim compatibility with the
+            // builds we compile and verify against, so a new IDE release can't silently load a broken build.
+            sinceBuild.set("262.10968")
+            untilBuild.set("262.*")
+        }
+    }
+
+    pluginVerification {
+        ides {
+            create(IntelliJPlatformType.WebStorm, "2026.2.3")
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
+        }
     }
 
     // Plugin Dependencies -> https://plugins.jetbrains.com/docs/intellij/plugin-dependencies.html
