@@ -1,0 +1,10 @@
+<!-- Extensions that use classes only available when the ESLint plugin is installed (split out of the JavaScript plugin in 2026.2). -->
+<idea-plugin version="2">
+    <extensions defaultExtensionNs="com.intellij">
+        <externalAnnotator language="Gts" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
+        <externalAnnotator language="Handlebars" implementationClass="com.emberjs.hbs.linter.eslint.GtsEslintExternalAnnotator"/>
+        <actionOnSave id="EsLintActionOnSave"
+                      implementation="EsLintActionOnSave"
+                      order="after FormatOnSaveAction, before PrettierActionOnSave"/>
+    </extensions>
+</idea-plugin>
