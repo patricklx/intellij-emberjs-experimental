@@ -438,12 +438,22 @@ class HbsLocalReference(private val leaf: PsiElement, val resolved: Any?) : HbRe
                 if (ref != null && resolveToJs(sig ?: ref.resolve(), listOf(element.text)) != null) {
                     return HbsLocalReference(element, resolveToJs(sig ?: ref.resolve(), listOf(element.text)))
                 }
+                // @controller.model in a route template: the route sets it, so the controller usually doesn't declare it
+                if (name == "model" && sibling.text == "controller" && element.parent is HbData &&
+                        PsiTreeUtil.findSiblingBackward(sibling, HbTokenTypes.ID, null) == null) {
+                    EmberRouteTemplates.modelHook(element)?.let { return HbsLocalReference(element, it) }
+                }
                 val ref2 = sibling.references.find { it is HbReference } as HbReference?
                 val res = resolveToJs(ref2?.resolve(), listOf(element.text))
                 return HbsLocalReference(element, res ?: service?.getNavigationFor(document!!, element, true)?.firstOrNull()?.parent)
             }
 
             if (element.parent is HbData) {
+                // @controller / @model in route templates
+                when (name) {
+                    "controller" -> EmberRouteTemplates.controllerClass(element)?.let { return HbsLocalReference(element, it) }
+                    "model" -> EmberRouteTemplates.modelHook(element)?.let { return HbsLocalReference(element, it) }
+                }
                 val cls = EmberUtils.findBackingJsClass(element)
                 if (cls != null) {
                     val args = EmberUtils.findComponentArgsType(cls as JSElement)
