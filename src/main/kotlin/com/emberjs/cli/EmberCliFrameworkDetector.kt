@@ -1,5 +1,6 @@
 package com.emberjs.cli
 import com.emberjs.glint.getGlintDescriptor
+import com.emberjs.project.ProjectService
 import com.emberjs.utils.emberRoot
 import com.emberjs.utils.isEmber
 import com.intellij.framework.FrameworkType
@@ -8,9 +9,7 @@ import com.intellij.framework.detection.FileContentPattern
 import com.intellij.framework.detection.FrameworkDetectionContext
 import com.intellij.framework.detection.FrameworkDetector
 import com.intellij.ide.projectView.actions.MarkRootActionBase
-import com.intellij.javascript.nodejs.packageJson.PackageJsonFileManager
 import com.intellij.json.JsonFileType
-import com.intellij.lang.javascript.library.JSLibraryManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.module.ModuleUtilCore
@@ -25,9 +24,6 @@ import com.intellij.patterns.PatternCondition
 import com.intellij.util.ProcessingContext
 import com.intellij.util.indexing.FileContent
 import com.intellij.util.ui.EDT
-import com.intellij.webcore.libraries.ScriptingLibraryModel
-
-val detectedFrameworks = HashMap<Project, List<EmberCliFrameworkDetector.EmberFrameworkDescription>>()
 
 class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
     /** Use package json keys to detect ember */
@@ -54,38 +50,6 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
 
     override fun getFrameworkType(): FrameworkType = EmberFrameworkType
 
-    private fun listenNodeModules(rootDir: VirtualFile, modulesProvider: ModulesProvider) {
-        val modifiableModelsProvider = ModifiableModelsProvider.getInstance()
-        modulesProvider.modules
-                .filter { ModuleRootManager.getInstance(it).contentRoots.contains(rootDir) }
-                .forEach { module ->
-                    val p = modifiableModelsProvider.getModuleModifiableModel(module).project
-                    p.messageBus.connect().subscribe(PackageJsonFileManager.CHANGES_TOPIC, PackageJsonFileManager.PackageJsonChangesListener {
-                        ApplicationManager.getApplication().invokeLater {
-                            ApplicationManager.getApplication().runWriteAction()
-                            {
-                                val model = modifiableModelsProvider.getModuleModifiableModel(module)
-                                val entry = MarkRootActionBase.findContentEntry(model, rootDir)
-                                if (entry != null) {
-                                    EmberCliProjectConfigurator.setupEmber(model.project, entry, rootDir)
-                                    val moduleLibraryTable = JSLibraryManager.getInstance(model.project)
-                                    val libraries = moduleLibraryTable.getLibraries(ScriptingLibraryModel.LibraryLevel.PROJECT)
-
-                                    libraries.toList().forEach { ce ->
-                                        if (ce.sourceFiles.size == 0 && ce.originalLibrary != null) {
-                                            moduleLibraryTable.removeLibrary(ce)
-                                        }
-                                    }
-                                    modifiableModelsProvider.commitModuleModifiableModel(model)
-                                } else {
-                                    modifiableModelsProvider.disposeModuleModifiableModel(model)
-                                }
-                            }
-                        }
-                    })
-                }
-    }
-
     override fun detect(newFiles: MutableCollection<out VirtualFile>, context: FrameworkDetectionContext): MutableList<out DetectedFrameworkDescription> {
         newFiles.removeIf { !it.path.endsWith("package.json") || it.parent != it.emberRoot || !it.parent.isEmber }
 
@@ -104,7 +68,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
                 frameworkDescriptions.add(EmberFrameworkDescription(rootDir, newFiles, context.project!!))
             }
         }
-        detectedFrameworks[context.project!!] = frameworkDescriptions
+        ProjectService.getInstance(context.project!!).detectedFrameworks = frameworkDescriptions
         return frameworkDescriptions
     }
 
@@ -158,7 +122,7 @@ class EmberCliFrameworkDetector : FrameworkDetector("Ember", 2) {
 
     companion object {
         fun hasEnabledEmberFramework(project: Project): Boolean {
-            return detectedFrameworks.getOrDefault(project, emptyList()).any { it.isConfigured() }
+            return ProjectService.getInstance(project).detectedFrameworks.any { it.isConfigured() }
         }
     }
 }
