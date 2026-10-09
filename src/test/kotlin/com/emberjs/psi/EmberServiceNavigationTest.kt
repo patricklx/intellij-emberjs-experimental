@@ -22,6 +22,10 @@ class EmberServiceNavigationTest : BasePlatformTestCase() {
         """.trimIndent())
     }
 
+    private fun targetDescriptions(): List<String> =
+        GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
+            .map { "${it.javaClass.simpleName}:${(it as? com.intellij.psi.PsiNamedElement)?.name}" }
+
     private fun targetFileNames(): List<String> {
         val targets = GotoDeclarationAction.findAllTargetElements(project, myFixture.editor, myFixture.caretOffset)
         return targets.mapNotNull { (it as? PsiFile ?: it.containingFile)?.virtualFile?.path?.substringAfter("/src/") }
@@ -168,10 +172,76 @@ class EmberServiceNavigationTest : BasePlatformTestCase() {
         assertEquals(listOf("app/services/session.js"), narrowed(addon + app))
     }
 
-    fun testBuiltinRouterServiceFallsBackToEmberSource() {
-        myFixture.addFileToProject("node_modules/ember-source/package.json", """{ "name": "ember-source" }""")
-        myFixture.addFileToProject("node_modules/ember-source/dist/packages/@ember/-internals/routing/lib/services/router.js", "export default class RouterService {}")
-        assertEquals(listOf("node_modules/ember-source/dist/packages/@ember/-internals/routing/lib/services/router.js"), targetsAt("app/components/c4.js", sessionComponent, "router;"))
+    /** Mirrors how ember-source's stable types register the router service. */
+    private fun addEmberServiceTypes() {
+        myFixture.addFileToProject("types/ember/service.d.ts", """
+            declare module '@ember/service' {
+              export default class Service {}
+              export function service(name?: string): any;
+              export interface Registry extends Record<string, object | undefined> {}
+            }
+        """.trimIndent())
+        myFixture.addFileToProject("types/ember/routing/router-service.d.ts", """
+            declare module '@ember/routing/router-service' {
+              class RouterService { currentRouteName: string; }
+              export { RouterService as default };
+            }
+        """.trimIndent())
+        myFixture.addFileToProject("types/ember/routing/service-ext.d.ts", """
+            import '@ember/service';
+            import type RouterService from '@ember/routing/router-service';
+            declare module '@ember/service' {
+              export interface Registry {
+                router: RouterService;
+              }
+            }
+        """.trimIndent())
+    }
+
+    fun testBuiltinRouterServiceResolvesThroughTheServiceRegistry() {
+        addEmberServiceTypes()
+        assertEquals(listOf("types/ember/routing/router-service.d.ts"), targetsAt("app/components/c4.js", sessionComponent, "router;"))
+        assertEquals(listOf("TypeScriptClassImpl:RouterService"), targetDescriptions())
+    }
+
+    fun testStringArgumentResolvesThroughTheServiceRegistry() {
+        addEmberServiceTypes()
+        assertEquals(listOf("types/ember/routing/router-service.d.ts"), targetsAt("app/components/c6.js", """
+            import Component from '@ember/component';
+            import { inject as service } from '@ember/service';
+            export default Component.extend({ r: service('router') });
+        """, "router'"))
+    }
+
+    fun testDasherizedRegistryEntry() {
+        addEmberServiceTypes()
+        myFixture.addFileToProject("types/flash-messages.d.ts", """
+            declare module 'ember-cli-flash/services/flash-messages' {
+              export default class FlashMessagesService { success(message: string): void; }
+            }
+            declare module '@ember/service' {
+              import type FlashMessagesService from 'ember-cli-flash/services/flash-messages';
+              export interface Registry { 'flash-messages': FlashMessagesService; }
+            }
+        """.trimIndent())
+        assertEquals(listOf("types/flash-messages.d.ts"), targetsAt("app/components/c7.js", """
+            import Component from '@glimmer/component';
+            import { service } from '@ember/service';
+            export default class C extends Component {
+              @service flashMessages;
+            }
+        """, "flashMessages;"))
+    }
+
+    fun testUnregisteredServiceHasNoTarget() {
+        addEmberServiceTypes()
+        assertEquals(emptyList<String>(), targetsAt("app/components/c8.js", """
+            import Component from '@glimmer/component';
+            import { service } from '@ember/service';
+            export default class C extends Component {
+              @service doesNotExist;
+            }
+        """, "doesNotExist;"))
     }
 
     fun testStringArgumentAlsoPrefersTheAppCopy() {
