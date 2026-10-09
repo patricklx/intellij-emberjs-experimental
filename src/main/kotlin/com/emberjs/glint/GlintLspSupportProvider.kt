@@ -7,7 +7,6 @@ import com.emberjs.utils.parentEmberModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.OSProcessUtil
 import com.intellij.execution.wsl.WslPath
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
@@ -23,10 +22,17 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.isFile
-import com.intellij.platform.lsp.api.LspServerDescriptor
+import com.intellij.platform.lsp.api.LspClientDescriptor
+import com.intellij.platform.lsp.api.LspClientManager
+import com.intellij.platform.lsp.api.LspIntegrationProvider
 import com.intellij.platform.lsp.api.LspServerListener
-import com.intellij.platform.lsp.api.LspServerManager
-import com.intellij.platform.lsp.api.LspServerSupportProvider
+import com.intellij.platform.lsp.api.customization.LspCompletionCustomizer
+import com.intellij.platform.lsp.api.customization.LspCompletionDisabled
+import com.intellij.platform.lsp.api.customization.LspCustomization
+import com.intellij.platform.lsp.api.customization.LspDiagnosticsCustomizer
+import com.intellij.platform.lsp.api.customization.LspDiagnosticsDisabled
+import com.intellij.platform.lsp.api.customization.LspGoToDefinitionCustomizer
+import com.intellij.platform.lsp.api.customization.LspGoToDefinitionDisabled
 import com.intellij.psi.PsiManager
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.ServerInfo
@@ -38,13 +44,13 @@ import kotlin.io.path.Path
 
 private const val AVAILABILITY_CACHE_TTL_MS = 5000L
 
-class GlintLspSupportProvider : LspServerSupportProvider {
-    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
+class GlintLspSupportProvider : LspIntegrationProvider {
+    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspIntegrationProvider.LspClientStarter) {
         val descriptor = getGlintDescriptor(project)
         if (!descriptor.isAvailable(file)) return
         // Report the server through serverStarter: the LSP manager uses fileOpened to decide which servers the
         // open files need, so a server started behind its back gets stopped and restarted.
-        serverStarter.ensureServerStarted(descriptor)
+        serverStarter.ensureClientStarted(descriptor)
     }
 }
 
@@ -55,19 +61,15 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 
 @Service(Service.Level.PROJECT)
-class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
+class GlintLspServerDescriptor(private val myProject: Project) : LspClientDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
-    val lspServerManager = LspServerManager.getInstance(project)
+    val lspClientManager = LspClientManager.getInstance(project)
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
     private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
     private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
     private val availabilityProbesInFlight = ConcurrentHashMap.newKeySet<String>()
-
-    public val server
-        get() =
-           lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
     /**
      * getAttributeDescriptor/getAttributesDescriptors calls this for every attribute of every
@@ -195,7 +197,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun ensureStarted(vfile: VirtualFile) {
         if (!isAvailable(vfile)) return
-        lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
+        lspClientManager.ensureClientStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
     }
 
     override val lspServerListener = object : LspServerListener {
@@ -251,7 +253,7 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             commandLine.addParameter("$dirPath/bin/glint-language-server.js")
             commandLine.addParameter("--stdio")
             if (!this.isWsl) {
-                commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+                commandLine.addParameter("--clientProcessId=" + ProcessHandle.current().pid())
             }
         }
 
@@ -315,9 +317,13 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 file.fileType is JavaScriptFileType
     }
 
-    override val lspDiagnosticsSupport = null
-    override val lspGoToDefinitionSupport = false
-    override val lspCompletionSupport = null
+    // Diagnostics, completion and go-to-definition are wired through GlintTypeScriptService and the plugin's own
+    // references, so keep the platform's generic LSP versions of them off.
+    override val lspCustomization = object : LspCustomization() {
+        override val diagnosticsCustomizer: LspDiagnosticsCustomizer = LspDiagnosticsDisabled
+        override val completionCustomizer: LspCompletionCustomizer = LspCompletionDisabled
+        override val goToDefinitionCustomizer: LspGoToDefinitionCustomizer = LspGoToDefinitionDisabled
+    }
 
     override fun dispose() {}
 }

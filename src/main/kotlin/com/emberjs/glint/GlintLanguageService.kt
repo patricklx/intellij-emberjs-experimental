@@ -36,7 +36,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.platform.lsp.api.LspServerManager
 import com.intellij.platform.lsp.impl.features.highlighting.DiagnosticAndQuickFixes
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -69,7 +68,6 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
     // Re-entrancy guard for getNavigationFor (resolving references below can call back into it). This is a
     // project service used from many threads at once, so the guard must be per thread.
     private val currentlyChecking = ThreadLocal<PsiElement?>()
-    val lspServerManager = LspServerManager.getInstance(project)
 
     companion object {
         private val LOG = Logger.getInstance(GlintTypeScriptService::class.java)

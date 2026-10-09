@@ -102,7 +102,7 @@
         <directoryProjectGenerator implementation="com.emberjs.cli.EmberCliAddonProjectGenerator"/>
         <projectTemplatesFactory implementation="com.emberjs.cli.EmberCliProjectTemplatesFactory"/>
         <moduleBuilder builderClass="com.emberjs.cli.EmberCLIProjectModuleBuilder"/>
-        <platform.lsp.serverSupportProvider implementation="com.emberjs.glint.GlintLspSupportProvider"/>
+        <platform.lsp.integrationProvider implementation="com.emberjs.glint.GlintLspSupportProvider"/>
         <lang.findUsagesProvider language="Handlebars"
                                  implementationClass="com.emberjs.hbs.HbsFindUsagesProvider"/>
 
