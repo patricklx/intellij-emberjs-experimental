@@ -21,6 +21,7 @@ import com.intellij.xml.XmlAttributeDescriptor
 import com.intellij.xml.XmlElementDescriptor
 import com.intellij.xml.XmlElementsGroup
 import com.intellij.xml.XmlNSDescriptor
+import com.emberjs.hbs.TagReferencesProvider
 
 
 class GlintReference(val elem: PsiElement): PsiReferenceBase<PsiElement>(elem), EmberReference {
@@ -38,7 +39,7 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
     val version = "v2022.1.11"
 
     override fun equals(other: Any?): Boolean {
-        return (other as EmberXmlElementDescriptor).tag == this.tag && other.version == this.version
+        return other is EmberXmlElementDescriptor && other.tag == this.tag && other.version == this.version
     }
 
     override fun hashCode(): Int {
@@ -47,10 +48,11 @@ class EmberXmlElementDescriptor(private val tag: XmlTag, private val declaration
 
     companion object {
 
-        var isCheckingRef = false
-
         fun forTag(tag: XmlTag): EmberXmlElementDescriptor? {
-            val res: PsiNamedElement? = tag.references.lastOrNull()?.resolve() as? PsiNamedElement
+            // Only resolve the plugin's own tag references. tag.references runs every reference provider, and some
+            // of them ask for this tag's descriptor, which is what is being computed here. The recursion guard then
+            // made the result depend on cache state (Ember descriptor one time, plain HTML descriptor the next).
+            val res: PsiNamedElement? = TagReferencesProvider.getReferencesByElement(tag).lastOrNull()?.resolve() as? PsiNamedElement
             if (res == null && !tag.name.startsWith(":") && !tag.name.first().isUpperCase() || res is FakePsiElement) {
                 return null
             }

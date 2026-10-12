@@ -351,6 +351,10 @@ class HbsLocalCompletion : CompletionProvider<CompletionParameters>() {
     }
 
     fun addArgsCompletion(element: PsiElement, result: CompletionResultSet) {
+        if (EmberRouteTemplates.routeName(element) != null) {
+            val withAt = !(element.parent is HbData && !result.prefixMatcher.prefix.startsWith("@"))
+            listOf("controller", "model").forEach { result.addElement(LookupElementBuilder.create(if (withAt) "@$it" else it)) }
+        }
         val cls = EmberUtils.findBackingJsClass(element)
         if (cls != null) {
             val args = EmberUtils.findComponentArgsType(cls as JSElement)
