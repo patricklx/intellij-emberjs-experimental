@@ -5,9 +5,8 @@ import com.emberjs.gts.GlintConfiguration
 import com.emberjs.gts.GtsFileType
 import com.emberjs.utils.parentEmberModule
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.OSProcessHandler
-import com.intellij.execution.process.OSProcessUtil
 import com.intellij.execution.wsl.WslPath
 import com.intellij.javascript.nodejs.PackageJsonData
 import com.intellij.javascript.nodejs.interpreter.NodeCommandLineConfigurator
@@ -23,27 +22,35 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.isFile
-import com.intellij.platform.lsp.api.LspServerDescriptor
-import com.intellij.platform.lsp.api.LspServerManager
-import com.intellij.platform.lsp.api.LspServerSupportProvider
+import com.intellij.platform.lsp.api.LspClientDescriptor
+import com.intellij.platform.lsp.api.LspClientManager
+import com.intellij.platform.lsp.api.LspIntegrationProvider
+import com.intellij.platform.lsp.api.LspServerListener
+import com.intellij.platform.lsp.api.customization.LspCompletionCustomizer
+import com.intellij.platform.lsp.api.customization.LspCompletionDisabled
+import com.intellij.platform.lsp.api.customization.LspCustomization
+import com.intellij.platform.lsp.api.customization.LspDiagnosticsCustomizer
+import com.intellij.platform.lsp.api.customization.LspDiagnosticsDisabled
+import com.intellij.platform.lsp.api.customization.LspGoToDefinitionCustomizer
+import com.intellij.platform.lsp.api.customization.LspGoToDefinitionDisabled
 import com.intellij.psi.PsiManager
-import com.intellij.util.FileContentUtil
+import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.ServerInfo
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.schedule
 import kotlin.io.path.Path
 
 private const val AVAILABILITY_CACHE_TTL_MS = 5000L
 
-class GlintLspSupportProvider : LspServerSupportProvider {
-    var willStart = false
-    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
-        if (!getGlintDescriptor(project).isAvailable(file)) return
-        getGlintDescriptor(project).ensureStarted(file)
+class GlintLspSupportProvider : LspIntegrationProvider {
+    override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspIntegrationProvider.LspClientStarter) {
+        val descriptor = getGlintDescriptor(project)
+        if (!descriptor.isAvailable(file)) return
+        // Report the server through serverStarter: the LSP manager uses fileOpened to decide which servers the
+        // open files need, so a server started behind its back gets stopped and restarted.
+        serverStarter.ensureClientStarted(descriptor)
     }
 }
 
@@ -54,19 +61,15 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 
 @Service(Service.Level.PROJECT)
-class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescriptor(myProject, "Glint"), Disposable {
+class GlintLspServerDescriptor(private val myProject: Project) : LspClientDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
-    val lspServerManager = LspServerManager.getInstance(project)
+    val lspClientManager = LspClientManager.getInstance(project)
     var isWsl = false
     var wslDistro = ""
     var glintCoreDir: VirtualFile? = null
     private data class CachedAvailability(val available: Boolean, val checkedAt: Long)
     private val availabilityCache = ConcurrentHashMap<String, CachedAvailability>()
     private val availabilityProbesInFlight = ConcurrentHashMap.newKeySet<String>()
-
-    public val server
-        get() =
-           lspServerManager.getServersForProvider(GlintLspSupportProvider::class.java).firstOrNull()
 
     /**
      * getAttributeDescriptor/getAttributesDescriptors calls this for every attribute of every
@@ -191,13 +194,19 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 
     fun ensureStarted(vfile: VirtualFile) {
         if (!isAvailable(vfile)) return
-        lspServerManager.ensureServerStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
-        server?.let {
-            if (it.initializeResult?.serverInfo == null) {
-                it.initializeResult?.serverInfo = ServerInfo()
-            }
-            it.initializeResult?.serverInfo?.name = "Glint"
-            it.initializeResult?.serverInfo?.version = getGlintVersion()
+        lspClientManager.ensureClientStarted(GlintLspSupportProvider::class.java, getGlintDescriptor(project))
+    }
+
+    override val lspServerListener = object : LspServerListener {
+        override fun serverInitialized(params: InitializeResult) {
+            params.serverInfo = ServerInfo("Glint", getGlintVersion())
+            // References and highlighting computed before the server was up are stale. Drop the resolve caches and
+            // re-highlight once. Don't reparse open files: that needs a write action on the EDT for every server
+            // start, and the file changes it causes can trigger further TypeScript service restarts.
+            ApplicationManager.getApplication().invokeLater({
+                PsiManager.getInstance(myProject).dropResolveCaches()
+                DaemonCodeAnalyzer.getInstance(myProject).restart()
+            }, myProject.disposed)
         }
     }
 
@@ -206,25 +215,25 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
             val config = GlintConfiguration.getInstance(myProject)
             val pkg = config.getPackage()
             val path = pkg.`package`.constantPackage?.systemIndependentPath ?: glintCoreDir?.path ?: return@runReadAction null
-            val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json"))
-            PackageJsonData.getOrCreate(f!!).version?.rawVersion
+            val f = VirtualFileManager.getInstance().findFileByNioPath(Path(path).resolve("./package.json")) ?: return@runReadAction null
+            PackageJsonData.getOrCreate(f).version?.rawVersion
         }
     }
 
     override fun createCommandLine(): GeneralCommandLine {
         val config = GlintConfiguration.getInstance(myProject)
         val pkg = config.getPackage()
-        var path = pkg.`package`.constantPackage?.systemIndependentPath
-        val dir = glintCoreDir ?: ApplicationManager.getApplication().runReadAction<VirtualFile?> {
-            VfsUtil.findFile(Path(path!!), true)
-        }
+        val path = pkg.`package`.constantPackage?.systemIndependentPath
+        val dir = glintCoreDir ?: path?.let {
+            ApplicationManager.getApplication().runReadAction<VirtualFile?> { VfsUtil.findFile(Path(it), true) }
+        } ?: throw ExecutionException("Cannot start Glint: @glint/core was not found")
 
-        val (workDirectoryPath, dirPath) = ApplicationManager.getApplication().runReadAction<Pair<String?, String?>> {
-            var workDirectory = dir
+        val (workDirectoryPath, dirPath) = ApplicationManager.getApplication().runReadAction<Pair<String?, String>> {
+            var workDirectory: VirtualFile? = dir
             while (workDirectory != null && workDirectory.path.contains("node_modules")) {
                 workDirectory = workDirectory.parent
             }
-            Pair(workDirectory?.path, dir?.path)
+            Pair(workDirectory?.path, dir.path)
         }
 
         val commandLine = GeneralCommandLine()
@@ -238,36 +247,21 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
 //            val file = glintPkg.findFileByRelativePath("bin/glint-language-server.js")
 //                    ?: throw RuntimeException("glint lsp was not found")
             //commandLine.addParameter("--inspect-brk")
-            commandLine.addParameter("${dirPath!!}/bin/glint-language-server.js")
+            commandLine.addParameter("$dirPath/bin/glint-language-server.js")
             commandLine.addParameter("--stdio")
             if (!this.isWsl) {
-                commandLine.addParameter("--clientProcessId=" + OSProcessUtil.getCurrentProcessId().toString())
+                commandLine.addParameter("--clientProcessId=" + ProcessHandle.current().pid())
             }
         }
 
+        val interpreter = NodeJsInterpreterRef.createProjectRef().resolve(project)
+                ?: throw ExecutionException("Cannot start Glint: no Node.js interpreter is configured for this project")
         if (isWsl) {
-            WslCommandLineConfigurator
-                .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
-                .configure(commandLine)
+            WslCommandLineConfigurator.find(interpreter).configure(commandLine)
         } else {
-            NodeCommandLineConfigurator
-                .find(NodeJsInterpreterRef.createProjectRef().resolve(project)!!)
-                .configure(commandLine)
+            NodeCommandLineConfigurator.find(interpreter).configure(commandLine)
         }
         return commandLine
-    }
-
-    override fun startServerProcess(): OSProcessHandler {
-        val r = super.startServerProcess()
-        Timer().schedule(5000) {
-            ApplicationManager.getApplication().invokeLater {
-                DaemonCodeAnalyzer.getInstance(project).restart()
-                ApplicationManager.getApplication().runWriteAction {
-                    FileContentUtil.reparseOpenedFiles()
-                }
-            }
-        }
-        return r;
     }
 
     override fun findLocalFileByPath(path: String): VirtualFile? {
@@ -320,9 +314,13 @@ class GlintLspServerDescriptor(private val myProject: Project) : LspServerDescri
                 file.fileType is JavaScriptFileType
     }
 
-    override val lspDiagnosticsSupport = null
-    override val lspGoToDefinitionSupport = false
-    override val lspCompletionSupport = null
+    // Diagnostics, completion and go-to-definition are wired through GlintTypeScriptService and the plugin's own
+    // references, so keep the platform's generic LSP versions of them off.
+    override val lspCustomization = object : LspCustomization() {
+        override val diagnosticsCustomizer: LspDiagnosticsCustomizer = LspDiagnosticsDisabled
+        override val completionCustomizer: LspCompletionCustomizer = LspCompletionDisabled
+        override val goToDefinitionCustomizer: LspGoToDefinitionCustomizer = LspGoToDefinitionDisabled
+    }
 
     override fun dispose() {}
 }
