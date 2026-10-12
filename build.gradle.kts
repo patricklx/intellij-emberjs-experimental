@@ -29,6 +29,9 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.junit.platform:junit-platform-launcher:6.1.3")
+    // Runs the JUnit 3/4 platform tests on the JUnit Platform, so test/resources/META-INF/services listeners load.
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
+    testImplementation("junit:junit:4.13.2")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.7")
 
@@ -90,6 +93,10 @@ tasks {
 
     compileTestKotlin {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     publishPlugin {
