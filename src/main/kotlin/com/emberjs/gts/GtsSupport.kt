@@ -93,7 +93,7 @@ import com.intellij.refactoring.suggested.endOffset
 import com.intellij.refactoring.suggested.startOffset
 import com.intellij.util.Processor
 import com.intellij.xml.template.formatter.AbstractXmlTemplateFormattingModelBuilder
-import java.util.function.Predicate
+import java.util.function.Consumer
 import javax.swing.Icon
 
 val TS: JSLanguageDialect = JavaScriptSupportLoader.TYPESCRIPT
@@ -392,13 +392,6 @@ class GtsLexerAdapter(baseLexer: Lexer = HtmlLexer(), val hideMode: Boolean =fal
 
 class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
 
-    override fun equals(other: Any?): Boolean {
-        if (other == TypeScriptFileType) {
-            return true
-        }
-        return super.equals(other)
-    }
-
     companion object {
         val INSTANCE = GtsFileType()
     }
@@ -419,19 +412,26 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
         return GtsIcons.icon
     }
 
-    override fun hashCode(): Int {
-        return javaClass.hashCode()
+    /**
+     * Claim equality with TypeScriptFileType so that TYPESCRIPT_FILE_TYPES.contains(GtsFileType.INSTANCE)
+     * returns true and the TypeScript language service picks up .gts files.
+     *
+     * hashCode() returns the identity hash of *this instance* (not javaClass.hashCode() and not
+     * TypeScriptFileType.hashCode()), so GtsFileType and TypeScriptFileType land in different buckets in
+     * the open-addressing fastutil maps used to look up per-file-type indices. Those maps probe on equals()
+     * only after a hash match, so the two types never collide in the index map — avoiding the
+     * "JSFilterLexer.start was not called" crash that occurs when GTS files accidentally inherit the
+     * TypeScript index (which uses a TS-specific lexer).
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other === TypeScriptFileType) return true
+        return super.equals(other)
     }
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }
 
 class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
-
-    override fun equals(other: Any?): Boolean {
-        if (other == JavaScriptFileType) {
-            return true
-        }
-        return super.equals(other)
-    }
 
     companion object {
         val INSTANCE = GjsFileType()
@@ -453,9 +453,17 @@ class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
         return GtsIcons.icon
     }
 
-    override fun hashCode(): Int {
-        return javaClass.hashCode()
+    /**
+     * Claim equality with JavaScriptFileType so that the JavaScript language service recognises .gjs files.
+     * hashCode() uses identity hash (not JavaScriptFileType.hashCode()) to prevent collision in the
+     * open-addressing index maps — same rationale as GtsFileType above.
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other === JavaScriptFileType) return true
+        return super.equals(other)
     }
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }
 
 class GtsFileViewProviderFactory: FileViewProviderFactory {
@@ -730,8 +738,8 @@ class GtsComponentCandidatesProvider(val placeInfo: JSImportPlaceInfo) : JSImpor
         candidates?.forEach { processor.processCandidate(GtsImportCandidate(ref, place, it)) }
     }
 
-    override fun getNames(keyFilter: Predicate<in String>): Set<String> {
-        return candidates.keys.filter(keyFilter::test).toSet()
+    override fun collectNames(consumer: Consumer<String>) {
+        candidates.keys.forEach(consumer::accept)
     }
 
     private fun getComponentName(virtualFile: VirtualFile): String {

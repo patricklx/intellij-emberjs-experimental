@@ -4,11 +4,13 @@ import com.emberjs.gts.GjsFileType
 import com.emberjs.gts.GtsFileType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.javascript.BasicDialectDetector
+import com.intellij.lang.javascript.JavaScriptFileType
 import com.intellij.lang.javascript.JavaScriptSupportLoader
 import com.intellij.lang.javascript.inspections.ES6UnusedImportsInspection
 import com.intellij.lang.javascript.inspections.JSLastCommaInObjectLiteralInspection
 import com.intellij.lang.javascript.inspections.JSUnusedGlobalSymbolsInspection
 import com.intellij.lang.javascript.inspections.JSUnusedLocalSymbolsInspection
+import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.psi.impl.JSFileImpl
 import com.intellij.testFramework.LoggedErrorProcessor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -167,5 +169,20 @@ class GtsFileTest : BasePlatformTestCase() {
         System.out.println(highlighting)
         val noCommaAllowed = highlighting.filter { it.description?.contains("comma") == true }
         TestCase.assertEquals(noCommaAllowed.toString(), 0, noCommaAllowed.size)
+    }
+
+    @Test
+    fun testFileTypesEqualJsAndTs() {
+        // GtsFileType.equals(TypeScriptFileType) == true so that TYPESCRIPT_FILE_TYPES.contains(GtsFileType.INSTANCE)
+        // returns true and the TypeScript language service picks up .gts files.
+        // GtsFileType.hashCode() uses System.identityHashCode(this) — different from TypeScriptFileType.hashCode() —
+        // so the two types never land in the same bucket in the open-addressing fastutil index map and the
+        // "JSFilterLexer.start was not called" collision is avoided.
+        TestCase.assertTrue(GtsFileType.INSTANCE.equals(TypeScriptFileType))
+        TestCase.assertTrue(GjsFileType.INSTANCE.equals(JavaScriptFileType))
+        TestCase.assertFalse(TypeScriptFileType.equals(GtsFileType.INSTANCE))
+        TestCase.assertFalse(JavaScriptFileType.equals(GjsFileType.INSTANCE))
+        TestCase.assertFalse(GtsFileType.INSTANCE.hashCode() == TypeScriptFileType.hashCode())
+        TestCase.assertFalse(GjsFileType.INSTANCE.hashCode() == JavaScriptFileType.hashCode())
     }
 }

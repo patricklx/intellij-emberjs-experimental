@@ -37,7 +37,7 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
         }
 
         private fun getAllPairs(project: Project): Collection<Pair<EmberName, VirtualFile>> {
-            return SlowOperations.allowSlowOperations<Collection<Pair<EmberName, VirtualFile>>, Throwable> {
+            return SlowOperations.knownIssue("intellij-emberjs: EmberNameIndex.getAllPairs").use {
                  CachedValuesManager.getManager(project).getCachedValue(project) {
                     val results = mutableListOf<Pair<EmberName, VirtualFile>>()
                     for (file in index.getContainingFiles(NAME, true, GlobalSearchScope.allScope(project))) {

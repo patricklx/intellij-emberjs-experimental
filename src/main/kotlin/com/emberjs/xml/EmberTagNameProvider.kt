@@ -212,7 +212,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
         }
 
         // find from named block yields  {{yield to='x'}}
-        val angleComponent = element.parents.find {
+        val angleComponent = element.parents(withSelf = false).find {
             it is XmlTag && it.descriptor is EmberXmlElementDescriptor
         } as XmlTag?
         if (angleComponent != null) {
@@ -238,7 +238,7 @@ class EmberTagNameProvider : XmlTagNameProvider {
     }
 
     fun fromImports(element: XmlTag, elements: MutableList<LookupElement>) {
-        val insideImport = element.parents.find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
+        val insideImport = element.parents(withSelf = false).find { it is HbMustache && it.children.getOrNull(1)?.text == "import"} != null
 
         if (insideImport && element.text != "from" && element.text != "import") {
             return
