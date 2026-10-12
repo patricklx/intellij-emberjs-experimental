@@ -411,6 +411,24 @@ class GtsFileType : LanguageFileType(GtsLanguage.INSTANCE) {
     override fun getIcon(): Icon {
         return GtsIcons.icon
     }
+
+    /**
+     * Claim equality with TypeScriptFileType so that TYPESCRIPT_FILE_TYPES.contains(GtsFileType.INSTANCE)
+     * returns true and the TypeScript language service picks up .gts files.
+     *
+     * hashCode() returns the identity hash of *this instance* (not javaClass.hashCode() and not
+     * TypeScriptFileType.hashCode()), so GtsFileType and TypeScriptFileType land in different buckets in
+     * the open-addressing fastutil maps used to look up per-file-type indices. Those maps probe on equals()
+     * only after a hash match, so the two types never collide in the index map — avoiding the
+     * "JSFilterLexer.start was not called" crash that occurs when GTS files accidentally inherit the
+     * TypeScript index (which uses a TS-specific lexer).
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other === TypeScriptFileType) return true
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }
 
 class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
@@ -434,6 +452,18 @@ class GjsFileType : LanguageFileType(GjsLanguage.INSTANCE) {
     override fun getIcon(): Icon {
         return GtsIcons.icon
     }
+
+    /**
+     * Claim equality with JavaScriptFileType so that the JavaScript language service recognises .gjs files.
+     * hashCode() uses identity hash (not JavaScriptFileType.hashCode()) to prevent collision in the
+     * open-addressing index maps — same rationale as GtsFileType above.
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other === JavaScriptFileType) return true
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }
 
 class GtsFileViewProviderFactory: FileViewProviderFactory {
