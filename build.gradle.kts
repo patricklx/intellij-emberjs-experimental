@@ -36,12 +36,15 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
-        bundledPlugins(listOf("com.dmarcotte.handlebars", "JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
+        // com.dmarcotte.handlebars is bundled in WebStorm but a marketplace plugin in IntelliJ IDEA Ultimate.
+        // The main platform is IntelliJ IDEA Ultimate (compilation + tests). runIde uses IDEA Ultimate by default.
+        plugins(listOf("com.dmarcotte.handlebars:262.8665.173"))
+        bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
         bundledModules(listOf("intellij.platform.lsp.impl", "intellij.platform.structureView", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.WebStorm, "2026.2.3")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
     }
 }
 
@@ -93,6 +96,30 @@ tasks {
         token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
 
+}
+
+// The default runIde task uses IntelliJ IDEA Ultimate (the main platform). Use runIdeWS to launch WebStorm.
+// The coroutines-javaagent.jar added by IntelliJPlatformArgumentProvider causes a JVM abort under
+// IntelliJ IDEA Ultimate (AgentPremain is not loadable via PathClassLoader). Wrap each provider on
+// the runIde task so the -javaagent arg is silently filtered out.
+intellijPlatformTesting.runIde.register("runIdeWS") {
+    // Launch the plugin sandbox in WebStorm.
+    // Usage: ./gradlew runIdeWS
+    type = IntelliJPlatformType.WebStorm
+    version = "2026.2.3"
+}
+
+gradle.taskGraph.whenReady {
+    // Filter out the coroutines-javaagent from runIde (IDEA Ultimate) after all plugin configuration is done
+    (tasks.findByName("runIde") as? JavaExec)?.let { task ->
+        val wrapped = task.jvmArgumentProviders.map { original ->
+            CommandLineArgumentProvider {
+                original.asArguments().filter { !it.contains("coroutines-javaagent") }
+            }
+        }
+        task.jvmArgumentProviders.clear()
+        task.jvmArgumentProviders.addAll(wrapped)
+    }
 }
 
 
