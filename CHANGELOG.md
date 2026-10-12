@@ -1,6 +1,24 @@
 # Changelog
 
 
+## v2026.2.1 (2026-10-12)
+
+#### :rocket: Enhancement
+* [#401](https://github.com/patricklx/intellij-emberjs-experimental/pull/401) Template features: resolve @controller and @model in route templates, deterministic tag descriptors ([@patricklx](https://github.com/patricklx))
+* [#400](https://github.com/patricklx/intellij-emberjs-experimental/pull/400) Service navigation: Cmd+click on @service fields, follow re-exports and built-in registry ([@patricklx](https://github.com/patricklx))
+* [#398](https://github.com/patricklx/intellij-emberjs-experimental/pull/398) Glint LSP: migrate to LspClientDescriptor API, fix ClassCastException and lifecycle issues ([@patricklx](https://github.com/patricklx))
+* [#397](https://github.com/patricklx/intellij-emberjs-experimental/pull/397) IDE compatibility: IDEA Ultimate as main platform, WebStorm sandbox, build range 2026.2.3 ([@patricklx](https://github.com/patricklx))
+
+#### :bug: Bug Fix
+* [#399](https://github.com/patricklx/intellij-emberjs-experimental/pull/399) Crash & stability fixes: ESLint optional dep, indexing crashes, deprecated APIs ([@patricklx](https://github.com/patricklx))
+
+#### :house: Internal
+* [#403](https://github.com/patricklx/intellij-emberjs-experimental/pull/403) Bump version to 2026.2.1 ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2026.2.0 (2026-10-09)
 
 #### :rocket: Enhancement
