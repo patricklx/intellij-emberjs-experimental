@@ -22,6 +22,15 @@ open class EmberJSModuleReference(context: PsiElement, range: TextRange, filePat
     override fun acceptFileWithoutExtension(): Boolean {
         return extensions?.isEmpty() == true
     }
+
+    // A module never imports itself. Resolving to the containing file creates a cycle that the resolver only
+    // breaks via its recursion guard, so results differ between calls (reported as a non-idempotent resolve).
+    override fun multiResolve(incompleteCode: Boolean): Array<ResolveResult> {
+        val self = element.containingFile?.originalFile
+        val results = super.multiResolve(incompleteCode)
+        if (self == null || results.none { it.element == self }) return results
+        return results.filter { it.element != self }.toTypedArray()
+    }
 }
 
 open class EmberInternalJSModuleReference(context: PsiElement, range: TextRange, val internalFile: PsiFile?) : EmberJSModuleReference(context, range, emptyList(), emptyArray()) {
@@ -148,12 +157,16 @@ class EmberModuleReferenceContributor : JSModuleReferenceContributor {
 
 
 
-        /** Search the `/app` and `/addon` directories of the root and each in-repo-addon */
+        /**
+         * Search the `/addon` (and `/app`) directories of the root and each in-repo-addon. An addon's `/app` folder is
+         * merged into the consuming app's namespace, so `<addon-name>/...` never maps to it; including it made every
+         * `app/` re-export (`export { default } from '<addon-name>/...'`) resolve to itself.
+         */
         val roots = modules
                 .flatMap {
                     listOfNotNull(
                             it.findChild("addon"),
-                            it.findChild("app"),
+                            it.findChild("app")?.takeUnless { _ -> it.isEmberAddonFolder },
                             it.findChild("addon-test-support"),
                     )
                 }.toMutableList()
