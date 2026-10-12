@@ -172,11 +172,17 @@ class GtsFileTest : BasePlatformTestCase() {
     }
 
     @Test
-    fun testFileTypesAreNotEqualToJsAndTs() {
-        // The platform looks up the indices for a file type in an open-addressing map that only calls equals(),
-        // so a Gjs/Gts file type claiming to equal JavaScript/TypeScript picked up their indices on some runs
-        // ("JSFilterLexer.start was not called").
-        TestCase.assertFalse(GjsFileType.INSTANCE.equals(JavaScriptFileType))
-        TestCase.assertFalse(GtsFileType.INSTANCE.equals(TypeScriptFileType))
+    fun testFileTypesEqualJsAndTs() {
+        // GtsFileType.equals(TypeScriptFileType) == true so that TYPESCRIPT_FILE_TYPES.contains(GtsFileType.INSTANCE)
+        // returns true and the TypeScript language service picks up .gts files.
+        // GtsFileType.hashCode() uses System.identityHashCode(this) — different from TypeScriptFileType.hashCode() —
+        // so the two types never land in the same bucket in the open-addressing fastutil index map and the
+        // "JSFilterLexer.start was not called" collision is avoided.
+        TestCase.assertTrue(GtsFileType.INSTANCE.equals(TypeScriptFileType))
+        TestCase.assertTrue(GjsFileType.INSTANCE.equals(JavaScriptFileType))
+        TestCase.assertFalse(TypeScriptFileType.equals(GtsFileType.INSTANCE))
+        TestCase.assertFalse(JavaScriptFileType.equals(GjsFileType.INSTANCE))
+        TestCase.assertFalse(GtsFileType.INSTANCE.hashCode() == TypeScriptFileType.hashCode())
+        TestCase.assertFalse(GjsFileType.INSTANCE.hashCode() == JavaScriptFileType.hashCode())
     }
 }
