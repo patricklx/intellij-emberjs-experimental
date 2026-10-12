@@ -34,13 +34,16 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
       - run: chmod +x ./gradlew
       - run: ./gradlew assemble
       - run: ./gradlew -i check
+      # Catches binary incompatibilities with the target IDEs (missing classes/methods in internal APIs).
+      - run: ./gradlew verifyPlugin
+        if: matrix.os == 'ubuntu-latest'
   release:
     name: Update Changelog, Create Tag and Release
     runs-on: ubuntu-latest
@@ -159,7 +162,7 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x ./gradlew

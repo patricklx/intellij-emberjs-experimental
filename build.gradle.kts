@@ -1,5 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.net.URI
 
@@ -29,6 +30,9 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("org.junit.platform:junit-platform-launcher:6.1.3")
+    // Runs the JUnit 3/4 platform tests on the JUnit Platform, so test/resources/META-INF/services listeners load.
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
+    testImplementation("junit:junit:4.13.2")
     implementation(kotlin("test"))
     implementation("org.codehaus.jettison:jettison:1.5.7")
 
@@ -36,13 +40,15 @@ dependencies {
     // and https://www.jetbrains.com/intellij-repository/snapshots/
     // https://plugins.jetbrains.com/plugin/6884-handlebars-mustache/versions/stable
     intellijPlatform {
+        // com.dmarcotte.handlebars is bundled in WebStorm but a marketplace plugin in IntelliJ IDEA Ultimate.
+        // The main platform is IntelliJ IDEA Ultimate (compilation + tests). runIde uses IDEA Ultimate by default.
         plugins(listOf("com.dmarcotte.handlebars:262.8665.173"))
         bundledPlugins(listOf("JavaScript", "com.intellij.css", "org.jetbrains.plugins.yaml", "com.intellij.modules.json", "intellij.javascript.eslint"))
-        bundledModules(listOf("intellij.platform.lsp.impl", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
+        bundledModules(listOf("intellij.platform.lsp.impl", "intellij.platform.structureView", "intellij.xml.structureView", "intellij.xml.structureView.impl", "intellij.platform.smRunner", "intellij.platform.testRunner"))
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
-        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2")
+        create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
     }
 }
 
@@ -58,6 +64,27 @@ java {
 intellijPlatform {
     pluginConfiguration {
         name.set("EmberExperimental.js")
+        ideaVersion {
+            // The JavaScript plugin APIs we extend (BaseLspTypeScriptService, ESLint, LSP impl) are internal and
+            // change incompatibly between releases - even between 262 patch releases (2026.2 -> 2026.2.3 turned
+            // TypeScriptService.getSignatureHelp into a suspend function). Only claim compatibility with the
+            // builds we compile and verify against, so a new IDE release can't silently load a broken build.
+            sinceBuild.set("262.10968")
+            untilBuild.set("262.*")
+        }
+    }
+
+    pluginVerification {
+        // The verifier does not resolve content modules that live inside bundled plugins (the Test Runner and
+        // Structure View plugins in 2026.2), so it reports their classes as missing even though they are declared
+        // in plugin.xml <dependencies> and load fine at runtime.
+        ignoredProblemsFile.set(file("gradle/plugin-verifier-ignored-problems.txt"))
+        // Internal API usage is inherent to the Glint/ESLint integrations, so only fail on real binary problems.
+        failureLevel.set(listOf(VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS, VerifyPluginTask.FailureLevel.INVALID_PLUGIN))
+        ides {
+            create(IntelliJPlatformType.WebStorm, "2026.2.3")
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
+        }
     }
 
     // Plugin Dependencies -> https://plugins.jetbrains.com/docs/intellij/plugin-dependencies.html
@@ -75,10 +102,38 @@ tasks {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
     }
 
+    test {
+        useJUnitPlatform()
+    }
+
     publishPlugin {
         token.set(System.getenv("ORG_GRADLE_PROJECT_intellijPublishToken"))
     }
 
+}
+
+// The default runIde task uses IntelliJ IDEA Ultimate (the main platform). Use runIdeWS to launch WebStorm.
+// The coroutines-javaagent.jar added by IntelliJPlatformArgumentProvider causes a JVM abort under
+// IntelliJ IDEA Ultimate (AgentPremain is not loadable via PathClassLoader). Wrap each provider on
+// the runIde task so the -javaagent arg is silently filtered out.
+intellijPlatformTesting.runIde.register("runIdeWS") {
+    // Launch the plugin sandbox in WebStorm.
+    // Usage: ./gradlew runIdeWS
+    type = IntelliJPlatformType.WebStorm
+    version = "2026.2.3"
+}
+
+gradle.taskGraph.whenReady {
+    // Filter out the coroutines-javaagent from runIde (IDEA Ultimate) after all plugin configuration is done
+    (tasks.findByName("runIde") as? JavaExec)?.let { task ->
+        val wrapped = task.jvmArgumentProviders.map { original ->
+            CommandLineArgumentProvider {
+                original.asArguments().filter { !it.contains("coroutines-javaagent") }
+            }
+        }
+        task.jvmArgumentProviders.clear()
+        task.jvmArgumentProviders.addAll(wrapped)
+    }
 }
 
 

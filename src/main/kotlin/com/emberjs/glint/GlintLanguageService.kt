@@ -48,8 +48,6 @@ import org.eclipse.lsp4j.DiagnosticSeverity
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
-import java.util.concurrent.Future
-import java.util.stream.Stream
 
 class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProvider {
     val descriptor = getGlintDescriptor(project)
@@ -167,7 +165,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         return this.isAcceptable(virtualFile)
     }
 
-    override fun getSignatureHelp(file: PsiFile, offset: Int): Future<Stream<JSFunctionType>?>? = null
+    override suspend fun getSignatureHelp(file: PsiFile, offset: Int): Sequence<JSFunctionType>? = null
 
     override fun isDisabledByContext(context: VirtualFile): Boolean {
         return getDescriptor()?.isAvailable(context)?.not() ?: return true
