@@ -3,8 +3,8 @@ package com.emberjs.gts
 import com.dmarcotte.handlebars.file.HbFileViewProvider
 import com.dmarcotte.handlebars.parsing.HbTokenTypes
 import com.dmarcotte.handlebars.psi.*
-import com.emberjs.glint.GlintAnnotationError
 import com.emberjs.glint.GlintTypeScriptService
+import com.intellij.lang.javascript.integration.JSAnnotationRangeError
 import com.emberjs.hbs.EmberReference
 import com.emberjs.utils.ifTrue
 import com.intellij.codeInsight.intention.PriorityAction
@@ -44,7 +44,7 @@ class InitialInfo {
 }
 
 class AnnotationResult {
-    var annotationErrors: MutableList<GlintAnnotationError> = mutableListOf()
+    var annotationErrors: MutableList<JSAnnotationRangeError> = mutableListOf()
     var initialInfo: InitialInfo? = null
 }
 
@@ -126,7 +126,7 @@ class HbLintExternalAnnotator() : ExternalAnnotator<InitialInfo, AnnotationResul
             collectedInfo.project?.getService(GlintTypeScriptService::class.java)
                     ?.highlight(collectedInfo.file!!)
                     ?.get()
-                    ?.map { it as GlintAnnotationError }
+                    ?.filterIsInstance<JSAnnotationRangeError>()
                     ?.toCollection(result.annotationErrors)
         }
         result.initialInfo = collectedInfo

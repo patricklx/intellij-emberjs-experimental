@@ -16,12 +16,9 @@ import com.intellij.lang.javascript.TypeScriptFileType
 import com.intellij.lang.javascript.completion.JSInsertHandler
 import com.intellij.lang.javascript.inspections.JSInspectionSuppressor
 import com.intellij.lang.javascript.integration.JSAnnotationError
-import com.intellij.lang.javascript.integration.JSAnnotationError.*
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSFunctionType
-import com.intellij.lang.javascript.service.JSLanguageService
 import com.intellij.lang.javascript.service.JSLanguageServiceProvider
-import com.intellij.lang.parameterInfo.CreateParameterInfoContext
 import com.intellij.lang.typescript.compiler.TypeScriptService
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptInlayHintsResult
 import com.intellij.lang.typescript.compiler.languageService.protocol.commands.response.TypeScriptQuickInfoResponse
@@ -30,13 +27,12 @@ import com.intellij.lang.typescript.compiler.languageService.codeFixes.TypeScrip
 import com.intellij.lang.typescript.lsp.BaseLspTypeScriptService
 import com.intellij.lang.typescript.lsp.LspAnnotationError
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.application.readAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.platform.lsp.impl.features.highlighting.DiagnosticAndQuickFixes
+import com.intellij.platform.lsp.api.LspClient
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -45,7 +41,9 @@ import com.intellij.psi.xml.XmlElement
 import com.intellij.ui.EditorNotifications
 import com.intellij.util.containers.toMutableSmartList
 import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.DiagnosticSeverity
+import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.Position
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletableFuture.completedFuture
@@ -64,7 +62,7 @@ class GlintLanguageServiceProvider(val project: Project) : JSLanguageServiceProv
 
 
 
-class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(project, GlintLspSupportProvider::class.java) {
+class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(project, GlintLspSupportProvider::class.java, getGlintDescriptor(project)) {
     // Re-entrancy guard for getNavigationFor (resolving references below can call back into it). This is a
     // project service used from many threads at once, so the guard must be per thread.
     private val currentlyChecking = ThreadLocal<PsiElement?>()
@@ -146,17 +144,33 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         }
 
         val virtualFile = element.originalVirtualFile ?: return emptyArray()
-        val links = getLspClient()?.requestExecutor?.getElementDefinitions(virtualFile, (elem as PsiElement).textOffset)
+        val client = getLspClient() ?: return emptyArray()
+        val identifier = client.getDocumentIdentifier(virtualFile)
+        val textOffset = (elem as PsiElement).textOffset
+        val fileDoc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
+            ?: return emptyArray()
+        val line = fileDoc.getLineNumber(textOffset)
+        val col = textOffset - fileDoc.getLineStartOffset(line)
+        val links = client.sendRequestSync(LspClient.DEFAULT_REQUEST_TIMEOUT_MS) { server ->
+            server.textDocumentService.definition(DefinitionParams(identifier, Position(line, col)))
+        }?.let { either ->
+            either.left?.map { loc ->
+                org.eclipse.lsp4j.LocationLink().also {
+                    it.targetUri = loc.uri
+                    it.targetRange = loc.range
+                    it.targetSelectionRange = loc.range
+                }
+            } ?: either.right
+        }
+            ?: return emptyArray()
         val psiManager = PsiManager.getInstance(project)
-        return links?.map {
+        return links.mapNotNull {
             val vFile = VfsUtil.findFileByURL(URL(it.targetUri))
-            val file = vFile?.let { psiManager.findFile(it) }
-            if (file == null) return@map null
-            val doc = file.viewProvider.document ?: return@map null
-            val startOffset = doc.getLineStartOffset(it.targetRange.start.line)
-            val offset = startOffset + it.targetRange.start.character
-            return@map file.findElementAt(offset)
-        }?.filterNotNull()?.toTypedArray() ?: emptyArray<PsiElement>()
+            val file = vFile?.let { psiManager.findFile(it) } ?: return@mapNotNull null
+            val d = file.viewProvider.document ?: return@mapNotNull null
+            val startOffset = d.getLineStartOffset(it.targetRange.start.line) + it.targetRange.start.character
+            file.findElementAt(startOffset)
+        }.toTypedArray()
     }
 
     override fun getNavigationFor(document: Document, elem: PsiElement, offsetInSourceElement: Int): Array<PsiElement> {
@@ -177,36 +191,35 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
 
     override suspend fun getSignatureHelp(file: PsiFile, offset: Int): Sequence<JSFunctionType>? = null
 
-    override fun getQuickInfoAt(element: PsiElement, originalFile: VirtualFile): CompletableFuture<TypeScriptQuickInfoResponse?> =
+    override fun getQuickInfoAt(usageElement: PsiElement, originalFile: VirtualFile): CompletableFuture<TypeScriptQuickInfoResponse?> =
         completedFuture(null)
 
-    override suspend fun getCompletionItemsSuspending(file: VirtualFile, document: Document, offset: Int, parameters: CompletionParameters): List<TypeScriptService.CompletionEntry> {
+    override suspend fun getCompletionItemsSuspending(virtualFile: VirtualFile, document: Document, offset: Int, parameters: CompletionParameters): List<TypeScriptService.CompletionEntry> {
         val client = getLspClient() ?: return emptyList()
-        val completionList = readAction {
-            client.requestExecutor.getCompletionListAsync(file, offset, parameters.isAutoPopup)
-        }.await() ?: return emptyList()
+        val identifier = client.getDocumentIdentifier(virtualFile)
+        val line = document.getLineNumber(offset)
+        val col = offset - document.getLineStartOffset(line)
+        val completionList: org.eclipse.lsp4j.CompletionList = client.sendRequest { server ->
+            server.textDocumentService.completion(CompletionParams(identifier, Position(line, col)))
+        }?.let { either ->
+            if (either.isLeft) org.eclipse.lsp4j.CompletionList(false, either.left)
+            else either.right
+        } ?: return emptyList()
         return completionList.items.map { GlintCompletionEntry(it) }
     }
 
-    override suspend fun getLspDiagnosticsAndQuickFixes(file: VirtualFile): List<DiagnosticAndQuickFixes> {
-        if (getDescriptor()?.isAvailable(file) != true) return emptyList()
-        return getLspClient()?.getDiagnosticsAndQuickFixes(file) ?: emptyList()
-    }
-
     override fun isDisabledByContext(context: VirtualFile): Boolean {
-        return getDescriptor()?.isAvailable(context)?.not() ?: return true
+        if (getDescriptor()?.isAvailable(context) != true) return true
+        EditorNotifications.getInstance(project).updateNotifications(context)
+        return false
     }
 
-    override fun highlight(file: PsiFile): CompletableFuture<List<JSAnnotationError>>? {
-        val virtualFile = file.virtualFile ?: return completedFuture(emptyList())
-        if (getDescriptor()?.isAvailable(virtualFile) != true) {
-            return completedFuture(emptyList())
+    override fun postProcessErrors(file: PsiFile, errors: List<LspAnnotationError>): List<LspAnnotationError> {
+        return errors.map { e ->
+            val code = e.errorCode.takeIf { it != 0 }?.let { ":$it" } ?: ""
+            val suffix = " (glint$code)"
+            e.copyWith(e.description + suffix, e.tooltipText?.plus(suffix) ?: (e.description + suffix))
         }
-
-        EditorNotifications.getInstance(project).updateNotifications(virtualFile)
-
-        val diagnostics = getLspClient()?.getDiagnosticsAndQuickFixes(virtualFile) ?: emptyList()
-        return completedFuture(diagnostics.map { GlintAnnotationError(it, virtualFile.canonicalPath) })
     }
 
     override fun canHighlight(file: PsiFile) = file.fileType is HbFileType ||
@@ -220,32 +233,11 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
                                                    file.fileType is JavaScriptFileType
 }
 
-class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntryBase() {
+class GlintCompletionEntry(internal val item: CompletionItem) : TypeScriptService.CompletionEntry {
     override val name: String get() = item.label
     val detail: String? get() = item.detail
 
     override fun createLookupElement() = LookupElementBuilder.create(item.label)
             .withTypeText(item.detail, true)
             .withInsertHandler(JSInsertHandler.DEFAULT)
-}
-
-class GlintAnnotationError(val diagFixes: DiagnosticAndQuickFixes, private val path: String?) : JSAnnotationError {
-    val diagnostic = diagFixes.diagnostic
-    public val fixes = diagFixes.quickFixes
-    override fun getLine() = diagnostic.range.start.line
-    val endLine = diagnostic.range.end.line
-    val endColumn = diagnostic.range.end.character
-    val diagCode = diagnostic.code?.get()
-    override fun getColumn() = diagnostic.range.start.character
-    val code by lazy { diagnostic.source?.toString() }
-
-    override fun getAbsoluteFilePath(): String? = path
-
-    override fun getDescription(): String = diagnostic.message + " (${diagnostic.source}${diagCode?.let { ":${it}" } ?: ""})"
-
-    override fun getCategory() = when (diagnostic.severity) {
-        DiagnosticSeverity.Error -> ERROR_CATEGORY
-        DiagnosticSeverity.Warning -> WARNING_CATEGORY
-        DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> INFO_CATEGORY
-    }
 }
