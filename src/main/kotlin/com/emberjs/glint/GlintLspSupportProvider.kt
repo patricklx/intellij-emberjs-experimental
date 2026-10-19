@@ -22,7 +22,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.isFile
-import com.intellij.platform.lsp.api.LspClientDescriptor
+import com.intellij.lang.typescript.lsp.TypeScriptLspClientDescriptor
 import com.intellij.platform.lsp.api.LspClientManager
 import com.intellij.platform.lsp.api.LspIntegrationProvider
 import com.intellij.platform.lsp.api.LspServerListener
@@ -61,7 +61,7 @@ fun getGlintDescriptor(project: Project): GlintLspServerDescriptor {
 
 
 @Service(Service.Level.PROJECT)
-class GlintLspServerDescriptor(private val myProject: Project) : LspClientDescriptor(myProject, "Glint"), Disposable {
+class GlintLspServerDescriptor(private val myProject: Project) : TypeScriptLspClientDescriptor(myProject, "Glint"), Disposable {
     val psiManager = PsiManager.getInstance(myProject)
     val lspClientManager = LspClientManager.getInstance(project)
     var isWsl = false

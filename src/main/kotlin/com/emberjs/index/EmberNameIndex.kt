@@ -8,7 +8,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.util.SlowOperations
 import com.intellij.util.containers.addIfNotNull
 import com.intellij.util.indexing.*
 import com.intellij.util.io.BooleanDataDescriptor
@@ -38,16 +37,14 @@ class EmberNameIndex : ScalarIndexExtension<Boolean>() {
         }
 
         private fun getAllPairs(project: Project): Collection<Pair<EmberName, VirtualFile>> {
-            return SlowOperations.knownIssue("intellij-emberjs: EmberNameIndex.getAllPairs").use {
-                // While indexing, the index keeps filling up without its modification stamp changing, so a cached
-                // list would be stale (and the IDE reports it as a non-idempotent computation). Only cache once
-                // indexing is done; DumbService as a dependency drops anything cached right at the transition.
-                if (DumbService.isDumb(project)) {
-                    computeAllPairs(project)
-                } else {
-                    CachedValuesManager.getManager(project).getCachedValue(project) {
-                        CachedValueProvider.Result.create(computeAllPairs(project), IndexModificationTracker(project), DumbService.getInstance(project))
-                    }
+            // While indexing, the index keeps filling up without its modification stamp changing, so a cached
+            // list would be stale (and the IDE reports it as a non-idempotent computation). Only cache once
+            // indexing is done; DumbService as a dependency drops anything cached right at the transition.
+            return if (DumbService.isDumb(project)) {
+                computeAllPairs(project)
+            } else {
+                CachedValuesManager.getManager(project).getCachedValue(project) {
+                    CachedValueProvider.Result.create(computeAllPairs(project), IndexModificationTracker(project), DumbService.getInstance(project))
                 }
             }
         }
