@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v2026.2.2 (2026-10-20)
+
+#### :house: Internal
+* [#405](https://github.com/patricklx/intellij-emberjs-experimental/pull/405) Remove all @ApiStatus.Internal API usages ([@patricklx](https://github.com/patricklx))
+
+#### Committers: 1
+- Patrick Pircher ([@patricklx](https://github.com/patricklx))
+
+
 ## v2026.2.1 (2026-10-12)
 
 #### :rocket: Enhancement
