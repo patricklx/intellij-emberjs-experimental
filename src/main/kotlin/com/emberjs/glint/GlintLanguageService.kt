@@ -33,6 +33,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.platform.lsp.api.LspClient
+import com.intellij.platform.lsp.api.LspClientManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -144,7 +145,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         }
 
         val virtualFile = element.originalVirtualFile ?: return emptyArray()
-        val client = getLspClient() ?: return emptyArray()
+        val client = LspClientManager.getInstance(project).getClients(GlintLspSupportProvider::class.java).firstOrNull() ?: return emptyArray()
         val identifier = client.getDocumentIdentifier(virtualFile)
         val textOffset = (elem as PsiElement).textOffset
         val fileDoc = com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(virtualFile)
@@ -195,7 +196,7 @@ class GlintTypeScriptService(project: Project) : BaseLspTypeScriptService(projec
         completedFuture(null)
 
     override suspend fun getCompletionItemsSuspending(virtualFile: VirtualFile, document: Document, offset: Int, parameters: CompletionParameters): List<TypeScriptService.CompletionEntry> {
-        val client = getLspClient() ?: return emptyList()
+        val client = LspClientManager.getInstance(project).getClients(GlintLspSupportProvider::class.java).firstOrNull() ?: return emptyList()
         val identifier = client.getDocumentIdentifier(virtualFile)
         val line = document.getLineNumber(offset)
         val col = offset - document.getLineStartOffset(line)
