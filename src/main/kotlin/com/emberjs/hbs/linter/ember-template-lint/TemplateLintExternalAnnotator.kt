@@ -10,6 +10,7 @@ import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
+import com.intellij.util.containers.ContainerUtil
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
@@ -69,8 +70,29 @@ class TemplateLintExternalAnnotator(onTheFly: Boolean = true) : JSLinterExternal
             val prefix = TemplateLintBundle.message("hbs.lint.message.prefix") + " "
             annotationResult.errors.removeIf { it.code?.startsWith("glint") == true }
             val configurable = TemplateLintConfigurable(file.project, true)
+            val document = PsiDocumentManager.getInstance(file.project).getDocument(file)
+            val documentModificationStamp = document?.modificationStamp ?: -1L
             val fixes = JSLinterStandardFixes()
                     .setEditSettingsAction(JSLinterEditSettingsAction(configurable, EmberIcons.TEMPLATE_LINT_16))
+                    .setErrorToIntentionConverter { error: JSLinterErrorBase ->
+                        val result: MutableList<com.intellij.codeInsight.intention.IntentionAction> = mutableListOf()
+                        if (!holder.isBatchMode) {
+                            // Offer a suppression comment insertion for the specific rule
+                            ContainerUtil.addIfNotNull(result, TemplateLintSuppressionUtil.getSuppressForLineAction(error, documentModificationStamp))
+                        }
+                        result
+                    }
+                    .setProblemGroup { error: JSLinterErrorBase? ->
+                        if (holder.isBatchMode) {
+                            null
+                        } else if (error is com.intellij.lang.javascript.linter.JSLinterError) {
+                            val intentions = TemplateLintSuppressionUtil.getSuppressionsForError(error, documentModificationStamp)
+                            com.intellij.lang.javascript.validation.JSAnnotatorProblemGroup(intentions, null as String?)
+                        } else {
+                            null
+                        }
+                    }
+
             JSLinterAnnotationsBuilder(file, annotationResult, holder, configurable, prefix, this.inspectionClass, fixes)
                     .setHighlightingGranularity(HighlightingGranularity.element)
                     .setDefaultFileLevelErrorIcon(EmberIcons.TEMPLATE_LINT_16)
