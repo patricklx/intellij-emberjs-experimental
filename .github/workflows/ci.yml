@@ -58,7 +58,7 @@ jobs:
       - name: Use Node.js 18
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 26
       - run: sudo apt-get install markdown -y
       - uses: actions/setup-java@v6.0.1
         with:
